@@ -54,14 +54,22 @@ app:
 networkPolicy:
   enabled: true
   allowSameNamespace: false
+  # OpenShift Routes reach pods from the openshift-ingress namespace: this
+  # MUST be true on OpenShift or all ingress is denied (see the prod example).
   allowOpenShiftIngress: false
   dns:
+    # Pod DNS (UDP/TCP 53). Covers upstream Kubernetes (kube-system: kind,
+    # k3d, GKE, EKS, AKS, ...) AND OpenShift (openshift-dns). CoreDNS pod
+    # labels differ per distro/install, so all pods in the DNS namespaces
+    # are matched — those namespaces only run DNS components.
     namespaceSelector:
-      matchLabels:
-        kubernetes.io/metadata.name: kube-system
-    podSelector:
-      matchLabels:
-        k8s-app: kube-dns
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values:
+            - kube-system
+            - openshift-dns
+    podSelector: {}
   app:
     ingressFrom: []
     # Krypton calls the Kubernetes API (https://kubernetes.default.svc), which

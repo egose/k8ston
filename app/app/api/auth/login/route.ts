@@ -1,6 +1,13 @@
 import { connection, NextResponse } from 'next/server';
 import { config } from '@/lib/config';
-import { createSessionToken, DEV_USER, getAuthorizationUrl, isOidcConfigured, setSessionCookie } from '@/lib/auth';
+import {
+  createSessionToken,
+  describeAuthError,
+  DEV_USER,
+  getAuthorizationUrl,
+  isOidcConfigured,
+  setSessionCookie,
+} from '@/lib/auth';
 
 /** Start SSO login — or short-circuit to a dev session when AUTH_DISABLED. */
 export async function GET() {
@@ -17,6 +24,35 @@ export async function GET() {
       { status: 501 },
     );
   }
-  const url = await getAuthorizationUrl();
-  return NextResponse.redirect(url);
+  try {
+    const url = await getAuthorizationUrl();
+    return NextResponse.redirect(url);
+  } catch (err) {
+    // Discovery/network failure talking to the IdP: log the actionable
+    // detail (cause code, hostname, hint) and answer 502 instead of the
+    // default Next.js 500 stack trace.
+    const details = describeAuthError(err);
+    console.error(
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        app: 'krypton',
+        action: 'auth.login',
+        result: 'error',
+        detail: details.message,
+        issuer: config.oidc.issuer,
+        ...(details.code ? { code: details.code } : {}),
+        ...(details.hostname ? { hostname: details.hostname } : {}),
+        ...(details.hint ? { hint: details.hint } : {}),
+      }),
+    );
+    return NextResponse.json(
+      {
+        error: 'OIDC discovery failed: the app cannot reach the identity provider.',
+        issuer: config.oidc.issuer,
+        ...(details.code ? { code: details.code } : {}),
+        ...(details.hint ? { hint: details.hint } : {}),
+      },
+      { status: 502 },
+    );
+  }
 }

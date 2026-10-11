@@ -29,8 +29,8 @@ app:
     KRYPTON_ACCESS_CONFIGMAP: krypton-access
     OIDC_ISSUER: https://keycloak.example.com/realms/company
     OIDC_CLIENT_ID: krypton
-    OIDC_SCOPES: openid profile email groups
-    OIDC_GROUPS_CLAIM: groups
+    OIDC_SCOPES: openid profile email roles
+    OIDC_GROUPS_CLAIM: roles
     OIDC_USERNAME_CLAIM: email
     NEXT_PUBLIC_APP_URL: https://krypton.apps.example.com
   resources:
@@ -63,7 +63,10 @@ app:
         groups: [dev-team, database-admins]
         users: [alice@company.com]
 
-# Egress for the external IdP (OIDC discovery/token/userinfo over 443). Note
+# Pod DNS egress defaults already cover upstream K8s (kube-system) and
+# OpenShift (openshift-dns) — no override needed. allowOpenShiftIngress is
+# REQUIRED on OpenShift, otherwise the Route cannot reach the pods.
+# Egress for the external IdP (OIDC discovery/token/userinfo over 443): note
 # allowKubeApiEgress already permits 443 egress; set it to false for tighter
 # rules restricted to the CIDRs below plus extraEgress API server CIDRs.
 networkPolicy:

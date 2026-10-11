@@ -238,3 +238,79 @@ export async function handleOidcCallback(currentUrl: URL): Promise<SessionUser> 
 function randomToken(): string {
   return [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+// ---------------------------------------------------------------------------
+// Error reporting — flatten OIDC failures into actionable log fields
+// ---------------------------------------------------------------------------
+
+export interface AuthErrorDetails {
+  message: string;
+  /** low-level cause code: EAI_AGAIN, ECONNREFUSED, CERT_HAS_EXPIRED, ... */
+  code?: string;
+  hostname?: string;
+  /** IdP's own error (Keycloak's error/error_description from the callback URL) */
+  idpError?: string;
+  idpDescription?: string;
+  hint?: string;
+}
+
+function causeChain(err: unknown): Record<string, unknown>[] {
+  const chain: Record<string, unknown>[] = [];
+  let cur: unknown = err;
+  const seen = new Set<unknown>();
+  while (cur && typeof cur === 'object' && !seen.has(cur)) {
+    seen.add(cur);
+    chain.push(cur as Record<string, unknown>);
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return chain;
+}
+
+/**
+ * Flatten OIDC failures into loggable fields plus an operator hint. Covers
+ * IdP error responses (?error= on the callback), DNS/TLS/network fetch
+ * failures from discovery/token/userinfo, and issuer mismatches.
+ */
+export function describeAuthError(err: unknown): AuthErrorDetails {
+  const message = err instanceof Error ? err.message : String(err);
+  const out: AuthErrorDetails = { message };
+  for (const link of causeChain(err)) {
+    // oauth4webapi AuthorizationResponseError carries the IdP's verdict
+    // (?error=&error_description=) as .error/.error_description.
+    if (typeof link.error === 'string' && !out.idpError) {
+      out.idpError = link.error;
+      if (typeof link.error_description === 'string') out.idpDescription = link.error_description;
+    }
+    // undici/node fetch system errors surface on `cause`.
+    if (typeof link.code === 'string' && !out.code) {
+      out.code = link.code;
+      if (typeof link.hostname === 'string') out.hostname = link.hostname;
+      else if (typeof link.host === 'string') out.hostname = link.host;
+    }
+  }
+
+  if (out.idpError === 'invalid_request' && /redirect_uri/i.test(out.idpDescription ?? out.message)) {
+    out.hint =
+      `redirect_uri mismatch: register exactly "${config.oidc.redirectUri}" ` +
+      `as a Valid Redirect URI for client "${config.oidc.clientId}"`;
+  } else if (out.idpError === 'invalid_scope') {
+    out.hint = `IdP rejected the requested scopes ("${config.oidc.scopes}"): drop unknown scopes via OIDC_SCOPES`;
+  } else if (out.idpError && !out.hint) {
+    out.hint = `IdP rejected the login (${out.idpError}): verify client "${config.oidc.clientId}", realm, and redirect URI registration`;
+  } else if (out.code === 'EAI_AGAIN' || out.code === 'ENOTFOUND') {
+    out.hint =
+      `pod DNS cannot resolve ${out.hostname ?? 'the IdP host'}: allow UDP/TCP 53 egress ` +
+      `to the cluster DNS (kube-system on K8s, openshift-dns on OpenShift)`;
+  } else if (out.code && /^(ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH)$/.test(out.code)) {
+    out.hint =
+      `cannot reach the IdP at ${out.hostname ?? config.oidc.issuer}: allow TCP 443 egress ` +
+      `(NetworkPolicy / cluster egress firewall)`;
+  } else if (out.code && /CERT|SELF_SIGNED|UNABLE_TO_VERIFY|DEPTH_ZERO/.test(out.code)) {
+    out.hint = 'IdP TLS certificate is not trusted by the container (corporate MITM proxy CA missing from the image?)';
+  } else if (/issuer/i.test(message) && /match|mismatch|expected/i.test(message)) {
+    out.hint =
+      `OIDC_ISSUER must exactly match the "issuer" field of ${config.oidc.issuer}/.well-known/openid-configuration ` +
+      `(Keycloak realms often live under /auth/realms/...)`;
+  }
+  return out;
+}

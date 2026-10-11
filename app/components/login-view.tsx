@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@egose/shadcn-theme/co
 export function LoginView() {
   const searchParams = useSearchParams();
   const authError = searchParams.get('auth') === 'error';
+  const idpError = searchParams.get('idp_error');
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 pt-16">
@@ -23,7 +24,7 @@ export function LoginView() {
       </div>
       {authError && (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          SSO sign-in failed. Check the OIDC configuration and try again.
+          SSO sign-in failed{idpError ? ` (${idpError})` : ''}. Check the OIDC configuration and try again.
         </p>
       )}
       <Card>

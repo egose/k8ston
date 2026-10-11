@@ -205,7 +205,22 @@ export async function handleOidcCallback(currentUrl: URL): Promise<SessionUser> 
   store.delete(NONCE_COOKIE);
   store.delete(STATE_COOKIE);
 
-  const tokens = await openid.authorizationCodeGrant(oidc, currentUrl, {
+  // openid-client derives the token-request `redirect_uri` from `currentUrl`
+  // by stripping query params. Behind a TLS-terminating Ingress/Route,
+  // `req.url` is http://internal-host/... while the authorize request used
+  // the public https://... appUrl — Keycloak then rejects the code exchange
+  // with `invalid_grant: Incorrect redirect_uri`. Normalize to the configured
+  // redirect URI (same value sent at authorize time), preserving the IdP's
+  // response params (code/state/error). Assumes the registered redirect has
+  // no own query string (the standard `<appUrl>/api/auth/callback` shape).
+  const registered = new URL(config.oidc.redirectUri);
+  const normalized = new URL(registered.toString());
+  for (const [k, v] of currentUrl.searchParams) {
+    normalized.searchParams.append(k, v);
+  }
+  if (!normalized.hash && currentUrl.hash) normalized.hash = currentUrl.hash;
+
+  const tokens = await openid.authorizationCodeGrant(oidc, normalized, {
     pkceCodeVerifier: codeVerifier,
     expectedState,
     expectedNonce: nonce,
@@ -289,10 +304,19 @@ export function describeAuthError(err: unknown): AuthErrorDetails {
     }
   }
 
-  if (out.idpError === 'invalid_request' && /redirect_uri/i.test(out.idpDescription ?? out.message)) {
+  if (
+    (out.idpError === 'invalid_request' || out.idpError === 'invalid_grant') &&
+    /redirect_uri/i.test(out.idpDescription ?? out.message)
+  ) {
+    // invalid_request = authorize phase (registration missing/wrong);
+    // invalid_grant = token phase (authorize succeeded, so registration exists
+    // but the token redirect_uri differed — e.g. http vs https behind a
+    // TLS-terminating ingress, host mismatch, or trailing slash).
+    const phase = out.idpError === 'invalid_grant' ? 'token' : 'authorize';
     out.hint =
-      `redirect_uri mismatch: register exactly "${config.oidc.redirectUri}" ` +
-      `as a Valid Redirect URI for client "${config.oidc.clientId}"`;
+      `redirect_uri mismatch (${phase} phase): register exactly "${config.oidc.redirectUri}" ` +
+      `as a Valid Redirect URI for client "${config.oidc.clientId}", and ensure ` +
+      `NEXT_PUBLIC_APP_URL scheme/host matches the public ingress URL (https, no trailing slash)`;
   } else if (out.idpError === 'invalid_scope') {
     out.hint = `IdP rejected the requested scopes ("${config.oidc.scopes}"): drop unknown scopes via OIDC_SCOPES`;
   } else if (out.idpError && !out.hint) {

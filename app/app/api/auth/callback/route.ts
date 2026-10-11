@@ -24,9 +24,14 @@ export async function GET(req: Request) {
     if ((err as Error)?.message?.includes('bail out of prerendering')) throw err;
     const details = describeAuthError(err);
     // Belt & braces: the IdP's verdict is also in the callback query string.
-    const params = new URL(req.url).searchParams;
+    const callbackUrl = new URL(req.url);
+    const params = callbackUrl.searchParams;
     const idpError = details.idpError ?? params.get('error') ?? undefined;
     const idpDescription = details.idpDescription ?? params.get('error_description') ?? undefined;
+    // Log expected vs actual redirect base (origin+path only — the query
+    // holds the single-use authorization code and must stay out of logs).
+    // A mismatch here is the classic invalid_grant "Incorrect redirect_uri".
+    const actualBase = `${callbackUrl.origin}${callbackUrl.pathname}`;
     console.error(
       JSON.stringify({
         ts: new Date().toISOString(),
@@ -38,6 +43,9 @@ export async function GET(req: Request) {
         ...(details.hostname ? { hostname: details.hostname } : {}),
         ...(idpError ? { idpError } : {}),
         ...(idpDescription ? { idpDescription } : {}),
+        clientId: config.oidc.clientId,
+        expectedRedirectUri: config.oidc.redirectUri,
+        callbackUri: actualBase,
         ...(details.hint ? { hint: details.hint } : {}),
       }),
     );

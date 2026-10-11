@@ -2,7 +2,9 @@ import type { V1Secret } from '@kubernetes/client-node';
 import { ANNOTATIONS, config } from './config';
 import { getCoreApi, getPodNamespace } from './k8s';
 import type { SessionUser } from './auth';
-import { namespaceAccessSchema, type NamespaceAccessMap } from './validation';
+import { auditLog, namespaceAccessSchema, type NamespaceAccessMap } from './validation';
+import { HttpError } from './http';
+import { isManagedByKrypton } from './secrets';
 
 /**
  * Hybrid authorization (for SSO users that do NOT exist in the cluster):
@@ -75,6 +77,32 @@ export async function getNamespaceAccessMap(): Promise<NamespaceAccessMap> {
   }
   cache = { at: now, data };
   return data;
+}
+
+/**
+ * Hide unmanaged (non-Krypton) secrets entirely when KRYPTON_MANAGED_ONLY=true:
+ * 404 as if the secret didn't exist, so K8s-level secrets created outside
+ * Krypton can't be viewed, edited, or deleted by accident. Call right after
+ * reading the live object, before the authz check.
+ */
+export function assertManagedVisible(
+  action: string,
+  user: SessionUser,
+  namespace: string,
+  name: string,
+  secret: V1Secret,
+): void {
+  if (config.managedOnly && !isManagedByKrypton(secret)) {
+    auditLog({
+      action,
+      user: user.email,
+      namespace,
+      name,
+      result: 'deny',
+      detail: 'unmanaged secret hidden (KRYPTON_MANAGED_ONLY=true)',
+    });
+    throw new HttpError(404, `Secret "${name}" not found in "${namespace}"`);
+  }
 }
 
 export function secretRules(secret: V1Secret): { groups: string[]; users: string[] } {

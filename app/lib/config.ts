@@ -39,6 +39,14 @@ export const config = {
   /** cap on stored historical snapshot Secrets per secret */
   historyLimit: Number.parseInt(process.env.KRYPTON_HISTORY_LIMIT ?? '20', 10) || 20,
 
+  /**
+   * When true (default), secrets WITHOUT the krypton.io/managed-by=krypton
+   * annotation are hidden entirely (excluded from lists, 404 on direct
+   * access) so K8s-level secrets created outside Krypton can't be edited or
+   * deleted by accident. Set false to restore the legacy adopt-on-edit flow.
+   */
+  managedOnly: bool(process.env.KRYPTON_MANAGED_ONLY, true),
+
   /** set true when etcd encryption-at-rest (e.g. aescbc) is enabled; else show warning */
   etcdEncrypted: bool(process.env.KRYPTON_ETCD_ENCRYPTED, false),
 

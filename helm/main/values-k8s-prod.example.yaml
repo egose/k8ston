@@ -25,6 +25,7 @@ app:
     KRYPTON_SCOPE: namespace
     KRYPTON_ETCD_ENCRYPTED: 'true' # only once apiserver encryption (aescbc) is on
     KRYPTON_IMPERSONATION: 'false'
+    KRYPTON_MANAGED_ONLY: 'true' # hide K8s secrets not created by Krypton
     KRYPTON_ADMIN_GROUPS: krypton-admin
     KRYPTON_ACCESS_CONFIGMAP: krypton-access
     OIDC_ISSUER: https://keycloak.example.com/realms/company

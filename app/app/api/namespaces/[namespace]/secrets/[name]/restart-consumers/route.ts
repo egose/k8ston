@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCoreApi, requestOptions } from '@/lib/k8s';
 import { HttpError, jsonError, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
-import { canAccessSecret } from '@/lib/authz';
+import { assertManagedVisible, canAccessSecret } from '@/lib/authz';
 import { restartConsumers } from '@/lib/secrets';
 import { auditLog } from '@/lib/validation';
 
@@ -20,6 +20,7 @@ export async function POST(_req: Request, ctx: Ctx) {
 
     const core = getCoreApi();
     const live = await core.readNamespacedSecret({ namespace, name }, requestOptions(user));
+    assertManagedVisible('secret.restart', user, namespace, name, live);
     if (!(await canAccessSecret(user, namespace, live))) {
       auditLog({ action: 'secret.restart', user: user.email, namespace, name, result: 'deny' });
       throw new HttpError(403, 'You are not allowed to modify this secret');

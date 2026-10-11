@@ -50,7 +50,7 @@ test('denied creation is explained upfront, not on submit', async ({ page }, tes
   // Dashboard: button disabled with an inline hint.
   await page.goto('/?ns=payments', { waitUntil: 'networkidle' });
   await expect(page.getByRole('button', { name: 'New secret' })).toBeDisabled();
-  await expect(page.getByText(/Namespace rules don.t allow you to create secrets/)).toBeVisible();
+  await expect(page.getByText(/not allowed to create secrets in this namespace/)).toBeVisible();
   await assertIconsInline(page, 'dashboard denied-create');
   await shot(page, testInfo, 'dashboard-denied-create');
 

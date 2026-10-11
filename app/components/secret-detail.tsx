@@ -51,8 +51,8 @@ export function SecretDetail({ namespace, name }: Props) {
       const total = res.deployments.length + res.statefulSets.length + res.daemonSets.length;
       toast.success(
         total === 0
-          ? 'No direct consumers found — nothing restarted'
-          : `Restarted ${total} workload${total === 1 ? '' : 's'}: ${[...res.deployments, ...res.statefulSets, ...res.daemonSets].join(', ')}`,
+          ? 'No apps using this secret were found — nothing restarted'
+          : `Restarted ${total} app${total === 1 ? '' : 's'}: ${[...res.deployments, ...res.statefulSets, ...res.daemonSets].join(', ')}`,
       );
     },
     onError: (err: Error) => toast.error(err.message),
@@ -92,9 +92,9 @@ export function SecretDetail({ namespace, name }: Props) {
           size="sm"
           loading={restart.isPending}
           onClick={() => restart.mutate()}
-          title="Rolling-restart Deployments/StatefulSets/DaemonSets that reference this secret"
+          title="Restart apps using this secret so they pick up the new values"
         >
-          <IconRocket size={14} /> Restart consumers
+          <IconRocket size={14} /> Restart apps
         </Button>
         <Button
           variant="primary"
@@ -126,7 +126,7 @@ export function SecretDetail({ namespace, name }: Props) {
             )}
             {!secret.managedByKrypton && (
               <Badge variant="warning" size="sm">
-                external (not created by Krypton)
+                created outside Krypton
               </Badge>
             )}
           </CardTitle>
@@ -134,10 +134,6 @@ export function SecretDetail({ namespace, name }: Props) {
         <CardContent className="flex flex-col gap-3 text-sm">
           {secret.description && <p className="text-muted-foreground">{secret.description}</p>}
           <div className="grid gap-2 text-xs sm:grid-cols-2">
-            <div>
-              <span className="text-muted-foreground">resource version: </span>
-              <code className="font-mono">{secret.resourceVersion}</code>
-            </div>
             <div>
               <span className="text-muted-foreground">created: </span>
               {secret.creationTimestamp ? new Date(secret.creationTimestamp).toLocaleString() : '—'}
@@ -178,8 +174,8 @@ export function SecretDetail({ namespace, name }: Props) {
 
       <Alert variant="info">
         <div className="text-xs">
-          Volume-mounted secrets sync into pods automatically (kubelet delay); pods using environment variables need a{' '}
-          <strong>Restart consumers</strong> rollout to pick up new values.
+          Some apps pick up changes automatically, others need a restart. If your app still shows old values after
+          editing, use <strong>Restart apps</strong> above.
         </div>
       </Alert>
 
@@ -195,8 +191,7 @@ export function SecretDetail({ namespace, name }: Props) {
           <DialogHeader>
             <DialogTitle>Delete {name}?</DialogTitle>
             <DialogDescription>
-              This deletes the Secret object and its Krypton snapshots from namespace <code>{namespace}</code>. This
-              cannot be undone.
+              This permanently deletes &ldquo;{name}&rdquo; and its version history. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

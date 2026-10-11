@@ -12,6 +12,7 @@ const publicConfig = (over: Record<string, unknown> = {}) => ({
   authDisabled: true,
   oidcConfigured: false,
   historyLimit: 20,
+  managedOnly: true,
   appNamespace: 'krypton',
   ...over,
 });

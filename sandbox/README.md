@@ -58,13 +58,17 @@ deploys to Kubernetes via `app/k8s/*.yaml`, not compose.
 | ---------------------- | ------------ | --------------------------------------- | ----- | --- | ----- | ----- |
 | `database-credentials` | krypton-test | annotation `allowed-groups: dev-team,…` | ✅    | ❌  | ❌    | ✅    |
 | `feature-flags`        | krypton-test | none (open by default)                  | ✅    | ✅  | ✅    | ✅    |
-| `legacy-external`      | krypton-test | none + unmanaged ("external" badge)     | ✅    | ✅  | ✅    | ✅    |
+| `legacy-external`      | krypton-test | none + unmanaged ("external" badge)¹    | ✅    | ✅  | ✅    | ✅    |
 | `frontend-api-keys`    | frontend-ns  | namespace fallback (`frontend-team`)    | ❌    | ❌  | ✅    | ✅    |
 
 `frontend-ns` is governed by `krypton-access` in `krypton-test` (the app's own
 namespace); `krypton-test` is deliberately absent from it (open by default).
 `api-server` (Deployment) consumes `database-credentials` via env and
 `feature-flags` via volume for restart-consumer testing.
+
+¹ The sandbox sets `KRYPTON_MANAGED_ONLY=false` so `legacy-external` stays
+visible for the adoption demo below. With the production default (`true`),
+unmanaged secrets are hidden entirely (excluded from lists, 404 on access).
 
 ## Test scenarios
 
@@ -80,7 +84,8 @@ Walk the matrix above by logging in as each user. Then:
   then `kubectl rollout history deploy/api-server -n krypton-test` shows a new
   revision with the fresh env value.
 - **Redaction**: `grep` the `pnpm dev` log — key names only, never values.
-- **External adoption**: editing `legacy-external` stamps Krypton annotations on it.
+- **External adoption** (`KRYPTON_MANAGED_ONLY=false` only): editing
+  `legacy-external` stamps Krypton annotations on it.
 
 ## Headless authz checks (no browser)
 

@@ -39,7 +39,7 @@ export function Dashboard() {
         <div className="flex-1" />
         {canCreate === false && (
           <span className="text-xs text-muted-foreground">
-            Namespace rules don&apos;t allow you to create secrets here.
+            You are not allowed to create secrets in this namespace.
           </span>
         )}
         <Button
@@ -48,7 +48,7 @@ export function Dashboard() {
           disabled={!namespace || canCreate === false}
           title={
             canCreate === false
-              ? `You are not allowed to create secrets in "${namespace}" (namespace rules in the krypton-access ConfigMap)`
+              ? `You are not allowed to create secrets in "${namespace}". Contact your administrator for access.`
               : undefined
           }
           onClick={() => namespace && router.push(`/secrets/${namespace}/new`)}

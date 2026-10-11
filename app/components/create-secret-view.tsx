@@ -32,9 +32,8 @@ export function CreateSecretView({ namespace }: { namespace: string }) {
       <div className="flex flex-col gap-3">
         <Alert variant="warning">
           <div>
-            You are not allowed to create secrets in &ldquo;{namespace}&rdquo;. Creation is controlled by the namespace
-            rules in the <code>krypton-access</code> ConfigMap — per-secret allowed groups/users only take effect{' '}
-            <em>after</em> a secret exists, so they can&apos;t grant creation.
+            You are not allowed to create secrets in &ldquo;{namespace}&rdquo;. Contact your administrator if you need
+            access.
           </div>
         </Alert>
         <div>

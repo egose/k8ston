@@ -13,6 +13,7 @@ export async function GET() {
     authDisabled: config.authDisabled,
     oidcConfigured: isOidcConfigured(),
     historyLimit: config.historyLimit,
+    managedOnly: config.managedOnly,
     appNamespace: config.appNamespace,
   });
 }

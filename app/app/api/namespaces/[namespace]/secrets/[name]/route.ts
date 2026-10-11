@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCoreApi, requestOptions } from '@/lib/k8s';
 import { HttpError, isConflict, jsonError, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
-import { canAccessSecret } from '@/lib/authz';
+import { assertManagedVisible, canAccessSecret } from '@/lib/authz';
 import { assertSizeOk, buildLiveSecret, createSnapshot, listVersions, toDetail } from '@/lib/secrets';
 import { auditLog, updateSecretSchema } from '@/lib/validation';
 
@@ -16,6 +16,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 
     const core = getCoreApi();
     const live = await core.readNamespacedSecret({ namespace, name }, requestOptions(user));
+    assertManagedVisible('secret.read', user, namespace, name, live);
     if (!(await canAccessSecret(user, namespace, live))) {
       auditLog({ action: 'secret.read', user: user.email, namespace, name, result: 'deny' });
       throw new HttpError(403, 'You are not allowed to view this secret');
@@ -37,6 +38,7 @@ export async function PUT(req: Request, ctx: Ctx) {
 
     const core = getCoreApi();
     const live = await core.readNamespacedSecret({ namespace, name }, requestOptions(user));
+    assertManagedVisible('secret.update', user, namespace, name, live);
     if (!(await canAccessSecret(user, namespace, live))) {
       auditLog({ action: 'secret.update', user: user.email, namespace, name, result: 'deny' });
       throw new HttpError(403, 'You are not allowed to modify this secret');
@@ -98,6 +100,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
 
     const core = getCoreApi();
     const live = await core.readNamespacedSecret({ namespace, name }, requestOptions(user));
+    assertManagedVisible('secret.delete', user, namespace, name, live);
     if (!(await canAccessSecret(user, namespace, live))) {
       auditLog({ action: 'secret.delete', user: user.email, namespace, name, result: 'deny' });
       throw new HttpError(403, 'You are not allowed to delete this secret');

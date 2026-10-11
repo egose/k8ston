@@ -3,7 +3,8 @@ import { getCoreApi, requestOptions } from '@/lib/k8s';
 import { HttpError, isConflict, jsonError, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
 import { canCreateInNamespace, filterVisibleSecrets } from '@/lib/authz';
-import { assertSizeOk, buildLiveSecret, isHistorySnapshot, toSummary } from '@/lib/secrets';
+import { assertSizeOk, buildLiveSecret, isHistorySnapshot, isManagedByKrypton, toSummary } from '@/lib/secrets';
+import { config } from '@/lib/config';
 import { auditLog, createSecretSchema } from '@/lib/validation';
 
 export async function GET(_req: Request, ctx: RouteContext<'/api/namespaces/[namespace]/secrets'>) {
@@ -14,7 +15,11 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/namespaces/[nam
 
     const core = getCoreApi();
     const res = await core.listNamespacedSecret({ namespace }, requestOptions(user));
-    const live = (res.items ?? []).filter((s) => !isHistorySnapshot(s));
+    // Hide history snapshots always; hide unmanaged (non-Krypton) secrets too
+    // when KRYPTON_MANAGED_ONLY=true so they can't be touched by accident.
+    const live = (res.items ?? []).filter(
+      (s) => !isHistorySnapshot(s) && (!config.managedOnly || isManagedByKrypton(s)),
+    );
     const visible = await filterVisibleSecrets(user, namespace, live);
     return NextResponse.json({
       namespace,

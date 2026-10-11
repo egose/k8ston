@@ -69,6 +69,11 @@ export function isHistorySnapshot(secret: V1Secret): boolean {
   return secret.metadata?.labels?.[LABELS.kind] === 'history';
 }
 
+/** True when the secret was created (or adopted) by Krypton. */
+export function isManagedByKrypton(secret: V1Secret): boolean {
+  return secret.metadata?.annotations?.[ANNOTATIONS.managedBy] === MANAGED_BY_VALUE;
+}
+
 export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
   const ann = secret.metadata?.annotations ?? {};
   return {
@@ -83,7 +88,7 @@ export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
     creationTimestamp: secret.metadata?.creationTimestamp as unknown as string | undefined,
     allowedGroups: csv(ann[ANNOTATIONS.allowedGroups]),
     allowedUsers: csv(ann[ANNOTATIONS.allowedUsers]),
-    managedByKrypton: ann[ANNOTATIONS.managedBy] === MANAGED_BY_VALUE,
+    managedByKrypton: isManagedByKrypton(secret),
   };
 }
 
@@ -94,7 +99,7 @@ export function toDetail(namespace: string, secret: V1Secret): SecretDetail {
 export function assertSizeOk(data: Record<string, string>): void {
   const size = estimateSecretSize(data);
   if (size > K8S_SECRET_SIZE_LIMIT) {
-    const err = new Error(`Secret payload (~${size} bytes) exceeds the Kubernetes 1MiB object limit`);
+    const err = new Error(`Secret is too large (~${size} bytes, maximum 1 MB)`);
     (err as Error & { status?: number }).status = 413;
     throw err;
   }
@@ -210,6 +215,12 @@ export function buildLiveSecret(args: {
       name,
       namespace,
       ...(live?.metadata?.resourceVersion ? { resourceVersion: live.metadata.resourceVersion } : {}),
+      // Stamp managed-by as a label too (kubectl -l parity); preserve any
+      // existing labels since replaceNamespacedSecret overwrites the object.
+      labels: {
+        ...(live?.metadata?.labels ?? {}),
+        [LABELS.managedBy]: MANAGED_BY_VALUE,
+      },
       annotations: {
         ...prevAnn,
         [ANNOTATIONS.managedBy]: MANAGED_BY_VALUE,
@@ -298,7 +309,7 @@ export async function restartConsumers(
     deployments: [],
     statefulSets: [],
     daemonSets: [],
-    note: 'Volume-mounted secrets sync automatically via kubelet (with delay); environment-variable consumers require this rollout restart to pick up new values.',
+    note: 'Some apps pick up secret changes automatically, others need a restart to see the new values.',
   };
 
   const [deps, stss, dss] = await Promise.all([

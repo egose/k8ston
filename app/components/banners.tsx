@@ -14,10 +14,9 @@ export function Banners() {
         <Alert variant="warning">
           <IconAlertTriangle size={16} />
           <div>
-            <strong>etcd encryption at rest is not enabled.</strong>{' '}
+            <strong>Secrets on this deployment are not encrypted at rest.</strong>{' '}
             <span className="opacity-90">
-              Secrets are only base64-encoded in etcd — enable the API-server encryption provider (e.g. aescbc on
-              OpenShift) for true cryptographic protection.
+              Avoid storing highly sensitive data — administrators should enable encryption at rest.
             </span>
           </div>
         </Alert>

@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { IconBox } from '@tabler/icons-react';
-import { Badge } from '@egose/shadcn-theme/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -35,11 +34,6 @@ export function NamespaceSelector({ value, onChange }: Props) {
           ))}
         </SelectContent>
       </Select>
-      {data && (
-        <Badge variant={data.scope === 'cluster' ? 'info' : 'secondary'}>
-          {data.scope === 'cluster' ? 'cluster scope' : 'namespace scope'}
-        </Badge>
-      )}
     </div>
   );
 }

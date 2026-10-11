@@ -18,13 +18,11 @@ export function LoginView() {
           <IconShieldLock size={24} />
         </span>
         <h1 className="text-2xl font-semibold tracking-tight">Sign in to Krypton</h1>
-        <p className="text-sm text-muted-foreground">
-          Lightweight secret manager backed directly by Kubernetes Secrets — no database, no volumes.
-        </p>
+        <p className="text-sm text-muted-foreground">Securely store and share secrets with your team.</p>
       </div>
       {authError && (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          SSO sign-in failed{idpError ? ` (${idpError})` : ''}. Check the OIDC configuration and try again.
+          SSO sign-in failed{idpError ? ` (${idpError})` : ''}. Please try again or contact your administrator.
         </p>
       )}
       <Card>
@@ -33,11 +31,10 @@ export function LoginView() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <a href="/api/auth/login" className={buttonVariants({ variant: 'primary' })}>
-            <IconKey size={16} /> Continue with SSO (OIDC)
+            <IconKey size={16} /> Continue with SSO
           </a>
           <p className="text-xs text-muted-foreground">
-            Works with Keycloak, Entra ID, Okta, Google, or any OIDC provider. Users don&apos;t need cluster credentials
-            — access is enforced from SSO groups via secret annotations.
+            Use your company account to continue. If you can&apos;t access a secret, contact your team admin.
           </p>
           <Link href="/" className="text-center text-xs text-muted-foreground underline-offset-4 hover:underline">
             Back to dashboard

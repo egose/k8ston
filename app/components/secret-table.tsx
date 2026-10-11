@@ -91,7 +91,7 @@ export function SecretTable({ namespace, secrets }: { namespace: string; secrets
         </Table>
       </div>
       <p className="text-xs text-muted-foreground">
-        {secrets.length} secret{secrets.length === 1 ? '' : 's'} · historical snapshots are hidden from this list
+        {secrets.length} secret{secrets.length === 1 ? '' : 's'}
       </p>
     </div>
   );

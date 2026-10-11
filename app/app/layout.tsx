@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Krypton — Kubernetes Secret Manager',
+  title: 'Krypton — Secret Manager',
   description:
-    'Lightweight secret manager backed directly by Kubernetes Secret objects. No database, no volumes — SSO login, annotation-based access control, and versioned rollbacks.',
+    'Securely store and share secrets with your team. SSO login, team-based access control, and version history.',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
@@ -34,8 +34,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           <Banners />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
           <footer className="border-t py-4 text-center text-xs text-muted-foreground">
-            Krypton · stateless UI over native K8s Secrets · values stay base64 in etcd unless encryption at rest is
-            enabled
+            Krypton · if you need access to a secret, contact your administrator
           </footer>
         </Providers>
       </body>

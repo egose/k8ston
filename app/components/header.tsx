@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconKey, IconLogout, IconShieldLock } from '@tabler/icons-react';
 import { Button, buttonVariants } from '@egose/shadcn-theme/components/ui/button';
-import { Badge } from '@egose/shadcn-theme/components/ui/badge';
 import { api } from '@/lib/api-client';
 
 export function Header() {
@@ -33,9 +32,6 @@ export function Header() {
             <IconShieldLock size={18} />
           </span>
           <span className="text-lg tracking-tight">Krypton</span>
-          <Badge variant="secondary" className="hidden text-[10px] sm:inline-flex">
-            K8s-native secrets
-          </Badge>
         </Link>
         <div className="flex-1" />
         {user ? (

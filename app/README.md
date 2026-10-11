@@ -66,6 +66,13 @@ with explicit annotations is decided by those alone; otherwise the namespace rul
 apply; with no rules anywhere the secret is visible to all authenticated users
 (open by default, restricted once rules are added). Until any admin is configured,
 every authenticated user is treated as admin (bootstrap mode — set admins promptly).
+
+**Managed-only mode** (default, `KRYPTON_MANAGED_ONLY=true`): secrets _without_
+`krypton.io/managed-by: krypton` are hidden entirely — excluded from lists, 404
+on direct access (read, edit, delete, history, restore, restart) — so K8s-level
+secrets created outside Krypton can't be touched by accident. Set
+`KRYPTON_MANAGED_ONLY=false` to show everything again (legacy adopt-on-edit:
+saving an external secret stamps Krypton annotations onto it).
 Creation is special: a new secret has no annotations yet, so creating in a
 namespace is decided by the namespace rules alone — the per-secret allowed
 groups/users you set in the form only take effect _after_ the secret exists
@@ -137,6 +144,7 @@ and register the OIDC redirect URI (`https://<host>/api/auth/callback`).
 | `KRYPTON_SCOPE`                                      | `namespace`                                           | `namespace` (own NS only) or `cluster`                           |
 | `KRYPTON_NAMESPACES`                                 | —                                                     | comma allowlist for cluster scope                                |
 | `KRYPTON_HISTORY_LIMIT`                              | `20`                                                  | snapshots kept per secret                                        |
+| `KRYPTON_MANAGED_ONLY`                               | `true`                                                | hide secrets without `managed-by=krypton` (404)                  |
 | `KRYPTON_ETCD_ENCRYPTED`                             | `false`                                               | set `true` once apiserver encryption is on                       |
 | `KRYPTON_IMPERSONATION`                              | `false`                                               | forward SSO identity to K8s RBAC                                 |
 | `KRYPTON_ADMIN_GROUPS/USERS`                         | —                                                     | bootstrap admins (empty = everyone, lock down!)                  |

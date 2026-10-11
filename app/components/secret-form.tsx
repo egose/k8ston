@@ -58,27 +58,27 @@ const SECRET_TYPE_PRESETS = [
   { value: 'Opaque', hint: 'Arbitrary key-value pairs.', keys: [] },
   {
     value: 'kubernetes.io/basic-auth',
-    hint: 'Requires keys username + password (enforced by Kubernetes).',
+    hint: 'Requires keys username + password.',
     keys: ['username', 'password'],
   },
   {
     value: 'kubernetes.io/ssh-auth',
-    hint: 'Requires key ssh-privatekey (enforced by Kubernetes).',
+    hint: 'Requires key ssh-privatekey.',
     keys: ['ssh-privatekey'],
   },
   {
     value: 'kubernetes.io/tls',
-    hint: 'Requires keys tls.crt + tls.key (enforced by Kubernetes).',
+    hint: 'Requires keys tls.crt + tls.key.',
     keys: ['tls.crt', 'tls.key'],
   },
   {
     value: 'kubernetes.io/dockerconfigjson',
-    hint: 'Requires key .dockerconfigjson (enforced by Kubernetes).',
+    hint: 'Requires key .dockerconfigjson.',
     keys: ['.dockerconfigjson'],
   },
   {
     value: 'kubernetes.io/dockercfg',
-    hint: 'Requires key .dockercfg (enforced by Kubernetes).',
+    hint: 'Requires key .dockercfg.',
     keys: ['.dockercfg'],
   },
 ] as const;
@@ -199,7 +199,7 @@ export function SecretForm({ mode, namespace, initial }: Props) {
       data[k] = e.value;
     }
     if (overLimit) {
-      toast.error('Payload exceeds the Kubernetes 1MiB secret limit');
+      toast.error('Secret is too large (maximum 1 MB)');
       return;
     }
     // Updates preserve the live type server-side, so validate against that in
@@ -235,7 +235,7 @@ export function SecretForm({ mode, namespace, initial }: Props) {
           allowedUsers: parseCsv(values.allowedUsers),
           resourceVersion: initial.resourceVersion,
         });
-        toast.success(`Secret "${initial.name}" updated — snapshot v${initial.version || 1} kept for rollback`);
+        toast.success(`Secret "${initial.name}" updated — previous version saved to history`);
         router.push(`/secrets/${namespace}/${initial.name}`);
         router.refresh();
       }
@@ -256,7 +256,7 @@ export function SecretForm({ mode, namespace, initial }: Props) {
       {conflict && mode === 'edit' && (
         <Alert variant="warning">
           <div>
-            This secret changed since you loaded it (resourceVersion mismatch).{' '}
+            This secret changed since you loaded it.{' '}
             <button type="button" className="font-medium underline" onClick={() => router.refresh()}>
               Reload latest
             </button>{' '}
@@ -345,15 +345,13 @@ export function SecretForm({ mode, namespace, initial }: Props) {
               <Label htmlFor="allowedGroups">Allowed SSO groups (comma-separated)</Label>
               <Input id="allowedGroups" {...form.register('allowedGroups')} placeholder="dev-team, database-admins" />
               <p className="text-xs text-muted-foreground">
-                Stored as annotation <code>krypton.io/allowed-groups</code>. Empty = namespace default.
+                SSO groups that can access this secret. Leave empty to use this namespace&apos;s default.
               </p>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="allowedUsers">Allowed users (comma-separated emails)</Label>
               <Input id="allowedUsers" {...form.register('allowedUsers')} placeholder="alice@company.com" />
-              <p className="text-xs text-muted-foreground">
-                Stored as annotation <code>krypton.io/allowed-users</code>.
-              </p>
+              <p className="text-xs text-muted-foreground">Individual users (by email) that can access this secret.</p>
             </div>
           </div>
         </CardContent>
@@ -429,7 +427,7 @@ export function SecretForm({ mode, namespace, initial }: Props) {
             </Button>
           </div>
           <p className={`text-xs ${overLimit ? 'font-medium text-destructive' : 'text-muted-foreground'}`}>
-            Estimated payload ~{(payloadBytes / 1024).toFixed(1)} KiB of 1024 KiB K8s limit.
+            Size: ~{(payloadBytes / 1024).toFixed(1)} KB of 1 MB maximum.
           </p>
           <div className="flex flex-col gap-1.5">
             <Label>Bulk paste (optional, KEY=value per line)</Label>

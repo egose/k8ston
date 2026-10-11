@@ -86,22 +86,82 @@ export function patchOptions(user: SessionUser | null): K8sRequestOptions {
 }
 
 /**
+ * Extract the human-readable message from a K8s Status body, whether the
+ * client handed us a parsed object, a JSON string, or a Buffer.
+ * client-node v2's `getBodyAsAny()` returns raw text, so `ApiException.body`
+ * is usually a string like '{"kind":"Status","message":"secrets is
+ * forbidden: ...","reason":"Forbidden",...}' — not an object.
+ */
+function extractBodyMessage(body: unknown): string | undefined {
+  if (body === null || body === undefined) return undefined;
+  if (typeof body === 'object' && !(body instanceof Uint8Array) && !Buffer.isBuffer(body)) {
+    const b = body as { message?: unknown; reason?: unknown };
+    if (typeof b.message === 'string' && b.message) return b.message;
+    if (typeof b.reason === 'string' && b.reason) return b.reason;
+    return undefined;
+  }
+  let text: string | undefined;
+  if (typeof body === 'string') text = body;
+  else if (Buffer.isBuffer(body)) text = body.toString('utf8');
+  else if (body instanceof Uint8Array) text = Buffer.from(body).toString('utf8');
+  if (!text) return undefined;
+  text = text.trim();
+  if (!text) return undefined;
+  if (text.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text) as { message?: unknown; reason?: unknown };
+      if (typeof parsed.message === 'string' && parsed.message) return parsed.message;
+      if (typeof parsed.reason === 'string' && parsed.reason) return parsed.reason;
+    } catch {
+      // not JSON — fall through to raw text
+    }
+  }
+  return text;
+}
+
+/**
  * Normalize K8s client errors into { status, message }.
- * ApiException messages embed raw headers — extract the human-readable
- * "Message:" line (or API body message) so responses stay clean.
+ * ApiException messages embed raw headers — extract the API Status message
+ * (or the "Message:" line) so responses stay clean.
  * All K8s failures are prefixed so the UI can tell them apart from
  * app-session 401s (which trigger a login bounce).
+ *
+ * client-node v2 throws `ApiException(code, "Unknown API Status Code!", ...)`
+ * for every non-200/non-401 response, so the Message line is useless — the
+ * real reason (e.g. the RBAC "forbidden" detail) lives in `body` or in the
+ * embedded "Body:" JSON of `err.message`.
  */
 export function toK8sError(err: unknown): { status: number; message: string } {
   if (err instanceof k8s.ApiException) {
-    const body = err.body as { message?: string; reason?: string } | undefined;
-    const fromBody = body?.message ?? body?.reason;
-    const fromText = /Message:\s*(.+)/.exec(err.message ?? '')?.[1]?.trim();
-    const detail = fromBody ?? fromText ?? 'request failed';
-    return {
-      status: err.code ?? 500,
-      message: `Kubernetes API (${err.code ?? 'error'}): ${detail.slice(0, 300)}`,
-    };
+    const fromBody = extractBodyMessage(err.body);
+    // Fallback: parse the "Body:" JSON embedded in err.message
+    // ("HTTP-Code: X\nMessage: ...\nBody: {...}\nHeaders: {...}").
+    // Body is JSON.stringify(rawBody); rawBody is usually a JSON string
+    // already, so unquote once before extracting the Status message.
+    let fromText: string | undefined;
+    const msg = err.message ?? '';
+    const bodyLine = /Body:\s*([\s\S]+?)\s*\nHeaders:/.exec(msg)?.[1] ?? /Body:\s*(.+)\s*$/.exec(msg)?.[1];
+    if (bodyLine) {
+      const trimmed = bodyLine.trim();
+      let unwrapped: unknown = trimmed;
+      try {
+        unwrapped = JSON.parse(trimmed);
+      } catch {
+        // keep raw
+      }
+      fromText = extractBodyMessage(unwrapped) ?? extractBodyMessage(trimmed);
+    }
+    if (!fromText) {
+      const messageLine = /Message:\s*(.+)/.exec(msg)?.[1]?.trim();
+      if (messageLine && messageLine !== 'Unknown API Status Code!') fromText = messageLine;
+    }
+    const detail = fromBody ?? fromText ?? `request failed (HTTP ${err.code ?? 'error'})`;
+    const status = err.code ?? 500;
+    let message = `Kubernetes API (${err.code ?? 'error'}): ${detail.slice(0, 300)}`;
+    if (status === 403) {
+      message += ' — Access denied. Contact your administrator (the app is missing Kubernetes RBAC permission).';
+    }
+    return { status, message };
   }
   if (err instanceof Error) return { status: 500, message: err.message.slice(0, 300) };
   return { status: 500, message: 'Unknown Kubernetes error' };

@@ -9,6 +9,7 @@ export interface PublicConfig {
   authDisabled: boolean;
   oidcConfigured: boolean;
   historyLimit: number;
+  managedOnly: boolean;
   appNamespace: string;
 }
 

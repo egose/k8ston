@@ -31,7 +31,7 @@ export function slugifyK8sName(value: string): string {
 export const secretDataSchema = z
   .record(z.string(), z.string())
   .refine((data) => estimateSecretSize(data) <= K8S_SECRET_SIZE_LIMIT, {
-    message: `Secret payload exceeds the Kubernetes 1MiB limit (${K8S_SECRET_SIZE_LIMIT} bytes)`,
+    message: 'Secret is too large (maximum 1 MB)',
   });
 
 export const createSecretSchema = z.object({

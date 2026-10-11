@@ -60,12 +60,13 @@ export function VersionHistory({ namespace, name, currentKeys, onRestored }: Pro
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <p className="text-xs text-muted-foreground">
-          Kubernetes overwrites secrets in place — Krypton keeps a restorable snapshot (a separate Secret object) before
-          every change.
+          A copy is saved before every change, so you can restore an earlier version at any time.
         </p>
         {isLoading && <p className="text-sm text-muted-foreground">Loading history…</p>}
         {!isLoading && versions.length === 0 && (
-          <p className="text-sm text-muted-foreground">No snapshots yet. The first edit will create v1 here.</p>
+          <p className="text-sm text-muted-foreground">
+            No previous versions yet. They&apos;ll appear here after the first edit.
+          </p>
         )}
         {versions.map((v) => {
           const added = v.keys.filter((k) => !currentKeys.includes(k));
@@ -87,7 +88,7 @@ export function VersionHistory({ namespace, name, currentKeys, onRestored }: Pro
               </div>
               {(added.length > 0 || removed.length > 0) && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {added.length > 0 && <>keys only in snapshot: {added.join(', ')} </>}
+                  {added.length > 0 && <>keys only in this version: {added.join(', ')} </>}
                   {removed.length > 0 && <>keys removed since: {removed.join(', ')}</>}
                 </p>
               )}
@@ -109,8 +110,8 @@ export function VersionHistory({ namespace, name, currentKeys, onRestored }: Pro
           <DialogHeader>
             <DialogTitle>Restore v{confirm?.version}?</DialogTitle>
             <DialogDescription>
-              The current state will first be snapshotted, so this rollback is itself reversible. Consumers using
-              environment variables will need a rollout restart afterwards.
+              Your current version will be saved first, so you can undo this restore. Some apps may need a restart to
+              pick up the restored values.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

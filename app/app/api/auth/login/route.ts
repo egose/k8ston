@@ -20,7 +20,10 @@ export async function GET() {
   }
   if (!isOidcConfigured()) {
     return NextResponse.json(
-      { error: 'OIDC is not configured. Set OIDC_ISSUER/OIDC_CLIENT_ID or AUTH_DISABLED=true for local dev.' },
+      {
+        error:
+          'Sign-in is not configured. Contact your administrator. (Operator: set OIDC_ISSUER/OIDC_CLIENT_ID, or AUTH_DISABLED=true for local dev.)',
+      },
       { status: 501 },
     );
   }
@@ -47,7 +50,8 @@ export async function GET() {
     );
     return NextResponse.json(
       {
-        error: 'OIDC discovery failed: the app cannot reach the identity provider.',
+        error:
+          'Sign-in is temporarily unavailable: the app cannot reach the identity provider. Please try again later or contact your administrator.',
         issuer: config.oidc.issuer,
         ...(details.code ? { code: details.code } : {}),
         ...(details.hint ? { hint: details.hint } : {}),

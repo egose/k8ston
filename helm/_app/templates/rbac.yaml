@@ -22,9 +22,11 @@ rules:
 - apiGroups: ['']
   resources: [namespaces]
   verbs: [get, list, watch]
+{{- if .Values.restartEnabled }}
 - apiGroups: [apps]
   resources: [deployments, statefulsets, daemonsets]
   verbs: [get, list, watch, patch]
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -59,10 +61,12 @@ rules:
 - apiGroups: ['']
   resources: [configmaps]
   verbs: [get, list, watch]
+{{- if .Values.restartEnabled }}
   # Consumer restart (rollout via pod-template annotation patch)
 - apiGroups: [apps]
   resources: [deployments, statefulsets, daemonsets]
   verbs: [get, list, watch, patch]
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -94,9 +98,11 @@ rules:
 - apiGroups: ['']
   resources: [configmaps]
   verbs: [get, list, watch]
+{{- if $.Values.restartEnabled }}
 - apiGroups: [apps]
   resources: [deployments, statefulsets, daemonsets]
   verbs: [get, list, watch, patch]
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

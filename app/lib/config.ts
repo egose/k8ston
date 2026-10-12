@@ -58,6 +58,15 @@ export const config = {
    */
   impersonation: bool(process.env.KRYPTON_IMPERSONATION, false),
 
+  /**
+   * When true, the "Restart apps" feature is enabled: the UI shows the
+   * button + hint and the restart-consumers API rolls workloads.
+   * Default false (least privilege): the button + hint are hidden, the API
+   * returns 403, and the ServiceAccount needs no `apps` permissions (drop
+   * the deployments/statefulsets/daemonsets rule from the Role/ClusterRole).
+   */
+  restartEnabled: bool(process.env.KRYPTON_RESTART_ENABLED, false),
+
   authDisabled: bool(process.env.AUTH_DISABLED, false),
   sessionSecret: process.env.SESSION_SECRET ?? 'dev-only-insecure-secret-change-me-32chars!!',
   sessionMaxAgeSec: Number.parseInt(process.env.SESSION_MAX_AGE ?? '28800', 10) || 28800, // 8h

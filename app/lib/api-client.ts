@@ -10,6 +10,7 @@ export interface PublicConfig {
   oidcConfigured: boolean;
   historyLimit: number;
   managedOnly: boolean;
+  restartEnabled: boolean;
   appNamespace: string;
 }
 

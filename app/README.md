@@ -91,8 +91,11 @@ instead of the ServiceAccount's. Default is `false` (hybrid mode above).
 - History snapshots are labeled `krypton.io/history-of=<name>` /
   `krypton.io/kind=history` and pruned to `KRYPTON_HISTORY_LIMIT` (default 20).
 - Pods with **volume-mounted** secrets sync automatically (kubelet delay); pods
-  using **environment variables** need a rollout — use _Restart consumers_, which
+  using **environment variables** need a rollout — use _Restart apps_, which
   patches Deployments/StatefulSets/DaemonSets referencing the secret.
+  Disabled by default (`KRYPTON_RESTART_ENABLED=false`: UI button + hint
+  hidden, API returns 403, no `apps` permissions needed) — set it to `true`
+  to opt in, keeping the `apps` rule in the Role/ClusterRole.
 
 ## Local development
 
@@ -147,6 +150,7 @@ and register the OIDC redirect URI (`https://<host>/api/auth/callback`).
 | `KRYPTON_MANAGED_ONLY`                               | `true`                                                | hide secrets without `managed-by=krypton` (404)                  |
 | `KRYPTON_ETCD_ENCRYPTED`                             | `false`                                               | set `true` once apiserver encryption is on                       |
 | `KRYPTON_IMPERSONATION`                              | `false`                                               | forward SSO identity to K8s RBAC                                 |
+| `KRYPTON_RESTART_ENABLED`                            | `false`                                               | `true` enables "Restart apps" (needs apps RBAC rule)             |
 | `KRYPTON_ADMIN_GROUPS/USERS`                         | —                                                     | bootstrap admins (empty = everyone, lock down!)                  |
 | `KRYPTON_ACCESS_CONFIGMAP`                           | `krypton-access`                                      | namespace-rules ConfigMap name                                   |
 | `AUTH_DISABLED`                                      | `false`                                               | `true` = mock admin, local dev only                              |

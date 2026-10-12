@@ -68,6 +68,10 @@ spec:
                   fieldPath: metadata.namespace
             {{- end }}
           {{- $env := merge ($global.env | default dict) (.Values.env | default dict) -}}
+            {{- if not (hasKey $env "KRYPTON_RESTART_ENABLED") }}
+            - name: KRYPTON_RESTART_ENABLED
+              value: {{ .Values.restartEnabled | quote }}
+            {{- end }}
             {{- range $k, $v := $env }}
             - name: {{ $k | quote }}
               value: {{ $v | quote }}

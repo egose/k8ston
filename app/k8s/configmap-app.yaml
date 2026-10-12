@@ -14,6 +14,7 @@ data:
   KRYPTON_MANAGED_ONLY: 'true' # hide secrets without krypton.io/managed-by=krypton (excluded from lists, 404 on access)
   KRYPTON_ETCD_ENCRYPTED: 'false' # set true once apiserver encryption (aescbc) is on
   KRYPTON_IMPERSONATION: 'false' # true only if the API server trusts the same OIDC issuer
+  KRYPTON_RESTART_ENABLED: 'false' # set true to enable "Restart apps" (button + API); then also uncomment the apps rule in role.yaml
   KRYPTON_ADMIN_GROUPS: krypton-admin
   KRYPTON_ADMIN_USERS: ''
   KRYPTON_ANNOTATION_PREFIX: krypton.io

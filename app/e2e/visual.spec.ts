@@ -35,6 +35,7 @@ test('secret detail renders actions, values and history', async ({ page }, testI
   await mockApi(page, { loggedIn: true });
   await page.goto('/secrets/demo/app-config', { waitUntil: 'networkidle' });
   await expect(page.getByText('Version history')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Restart apps' })).toBeVisible();
   await assertIconsInline(page, 'secret detail');
   await shot(page, testInfo, 'detail');
 
@@ -43,6 +44,16 @@ test('secret detail renders actions, values and history', async ({ page }, testI
   await page.getByRole('button', { name: 'Restore', exact: true }).first().click();
   await expect(page.getByRole('button', { name: /Restore v\d/ })).toBeVisible();
   await shot(page, testInfo, 'detail-restore-dialog', false);
+});
+
+test('secret detail hides restart UI when KRYPTON_RESTART_ENABLED=false', async ({ page }, testInfo) => {
+  await mockApi(page, { loggedIn: true, restartEnabled: false });
+  await page.goto('/secrets/demo/app-config', { waitUntil: 'networkidle' });
+  await expect(page.getByText('Version history')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Restart apps' })).toHaveCount(0);
+  await expect(page.getByText(/still shows old values/)).toHaveCount(0);
+  await assertIconsInline(page, 'secret detail restart-disabled');
+  await shot(page, testInfo, 'detail-restart-disabled');
 });
 
 test('denied creation is explained upfront, not on submit', async ({ page }, testInfo) => {

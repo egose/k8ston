@@ -13,6 +13,7 @@ const publicConfig = (over: Record<string, unknown> = {}) => ({
   oidcConfigured: false,
   historyLimit: 20,
   managedOnly: true,
+  restartEnabled: true,
   appNamespace: 'krypton',
   ...over,
 });
@@ -78,9 +79,12 @@ export async function mockApi(
     loggedIn,
     etcdEncrypted = false,
     authDisabled = true,
-  }: { loggedIn: boolean; etcdEncrypted?: boolean; authDisabled?: boolean },
+    restartEnabled = true,
+  }: { loggedIn: boolean; etcdEncrypted?: boolean; authDisabled?: boolean; restartEnabled?: boolean },
 ) {
-  await page.route('**/api/config', (r) => r.fulfill({ json: publicConfig({ etcdEncrypted, authDisabled }) }));
+  await page.route('**/api/config', (r) =>
+    r.fulfill({ json: publicConfig({ etcdEncrypted, authDisabled, restartEnabled }) }),
+  );
   await page.route('**/api/auth/me', (r) =>
     loggedIn
       ? r.fulfill({ json: { user: devUser } })

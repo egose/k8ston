@@ -80,9 +80,10 @@ Walk the matrix above by logging in as each user. Then:
 - **409 conflicts**: open the same secret's edit page in two tabs/sessions, save
   both — the second gets the resourceVersion-mismatch prompt.
 - **1 MiB guard**: paste a large value — the form meter blocks; forced API calls 413.
-- **Restart consumers**: edit `database-credentials`, hit _Restart consumers_,
+- **Restart consumers**: edit `database-credentials`, hit _Restart apps_,
   then `kubectl rollout history deploy/api-server -n krypton-test` shows a new
-  revision with the fresh env value.
+  revision with the fresh env value (the sandbox sets
+  `KRYPTON_RESTART_ENABLED=true`; the default is `false`).
 - **Redaction**: `grep` the `pnpm dev` log — key names only, never values.
 - **External adoption** (`KRYPTON_MANAGED_ONLY=false` only): editing
   `legacy-external` stamps Krypton annotations on it.

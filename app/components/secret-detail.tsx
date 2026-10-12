@@ -36,6 +36,11 @@ export function SecretDetail({ namespace, name }: Props) {
     queryFn: () => api.getSecret(namespace, name),
   });
 
+  // Feature flag (KRYPTON_RESTART_ENABLED): shows the restart button + hint.
+  // Defaults to false while loading — matches the server default.
+  const { data: publicConfig } = useQuery({ queryKey: ['public-config'], queryFn: api.config });
+  const restartEnabled = publicConfig?.restartEnabled ?? false;
+
   const del = useMutation({
     mutationFn: () => api.deleteSecret(namespace, name),
     onSuccess: () => {
@@ -86,16 +91,18 @@ export function SecretDetail({ namespace, name }: Props) {
         <Button variant="secondary" appearance="outline" size="sm" onClick={() => refetch()}>
           <IconRefresh size={14} /> Reload
         </Button>
-        <Button
-          variant="info"
-          appearance="outline"
-          size="sm"
-          loading={restart.isPending}
-          onClick={() => restart.mutate()}
-          title="Restart apps using this secret so they pick up the new values"
-        >
-          <IconRocket size={14} /> Restart apps
-        </Button>
+        {restartEnabled && (
+          <Button
+            variant="info"
+            appearance="outline"
+            size="sm"
+            loading={restart.isPending}
+            onClick={() => restart.mutate()}
+            title="Restart apps using this secret so they pick up the new values"
+          >
+            <IconRocket size={14} /> Restart apps
+          </Button>
+        )}
         <Button
           variant="primary"
           appearance="outline"
@@ -172,12 +179,14 @@ export function SecretDetail({ namespace, name }: Props) {
         </CardContent>
       </Card>
 
-      <Alert variant="info">
-        <div className="text-xs">
-          Some apps pick up changes automatically, others need a restart. If your app still shows old values after
-          editing, use <strong>Restart apps</strong> above.
-        </div>
-      </Alert>
+      {restartEnabled && (
+        <Alert variant="info">
+          <div className="text-xs">
+            Some apps pick up changes automatically, others need a restart. If your app still shows old values after
+            editing, use <strong>Restart apps</strong> above.
+          </div>
+        </Alert>
+      )}
 
       <VersionHistory
         namespace={namespace}

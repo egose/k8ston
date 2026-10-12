@@ -56,6 +56,14 @@ extraEnv: []
 #     fieldRef:
 #       fieldPath: status.podIP
 
+# "Restart apps" feature: rolling restart of Deployments/StatefulSets/
+# DaemonSets consuming a secret. Sets KRYPTON_RESTART_ENABLED in the
+# container (unless already present in `env`/`global.env`) AND gates the
+# `apps` RBAC rule below. Default false (least privilege): the UI button is
+# hidden and the API returns 403. Set true when restarts are not handled
+# externally (e.g. Reloader/Stakater or GitOps rollouts).
+restartEnabled: false
+
 # Kubernetes RBAC for the app ServiceAccount (see app/k8s/role.yaml and
 # app/k8s/clusterrole.yaml). Must match KRYPTON_SCOPE in `env`: `namespace`
 # manages secrets in its own namespace(s) only, `cluster` is a centralized

@@ -14,6 +14,7 @@ export async function GET() {
     oidcConfigured: isOidcConfigured(),
     historyLimit: config.historyLimit,
     managedOnly: config.managedOnly,
+    restartEnabled: config.restartEnabled,
     appNamespace: config.appNamespace,
   });
 }

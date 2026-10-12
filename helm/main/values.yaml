@@ -46,6 +46,11 @@ app:
     create: true
     scope: namespace
 
+  # "Restart apps" feature (KRYPTON_RESTART_ENABLED + the apps RBAC rule for
+  # deployments/statefulsets/daemonsets). Default false (least privilege):
+  # the UI button is hidden and the API returns 403. Set true to enable.
+  restartEnabled: false
+
   # Namespace-level ownership fallback ConfigMap (krypton-access / access.json).
   # Per-secret annotations override these rules (see app/k8s/configmap-access.yaml).
   accessConfig:

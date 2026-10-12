@@ -1,0 +1,96 @@
+---
+sidebar_label: Security Model
+sidebar_position: 3
+---
+
+# Security Model
+
+Read this before production. Krypton makes secret management convenient, but it
+cannot make Kubernetes Secrets something they are not.
+
+## The etcd truth
+
+Out of the box, Kubernetes Secrets are **base64-encoded, not encrypted**, in etcd —
+anyone with etcd or broad API access can decode them. Krypton therefore:
+
+- **Never logs secret values.** Audit logs record key _names_ only
+  (`auditLog()` in `lib/validation.ts`); grep the logs to prove it.
+- **Masks values in the UI** until explicitly revealed per key.
+- **Validates the 1 MiB per-object limit** client- and server-side (the form
+  meter blocks; forced API calls get `413`).
+- **Shows a warning banner** until you confirm etcd encryption-at-rest is enabled
+  (`KRYPTON_ETCD_ENCRYPTED=true` once the API server uses an encryption provider
+  such as `aescbc` on OpenShift).
+
+Secrets additionally benefit from strict RBAC, redacted `kubectl` output, and
+`tmpfs` (RAM-backed) volume mounts that never touch node disk.
+
+:::warning
+`KRYPTON_ETCD_ENCRYPTED` is an attestation, not a detector. Set it to `true`
+only after you have verified the API server encrypts Secret resources at rest.
+:::
+
+## Authentication guarantees
+
+- Sessions are stateless HS256 JWTs (`krypton_session` cookie, `HttpOnly`,
+  `Secure` in production, `SameSite=Lax`, 8-hour default). There is no session
+  store to steal — but `SESSION_SECRET` must be ≥32 random characters
+  (`openssl rand -hex 32`) and must **never** be committed.
+- OIDC uses discovery + PKCE (`openid-client`). The issuer must exactly match the
+  discovery document's `issuer` field.
+- `http://` issuers fail closed: loopback only, `OIDC_ALLOW_HTTP=true` only, and
+  **rejected entirely when `NODE_ENV=production`**. This exists for sandbox Dex,
+  not for real IdPs.
+- `AUTH_DISABLED=true` skips SSO with a mock admin. Local development only. The
+  [public config endpoint](/api/config/) exposes `authDisabled` so deployments
+  can assert it is `false`.
+
+## Authorization rules
+
+1. Admins (`KRYPTON_ADMIN_GROUPS`/`KRYPTON_ADMIN_USERS`) always pass.
+2. A secret with explicit annotations is decided by those alone (override).
+3. Otherwise the namespace fallback in ConfigMap `krypton-access` applies.
+4. With no rules anywhere, the secret is visible to all authenticated users
+   (open by default, restricted once rules are added).
+
+Until any admin is configured, **every authenticated user is treated as admin**
+(bootstrap mode) — set admins promptly. See
+[Authorization](/guides/authorization/) for the full matrix.
+
+**Managed-only mode** (default, `KRYPTON_MANAGED_ONLY=true`): secrets _without_
+`krypton.io/managed-by: krypton` are hidden entirely — excluded from lists, 404
+on direct access (read, edit, delete, history, restore, restart) — so K8s-level
+secrets created outside Krypton can't be touched by accident.
+
+## Concurrency and integrity
+
+- Writes require the current `metadata.resourceVersion`; stale edits get `409`
+  instead of silently clobbering a colleague's change.
+- Every overwrite snapshots first; every restore snapshots first. There is no
+  write path that destroys the previous state without keeping a copy (within
+  `KRYPTON_HISTORY_LIMIT`).
+- Secret names must be DNS subdomains (validated by `k8sName`); descriptions are
+  capped at 1024 chars; payloads are zod-validated before touching the API.
+
+## Least-privilege RBAC
+
+- Default scope needs only `secrets` (full verbs, own namespace) + `configmaps`
+  (read) — see `app/k8s/role.yaml`.
+- The `apps` rule (deployments/statefulsets/daemonsets: get, list, watch, patch)
+  is required **only** when `KRYPTON_RESTART_ENABLED=true`. It ships commented
+  out; enabling the flag without the rule fails closed at the API.
+- Cluster scope additionally needs `namespaces` (get, list, watch);
+  `KRYPTON_NAMESPACES` narrows the blast radius.
+- Optional impersonation (`KRYPTON_IMPERSONATION=true`) requires the API server
+  to trust the same OIDC issuer and grants the `impersonate` verb — only enable
+  it when you understand both sides.
+
+## Operational checklist
+
+- [ ] `SESSION_SECRET` is random, ≥32 chars, stored in a K8s Secret, never in git.
+- [ ] `KRYPTON_ADMIN_GROUPS`/`KRYPTON_ADMIN_USERS` are set (no bootstrap mode).
+- [ ] `KRYPTON_ETCD_ENCRYPTED=true` after verifying apiserver encryption.
+- [ ] `AUTH_DISABLED=false` and `OIDC_ALLOW_HTTP=false` in real environments.
+- [ ] Ingress/Route uses TLS; OIDC redirect URI matches `https://<host>/api/auth/callback`.
+- [ ] `apps` RBAC rule present **iff** `KRYPTON_RESTART_ENABLED=true`.
+- [ ] `KRYPTON_MANAGED_ONLY=true` (default) unless you need the legacy adoption flow.

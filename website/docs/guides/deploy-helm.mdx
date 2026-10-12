@@ -1,0 +1,147 @@
+---
+sidebar_label: Deploy with Helm
+sidebar_position: 3
+---
+
+import CodeBlock from '@theme/CodeBlock';
+
+# Deploy with Helm
+
+The `helm/main` chart deploys Krypton via the `helm/krypton` subchart, with
+templated RBAC scope, restart wiring, access config, and NetworkPolicy.
+
+## Minimal values
+
+```mdx-code-block
+import HelmValues from '!!raw-loader!../../.samples/values-helm.yaml';
+
+<CodeBlock language="yaml">{HelmValues}</CodeBlock>
+```
+
+Create the referenced Secret out-of-band (never commit values):
+
+```bash
+kubectl create secret generic krypton-oidc -n krypton \
+  --from-literal=OIDC_CLIENT_SECRET='...' \
+  --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
+```
+
+## Key knobs
+
+| Value                         | Purpose                                                                 |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `krypton.env`                     | Non-secret Krypton config (full reference: `app/.env.example`)          |
+| `krypton.envSecretName`           | K8s Secret with `OIDC_CLIENT_SECRET` + `SESSION_SECRET`                 |
+| `krypton.rbac.scope`              | `namespace` (default) or `cluster` — must match `KRYPTON_SCOPE`         |
+| `krypton.rbac.extraNamespaces`    | Extra namespaces to bind the namespaced Role into (namespace scope)     |
+| `krypton.restartEnabled`          | Wires `KRYPTON_RESTART_ENABLED` **and** the `apps` RBAC rule together   |
+| `krypton.accessConfig.enabled`    | Renders the `krypton-access` / `access.json` ConfigMap                  |
+| `krypton.replicaCount`            | Stateless — more than one replica is always safe (default 2)            |
+| `krypton.ingress.enabled` / `route.enabled` / `httpRoute.enabled` | Expose via Ingress / OpenShift Route / Gateway API HTTPRoute |
+| `networkPolicy.enabled`       | Locks down pod traffic (DNS + K8s API egress allowed)                   |
+| `networkPolicy.allowOpenShiftIngress` | **Must be `true` on OpenShift** (routes arrive from `openshift-ingress`) |
+
+See `helm/main/values-example.yaml` and `helm/main/values-k8s-prod.example.yaml`
+for fuller examples, including topology spread and IdP egress CIDRs.
+
+## RBAC scope
+
+`krypton.rbac.scope` renders either a namespace `Role` or a `ClusterRole` for the
+app ServiceAccount. It must match `KRYPTON_SCOPE` in `krypton.env`:
+
+- `namespace`: own namespace only (least privilege, the default). Repeat coverage
+  with `krypton.rbac.extraNamespaces: [team-a]` (a Role + RoleBinding pair per
+  entry, subject stays this release's ServiceAccount) instead of going cluster-wide.
+- `cluster`: centralized dashboard; narrow with
+  `KRYPTON_NAMESPACES="team-a,team-b"` in `krypton.env`.
+
+## Restart + access config in one place
+
+Unlike the raw manifests (where the flag and the RBAC rule are separate manual
+steps), the chart wires them together: `krypton.restartEnabled: true` sets the env
+flag **and** renders the `apps` rule. Similarly, `krypton.accessConfig.enabled`
+renders the namespace fallback ConfigMap instead of applying
+`app/k8s/configmap-access.yaml` by hand.
+
+## NetworkPolicy notes
+
+- Pod DNS (UDP/TCP 53) is allowed for both upstream Kubernetes (`kube-system`)
+  and OpenShift (`openshift-dns`).
+- Egress to the Kubernetes API (`https://kubernetes.default.svc`, a ClusterIP)
+  is allowed on ports 443/6443 via `allowKubeApiEgress`.
+- Standard NetworkPolicy cannot match DNS names: add your IdP's CIDR ranges
+  under `networkPolicy.krypton.idpEgressIpBlocks` when you tighten API egress.
+- On OpenShift, `allowOpenShiftIngress` must be `true` or all ingress is denied.
+
+## Installing with the chart Makefile
+
+`helm/main/Makefile` wraps the standard flow. Secret values live in a
+`values-<namespace>.secret.yaml` file (see `values-ai-poc.secret.yaml` for the
+shape; never commit real ones):
+
+```bash
+cd helm/main
+make upgrade NAMESPACE=krypton IMAGE_TAG=0.1.0   # helm dependency update + upgrade --install
+make lint NAMESPACE=krypton IMAGE_TAG=0.1.0      # render + validate
+make template NAMESPACE=krypton IMAGE_TAG=0.1.0  # render to template.yaml
+```
+
+The packaged subchart (`helm/main/charts/krypton-0.1.0.tgz`) is refreshed by the
+`helm-dep` step (`helm dependency update`) before every install, upgrade, lint,
+and template run.
+
+## OCI chart releases
+
+Every `v*.*.*` tag publishes the `helm/krypton` chart to
+`oci://ghcr.io/egose/charts/krypton` (see the _Publish Helm chart_ workflow).
+Chart `version` and `appVersion` are both set from the release tag, so chart
+`1.2.3` deploys app `1.2.3` (`ghcr.io/egose/krypton:1.2.3` by default —
+override with `image.tag`).
+
+Install it directly, without the umbrella chart:
+
+```bash
+helm install krypton oci://ghcr.io/egose/charts/krypton --version 1.2.3 \
+  --namespace krypton --create-namespace
+```
+
+Or consume it as a dependency (`helm registry login ghcr.io` first if the
+package is private):
+
+```yaml
+# Chart.yaml
+dependencies:
+  - name: krypton
+    version: '1.2.3'
+    repository: oci://ghcr.io/egose/charts
+```
+
+```yaml
+# values.yaml
+krypton:
+  enabled: true
+  env:
+    KRYPTON_SCOPE: namespace
+```
+
+See `helm/krypton/README.md` for the full values reference (image, exposure,
+autoscaling, PDB, security contexts, extra volumes).
+
+## Exposure and health
+
+- One of `ingress`, `route` (OpenShift), or `httpRoute` (Gateway API) exposes
+  the ClusterIP Service — enable exactly what your platform provides.
+- Liveness and readiness probes hit `/api/config`: unauthenticated and
+  K8s/OIDC-free, so it is safe to probe (the raw manifests in `app/k8s/`
+  probe the same endpoint).
+- The ServiceAccount token **must** stay auto-mounted
+  (`serviceAccount.automount: true`) — Krypton talks to the Kubernetes API
+  with its own token.
+
+## Chart CI
+
+The _Helm_ workflow lints both charts and templates them on every `helm/**`
+change, including a full-flag matrix for the subchart (cluster scope,
+restart, ingress + route + HTTPRoute, access config, autoscaling, PDB,
+external ServiceAccount) and both umbrella example values files. Run the same
+locally with `helm lint` / `helm template` before opening a PR.

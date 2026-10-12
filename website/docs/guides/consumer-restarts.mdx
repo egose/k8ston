@@ -1,0 +1,71 @@
+---
+sidebar_label: Consumer Restarts
+sidebar_position: 8
+---
+
+# Consumer Restarts
+
+Editing a Secret does not automatically update the pods that consume it:
+
+- **Volume-mounted** secrets sync automatically (kubelet delay, no action needed).
+- **Environment-variable** secrets are frozen at container start — those pods
+  need a rollout to see new values.
+
+_Restart apps_ closes that gap: it finds the workloads referencing a secret and
+triggers a rolling restart by patching their pod template with a
+`krypton.io/restarted-at` annotation.
+
+## Enabling the feature
+
+Disabled by default (least privilege). Enabling takes **both** steps:
+
+1. Set `KRYPTON_RESTART_ENABLED=true` (or `krypton.restartEnabled: true` in Helm,
+   which also renders the RBAC rule).
+2. Grant the `apps` rule in `role.yaml` / `clusterrole.yaml` (ships commented out):
+
+```yaml
+- apiGroups: [apps]
+  resources: [deployments, statefulsets, daemonsets]
+  verbs: [get, list, watch, patch]
+```
+
+Without the flag, the UI button + hint are hidden and the API returns 403.
+Without the rule, the API fails closed at the Kubernetes API.
+
+## What it scans
+
+In the secret's namespace, Krypton inspects Deployments, StatefulSets, and
+DaemonSets for references to the secret name across:
+
+- `env[].valueFrom.secretKeyRef.name`
+- `envFrom[].secretRef.name`
+- `volumes[].secret.secretName`
+- Projected sources and friends via a conservative JSON string-scan fallback
+  (`"secretName":"<name>"` plus a name containment check)
+
+Matching workloads are patched (strategic-merge on the pod template metadata)
+and reported back grouped by kind:
+
+```json
+{
+  "deployments": ["api-server"],
+  "statefulSets": [],
+  "daemonSets": [],
+  "note": "Some apps pick up secret changes automatically, others need a restart to see the new values."
+}
+```
+
+## Trying it in the sandbox
+
+The sandbox sets `KRYPTON_RESTART_ENABLED=true` and ships an `api-server`
+Deployment consuming `database-credentials` via env and `feature-flags` via volume:
+
+1. Edit `database-credentials` in the UI and hit _Restart apps_.
+2. `kubectl rollout history deploy/api-server -n krypton-test` shows a new
+   revision with the fresh env value.
+
+## API contract
+
+`POST /api/namespaces/:namespace/secrets/:name/restart-consumers` — same
+namespace, managed-only, and authz gates as every other secret route, plus the
+feature flag. See the [Restart API](/api/restart-consumers/).

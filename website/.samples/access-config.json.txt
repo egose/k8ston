@@ -1,0 +1,10 @@
+{
+  "frontend-ns": {
+    "groups": ["AzureAD-Frontend-Team"],
+    "users": []
+  },
+  "production": {
+    "groups": ["dev-team", "database-admins"],
+    "users": ["alice@company.com"]
+  }
+}

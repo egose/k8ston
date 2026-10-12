@@ -1,0 +1,61 @@
+---
+sidebar_label: Overview
+sidebar_position: 0
+---
+
+import CodeBlock from '@theme/CodeBlock';
+
+# API Overview
+
+The API is plain REST over JSON, authenticated with the `krypton_session`
+cookie (an HS256 session JWT minted at OIDC login). Values cross the API
+boundary as **plain strings** — base64 stays inside Kubernetes.
+
+## Conventions
+
+- **Auth**: every endpoint except `GET /api/config` requires a session;
+  unauthenticated calls get `401 { "error": "Authentication required" }`.
+  (The one exception is `GET /api/auth/me`, which answers `401 { "user": null }`.)
+- **Errors**: `{ "error": "<message>" }` with the HTTP status. Zod validation
+  failures answer `400 { "error": "Validation failed", "issues": [...] }`.
+- **Gates**: every secrets route enforces, in order, namespace scope →
+  managed-only visibility (404) → hybrid authorization (403). See
+  [Authorization](/guides/authorization/).
+- **Kubernetes failures** surface as
+  `Kubernetes API (<status>): <detail>` — a 403 there means the app's
+  ServiceAccount lacks RBAC, not that the user failed Krypton authz.
+
+## Endpoint map
+
+| Method | Path                                                                    | Page                                       |
+| ------ | ----------------------------------------------------------------------- | ------------------------------------------ |
+| GET    | `/api/namespaces`                                                       | [Namespaces](/api/namespaces/)             |
+| GET    | `/api/namespaces/:ns/secrets`                                           | [Secrets](/api/secrets/)                   |
+| POST   | `/api/namespaces/:ns/secrets`                                           | [Secrets](/api/secrets/)                   |
+| GET    | `/api/namespaces/:ns/secrets/:name`                                     | [Secrets](/api/secrets/)                   |
+| PUT    | `/api/namespaces/:ns/secrets/:name`                                     | [Secrets](/api/secrets/)                   |
+| DELETE | `/api/namespaces/:ns/secrets/:name`                                     | [Secrets](/api/secrets/)                   |
+| GET    | `/api/namespaces/:ns/secrets/:name/versions`                            | [Versions](/api/versions/)                 |
+| POST   | `/api/namespaces/:ns/secrets/:name/restore`                             | [Restore](/api/restore/)                   |
+| POST   | `/api/namespaces/:ns/secrets/:name/restart-consumers`                   | [Restart](/api/restart-consumers/)         |
+| GET    | `/api/auth/login`, `/api/auth/callback`, `/api/auth/logout`, `/api/auth/me` | [Auth](/api/auth/)                     |
+| GET    | `/api/config`                                                           | [Config](/api/config/)                     |
+
+## Scripted lifecycle
+
+The full flow — list, negative authz case, create, read, concurrent-safe
+update, versions, restore, restart, delete — against the sandbox:
+
+```mdx-code-block
+import RestLifecycle from '!!raw-loader!../../.samples/rest-lifecycle.sh';
+
+<CodeBlock language="bash">{RestLifecycle}</CodeBlock>
+```
+
+Session cookies for scripts come from `sandbox/scripts/mint-jwt.mjs` (must
+match the app's `SESSION_SECRET`):
+
+```bash
+ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)
+curl --cookie "krypton_session=$ALICE" localhost:3000/api/namespaces
+```

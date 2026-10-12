@@ -1,7 +1,7 @@
 global:
   env: {}
 
-app:
+krypton:
   enabled: true
   # Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes
   # Secret referenced by envSecretName; non-secret configuration goes in `env`.
@@ -24,13 +24,13 @@ app:
     whenUnsatisfiable: ScheduleAnyway
     labelSelector:
       matchLabels:
-        app.kubernetes.io/name: app
+        app.kubernetes.io/name: krypton
 
 # Standard NetworkPolicy cannot match DNS names. Add the CIDR ranges used by
 # your IdP here; note allowKubeApiEgress already permits 443 egress, so this
 # only restricts further when that is set to false.
 networkPolicy:
   allowOpenShiftIngress: false
-  app:
+  krypton:
     idpEgressIpBlocks:
     - cidr: 203.0.113.10/32

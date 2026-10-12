@@ -1,0 +1,65 @@
+---
+sidebar_label: Quick Start
+sidebar_position: 1
+---
+
+# Quick Start
+
+Two paths, same app. Pick the one that matches how much realism you need.
+
+## Path A: local dev with a mock admin (fastest)
+
+Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster
+(Krypton uses `~/.kube/config` when not running in-cluster).
+
+```bash npm2yarn
+cd app
+cp .env.example .env   # AUTH_DISABLED=true gives a mock admin, no IdP needed
+pnpm install
+pnpm dev               # http://localhost:3000
+```
+
+`AUTH_DISABLED=true` skips SSO with a mock admin (`dev@krypton.local`) — local
+development only, never production. To exercise real SSO locally instead, set
+`AUTH_DISABLED=false` and fill in `OIDC_*` (your IdP needs redirect URI
+`http://localhost:3000/api/auth/callback`).
+
+Useful commands: `pnpm build`, `pnpm lint`, `pnpm start`, `pnpm e2e`
+(visual Playwright suite over the production build; first run needs
+`pnpm exec playwright install chromium`).
+
+## Path B: full sandbox with real SSO (recommended)
+
+The repo-root sandbox spins up a kind cluster with seeded fixtures plus Dex as
+a throwaway OIDC provider — everything Krypton needs, nothing else.
+
+```bash
+# from the repo root
+make up          # kind cluster + Dex + fixtures
+cp sandbox/app.env.sandbox app/.env
+cd app && pnpm install && pnpm dev   # http://localhost:3000
+```
+
+Sign in with any sandbox user (password is `password` for all):
+
+| User                | Groups          | Role                    |
+| ------------------- | --------------- | ----------------------- |
+| `alice@company.com` | `dev-team`      | restricted-secret reader |
+| `bob@company.com`   | `other-team`    | gets 403s (negative case) |
+| `carol@company.com` | `frontend-team` | namespace-fallback reader |
+| `admin@company.com` | `krypton-admin` | admin bypass             |
+
+Tear down: `make down` (stops Dex, keeps kind for fast iteration),
+`make destroy` (removes Dex volumes **and** the kind cluster), `make reset`.
+
+See the [Sandbox guide](/guides/sandbox/) for the fixture map, visibility
+matrix, test scenarios, and headless authz checks.
+
+## Deploy it for real
+
+- [Deploy to Kubernetes](/guides/deploy-kubernetes/) — raw manifests, namespace
+  or cluster scope, OIDC wiring.
+- [Deploy with Helm](/guides/deploy-helm/) — the `helm/main` chart with the
+  `helm/krypton` subchart, NetworkPolicy included.
+- [Configuration](/guides/configuration/) — every environment variable, with
+  defaults and safety notes.

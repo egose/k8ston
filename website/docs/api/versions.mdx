@@ -1,0 +1,40 @@
+---
+sidebar_label: Versions
+sidebar_position: 3
+---
+
+# Versions API
+
+## List versions
+
+```http
+GET /api/namespaces/:namespace/secrets/:name/versions
+```
+
+Same namespace, managed-only, and authz gates as reading the secret — history
+is only visible to readers of the live object.
+
+```json
+{
+  "namespace": "krypton-test",
+  "name": "database-credentials",
+  "versions": [
+    {
+      "version": 2,
+      "snapshotName": "database-credentials-v2",
+      "snapshotAt": "2026-01-05T09:30:00Z",
+      "snapshotBy": "alice@company.com",
+      "keys": ["DATABASE_URL"],
+      "data": { "DATABASE_URL": "postgres://…" }
+    }
+  ]
+}
+```
+
+Versions sort newest-first and are pruned to `KRYPTON_HISTORY_LIMIT`
+(default 20). Each entry is a real Kubernetes Secret
+(`<name>-vN`, labeled `krypton.io/kind=history`) with decoded `data` —
+inspectable via `kubectl` as well as the API.
+
+See [Versioning & History](/guides/versioning-history/) for the snapshot model
+and [Restore](/api/restore/) for rolling back.

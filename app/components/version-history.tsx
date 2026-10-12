@@ -40,6 +40,7 @@ export function VersionHistory({ namespace, name, currentKeys, onRestored }: Pro
       toast.success(`Rolled back — now at v${res.secret.version}`);
       queryClient.invalidateQueries({ queryKey: ['secret', namespace, name] });
       queryClient.invalidateQueries({ queryKey: ['versions', namespace, name] });
+      queryClient.invalidateQueries({ queryKey: ['secrets', namespace] });
       setConfirm(null);
       onRestored();
     },

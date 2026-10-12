@@ -45,6 +45,8 @@ export function SecretDetail({ namespace, name }: Props) {
     mutationFn: () => api.deleteSecret(namespace, name),
     onSuccess: () => {
       toast.success(`Secret "${name}" deleted`);
+      // Drop the cached dashboard list so the deleted row disappears immediately.
+      queryClient.invalidateQueries({ queryKey: ['secrets', namespace] });
       router.push(`/?ns=${encodeURIComponent(namespace)}`);
     },
     onError: (err: Error) => toast.error(err.message),

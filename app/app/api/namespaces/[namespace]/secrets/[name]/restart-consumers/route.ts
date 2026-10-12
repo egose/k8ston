@@ -5,17 +5,23 @@ import { assertNamespaceAllowed } from '@/lib/namespaces';
 import { assertManagedVisible, canAccessSecret } from '@/lib/authz';
 import { restartConsumers } from '@/lib/secrets';
 import { auditLog } from '@/lib/validation';
+import { config } from '@/lib/config';
 
 type Ctx = RouteContext<'/api/namespaces/[namespace]/secrets/[name]/restart-consumers'>;
 
 /**
  * Trigger a rolling restart of workloads consuming this secret.
  * Required for env-var consumers; volume mounts sync via kubelet on their own.
+ * Disabled entirely when KRYPTON_RESTART_ENABLED=false (403).
  */
 export async function POST(_req: Request, ctx: Ctx) {
   try {
     const user = await requireUser();
     const { namespace, name } = await ctx.params;
+    if (!config.restartEnabled) {
+      auditLog({ action: 'secret.restart', user: user.email, namespace, name, result: 'deny' });
+      throw new HttpError(403, 'Restarting apps is disabled on this deployment');
+    }
     await assertNamespaceAllowed(namespace, user);
 
     const core = getCoreApi();

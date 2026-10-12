@@ -18,10 +18,12 @@ rules:
 - apiGroups: ['']
   resources: [configmaps]
   verbs: [get, list, watch]
-  # Consumer restart (rollout via pod-template annotation patch)
-- apiGroups: [apps]
-  resources: [deployments, statefulsets, daemonsets]
-  verbs: [get, list, watch, patch]
+  # Consumer restart (rollout via pod-template annotation patch) is disabled
+  # by default (KRYPTON_RESTART_ENABLED=false). To enable it, set the flag to
+  # 'true' in configmap-app.yaml AND uncomment the rule below:
+# - apiGroups: [apps]
+#   resources: [deployments, statefulsets, daemonsets]
+#   verbs: [get, list, watch, patch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

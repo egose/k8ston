@@ -5,14 +5,14 @@
 #   make upgrade NAMESPACE=<app-namespace> IMAGE_TAG=<tag>  # or helm directly:
 #   helm upgrade --install krypton helm/main -n <app-namespace> \
 #     -f helm/main/values.yaml -f helm/main/values-<namespace>.secret.yaml \
-#     --set app.image.tag=<tag>
+#     --set krypton.image.tag=<tag>
 # The OIDC/session secrets live in a kubectl-applied Secret
 # (app/k8s/secret-oidc.yaml), never in this file. This file only carries
 # env-specific non-secret overrides; it is gitignored (*.secret.yaml).
 global:
   env: {}
 
-app:
+krypton:
   enabled: true
   envSecretName: krypton-oidc # pragma: allowlist secret
   # Krypton is stateless (Kubernetes Secrets are the datastore), so more than
@@ -47,7 +47,7 @@ app:
     whenUnsatisfiable: ScheduleAnyway
     labelSelector:
       matchLabels:
-        app.kubernetes.io/name: app
+        app.kubernetes.io/name: krypton
   route:
     enabled: true
     host: krypton.apps.example.com
@@ -72,6 +72,6 @@ app:
 # rules restricted to the CIDRs below plus extraEgress API server CIDRs.
 networkPolicy:
   allowOpenShiftIngress: true
-  app:
+  krypton:
     idpEgressIpBlocks:
     - cidr: 203.0.113.10/32

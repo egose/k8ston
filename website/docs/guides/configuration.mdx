@@ -1,0 +1,60 @@
+---
+sidebar_label: Configuration
+sidebar_position: 4
+---
+
+# Configuration
+
+Everything is environment-driven (`lib/config.ts`), resolved at request time —
+one image runs in many clusters. Non-secret values go in `krypton-config`;
+secrets (`OIDC_CLIENT_SECRET`, `SESSION_SECRET`) go in the `krypton-oidc` Secret.
+
+## Reference
+
+| Variable                                             | Default                                               | Purpose                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
+| `KRYPTON_SCOPE`                                      | `namespace`                                           | `namespace` (own NS only) or `cluster`                           |
+| `KRYPTON_NAMESPACE`                                  | `krypton`                                             | Fallback for the app's own namespace (downward API wins in-cluster) |
+| `KRYPTON_NAMESPACES`                                 | —                                                     | Comma allowlist for cluster scope                                |
+| `KRYPTON_HISTORY_LIMIT`                              | `20`                                                  | Snapshots kept per secret                                        |
+| `KRYPTON_MANAGED_ONLY`                               | `true`                                                | Hide secrets without `managed-by=krypton` (404)                  |
+| `KRYPTON_ETCD_ENCRYPTED`                             | `false`                                               | Set `true` once apiserver encryption is on                       |
+| `KRYPTON_IMPERSONATION`                              | `false`                                               | Forward SSO identity to K8s RBAC                                 |
+| `KRYPTON_RESTART_ENABLED`                            | `false`                                               | `true` enables "Restart apps" (needs apps RBAC rule)             |
+| `KRYPTON_ADMIN_GROUPS` / `KRYPTON_ADMIN_USERS`        | —                                                     | Bootstrap admins (empty = everyone, lock down!)                  |
+| `KRYPTON_ANNOTATION_PREFIX`                          | `krypton.io`                                          | Annotation/label prefix                                          |
+| `KRYPTON_ACCESS_CONFIGMAP`                           | `krypton-access`                                      | Namespace-rules ConfigMap name                                   |
+| `AUTH_DISABLED`                                      | `false`                                               | `true` = mock admin, local dev only                              |
+| `SESSION_SECRET`                                     | —                                                     | ≥32-char HMAC key for session JWTs                               |
+| `SESSION_MAX_AGE`                                    | `28800`                                               | Session lifetime in seconds (8h)                                 |
+| `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | —                                                  | SSO provider (discovery-based)                                   |
+| `OIDC_REDIRECT_URI`                                  | `<APP_URL>/api/auth/callback`                         | Override the derived redirect URI                                |
+| `OIDC_ALLOW_HTTP`                                    | `false`                                               | Allow `http://` issuers — loopback + non-prod only (sandbox Dex) |
+| `OIDC_SCOPES` / `OIDC_GROUPS_CLAIM` / `OIDC_USERNAME_CLAIM` / `OIDC_NAME_CLAIM` | `openid profile email groups` / `groups` / `email` / `name` | Claim mapping                                    |
+| `NEXT_PUBLIC_APP_URL`                                | `http://localhost:3000`                               | Public URL (derives OIDC redirect)                               |
+
+## Flags that deserve a second thought
+
+- **`KRYPTON_ADMIN_GROUPS` / `KRYPTON_ADMIN_USERS`** — when both are empty,
+  every authenticated user is admin (bootstrap mode). Convenient for first
+  login, dangerous to leave. Set at least one group.
+- **`KRYPTON_MANAGED_ONLY`** — default `true` hides any secret not created by
+  Krypton (excluded from lists, 404 on direct access). Set `false` only to show
+  everything again (legacy adopt-on-edit: saving an external secret stamps
+  Krypton annotations onto it).
+- **`KRYPTON_IMPERSONATION`** — default `false` (hybrid mode: the app
+  ServiceAccount executes, Krypton enforces authz itself). Set `true` only when
+  the API server trusts the same OIDC issuer, so `Impersonate-User`/`Group`
+  headers evaluate the _human's_ RBAC instead.
+- **`KRYPTON_RESTART_ENABLED`** — default `false` (button hidden, API 403, no
+  `apps` permissions needed). Enabling requires the `apps` RBAC rule too.
+- **`OIDC_ALLOW_HTTP`** — refused for non-loopback issuers and when
+  `NODE_ENV=production`, even if set. Sandbox Dex only.
+
+## Public-safe client config
+
+`GET /api/config` exposes the non-sensitive subset (`scope`, `etcdEncrypted`,
+`authDisabled`, `oidcConfigured`, `historyLimit`, `managedOnly`,
+`restartEnabled`, `appNamespace`) so the UI — and your deployment checks — can
+assert the effective configuration without secrets. See
+[Config API](/api/config/).

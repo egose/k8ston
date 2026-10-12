@@ -22,7 +22,7 @@ define arguments
     -n "${NAMESPACE}" \
     -f values.yaml \
     -f "${SECRET_FILE}" \
-    --set app.image.tag="${IMAGE_TAG}"
+    --set krypton.image.tag="${IMAGE_TAG}"
 endef
 
 .PHONY: helm-dep install upgrade lint uninstall template force-install help
@@ -37,7 +37,7 @@ upgrade: helm-dep
 	@helm upgrade --install $(call arguments)
 
 lint: helm-dep
-	@helm lint . -f values.yaml -f "${SECRET_FILE}" --set app.image.tag="${IMAGE_TAG}"
+	@helm lint . -f values.yaml -f "${SECRET_FILE}" --set krypton.image.tag="${IMAGE_TAG}"
 
 uninstall:
 	@helm uninstall ${NAME} -n ${NAMESPACE}

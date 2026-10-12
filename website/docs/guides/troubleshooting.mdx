@@ -1,0 +1,76 @@
+---
+sidebar_label: Troubleshooting
+sidebar_position: 9
+---
+
+# Troubleshooting
+
+## Login fails / redirect loops
+
+- Confirm `OIDC_ISSUER` is the issuer identifier, not the discovery URL, and
+  that it exactly matches the discovery document's `issuer` field.
+- Confirm the redirect URI registered at the IdP matches the app's
+  (`<NEXT_PUBLIC_APP_URL>/api/auth/callback`, or `OIDC_REDIRECT_URI`).
+- For `http://` issuers (sandbox Dex): hostname must be loopback,
+  `OIDC_ALLOW_HTTP=true` must be set, and `NODE_ENV` must not be `production`.
+- OIDC configuration is cached per process — restart `pnpm dev` (or roll the
+  deployment) after Dex/IdP restarts or issuer changes.
+- Check Dex health: the discovery doc must answer at
+  `http://localhost:5556/dex/.well-known/openid-configuration` (`make logs`
+  for Dex container logs).
+
+## 403 from the app vs 403 from Kubernetes
+
+- `You are not allowed to …` → Krypton authz denied it (annotations /
+  namespace rules / admin config). Check the visibility matrix in
+  [Authorization](/guides/authorization/).
+- `Kubernetes API (403): … — Access denied. Contact your administrator (the app
+  is missing Kubernetes RBAC permission).` → the ServiceAccount lacks RBAC.
+  Verify with `kubectl auth can-i … --as=system:serviceaccount:<ns>:krypton`
+  (see the [Sandbox guide](/guides/sandbox/)) and check scope vs Role.
+
+## 404 on a secret that exists
+
+- `KRYPTON_MANAGED_ONLY=true` (default) hides secrets without
+  `krypton.io/managed-by: krypton` — excluded from lists, 404 on direct access.
+  Either manage the secret through Krypton or set the flag to `false`.
+- History snapshots (`<name>-vN`) are always hidden from the secrets list.
+
+## 409 on save
+
+The secret changed since you loaded it (or a concurrent write raced yours).
+Reload and retry — your values are preserved in the form. See
+[Versioning & History](/guides/versioning-history/).
+
+## 413 on save
+
+The payload exceeds ~1 MiB. Split the secret or move large blobs (certs,
+bundles) to a volume/registry instead.
+
+## Namespace missing from the list
+
+- `namespace` scope shows only the pod's own namespace — by design.
+- `cluster` scope needs the `namespaces` get/list/watch grant; without it the
+  app falls back to `KRYPTON_NAMESPACES` (or its own namespace).
+- `KRYPTON_NAMESPACES` acts as an allowlist in cluster scope — a typo hides
+  namespaces silently.
+
+## _Restart apps_ missing / 403
+
+The button is hidden and the API returns 403 unless **both**
+`KRYPTON_RESTART_ENABLED=true` **and** the `apps` RBAC rule are in place. See
+[Consumer Restarts](/guides/consumer-restarts/).
+
+## etcd warning banner won't go away
+
+Set `KRYPTON_ETCD_ENCRYPTED=true` — but only after verifying the API server
+actually encrypts Secrets at rest (`aescbc` provider or equivalent). The flag
+is an attestation, not a detector.
+
+## Wrong cluster / stale fixtures (sandbox)
+
+- `kubectl config current-context` should be `kind-krypton-sandbox` —
+  `make kind-up` re-selects it. Never seed prod.
+- `make seed` re-applies fixtures idempotently; `make reset` for a clean slate.
+- `make verify-sandbox` runs static checks (compose config + manifest
+  validation) with no cluster needed.

@@ -1,0 +1,35 @@
+# Minimal Helm values for Krypton (chart: helm/main, subchart: helm/krypton).
+# Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes
+# Secret referenced by envSecretName — never in values files.
+global:
+  env: {}
+
+krypton:
+  enabled: true
+  replicaCount: 2
+  # kubectl create secret generic krypton-oidc -n krypton \
+  #   --from-literal=OIDC_CLIENT_SECRET='...' \
+  #   --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
+  envSecretName: krypton-oidc # pragma: allowlist secret
+  env:
+    KRYPTON_SCOPE: namespace
+    KRYPTON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on
+    KRYPTON_ADMIN_GROUPS: krypton-admin
+    OIDC_ISSUER: https://keycloak.example.com/realms/company
+    OIDC_CLIENT_ID: krypton
+    OIDC_SCOPES: openid profile email groups
+    NEXT_PUBLIC_APP_URL: https://krypton.example.com
+  # Must match KRYPTON_SCOPE above: namespace (default) or cluster.
+  rbac:
+    create: true
+    scope: namespace
+  # "Restart apps" (API + UI + apps RBAC rule). Default false.
+  restartEnabled: false
+  # Namespace fallback rules (krypton-access / access.json).
+  accessConfig:
+    enabled: false
+
+networkPolicy:
+  enabled: true
+  # MUST be true on OpenShift (routes arrive from openshift-ingress).
+  allowOpenShiftIngress: false

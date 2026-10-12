@@ -1,0 +1,59 @@
+---
+sidebar_label: Auth
+sidebar_position: 6
+---
+
+# Auth API
+
+Generic OIDC (discovery + PKCE) with stateless HS256 session JWTs. See
+[Authentication](/guides/authentication/) for the design.
+
+## Start login
+
+```http
+GET /api/auth/login
+```
+
+- With `AUTH_DISABLED=true`, short-circuits to a dev session and redirects to `/`.
+- Without OIDC configured, answers `501` (operator must set
+  `OIDC_ISSUER`/`OIDC_CLIENT_ID`, or `AUTH_DISABLED=true` for local dev).
+- Otherwise redirects to the IdP authorization endpoint. When the IdP is
+  unreachable, answers `502` with the issuer, cause code, and hint (logged
+  server-side with hostname detail).
+
+## OIDC callback
+
+```http
+GET /api/auth/callback?code=…&state=…
+```
+
+Exchanges the code, maps claims (`email` identity, `groups` authz input,
+`name` display), sets the `krypton_session` cookie (`HttpOnly`,
+`Secure` in production, `SameSite=Lax`, 8h default), and redirects to `/`.
+
+On failure (including IdP verdicts like `invalid_grant` from a redirect-URI
+mismatch), redirects to `/login?auth=error` carrying the short `idp_error`
+code — the single-use code and `error_description` stay out of URLs and logs.
+
+## Current user
+
+```http
+GET /api/auth/me
+```
+
+```json
+{ "user": { "sub": "…", "email": "alice@company.com", "name": "Alice", "groups": ["dev-team"] } }
+```
+
+Answers `401 { "user": null }` when unauthenticated — the one endpoint that
+does not use the `{ "error": … }` shape.
+
+## Logout
+
+```http
+GET /api/auth/logout
+POST /api/auth/logout
+```
+
+Both clear the session cookie. `GET` redirects to `/login`; `POST` answers
+`{ "ok": true }` for fetch-based sign-out buttons.

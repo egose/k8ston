@@ -1,0 +1,64 @@
+---
+sidebar_label: Versioning & History
+sidebar_position: 7
+---
+
+# Versioning & History
+
+Kubernetes overwrites Secrets in place. Krypton keeps the past anyway: before
+every write it snapshots the previous state into a separate Secret, so
+rollbacks are one click and every restore is reversible.
+
+## How snapshots work
+
+- Every live secret carries `krypton.io/version` (app counter, starts at 1).
+- Before an update, the current state is persisted as `<name>-vN` with labels
+  `krypton.io/history-of=<name>` / `krypton.io/kind=history` and annotations
+  for version, `snapshot-at` timestamp, `snapshot-by` actor, plus the live
+  description and access rules at snapshot time.
+- Snapshots are pruned to `KRYPTON_HISTORY_LIMIT` (default 20, newest kept).
+- Snapshot name length is capped to the 253-char K8s limit (base trimmed).
+- Deleting a secret deletes its snapshots too, unless `?keepHistory=true`.
+
+Inspect them directly — they are ordinary Secrets:
+
+```bash
+kubectl get secret -n krypton-test -l krypton.io/kind=history
+```
+
+## Restores are reversible
+
+Restore snapshots the **current** state first, then replaces the live object
+with the target version's data (bumping `krypton.io/version` again). Rolling
+back never destroys the state you rolled back from — within the history limit.
+
+```bash
+curl --cookie "krypton_session=$ALICE" \
+  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/versions
+curl --cookie "krypton_session=$ALICE" -X POST \
+  -H 'Content-Type: application/json' -d '{"version":1}' \
+  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore
+```
+
+## Optimistic concurrency (409s)
+
+The UI sends back the `metadata.resourceVersion` it loaded; if the live object
+moved on, the write is rejected with `409` and a reload prompt instead of
+silently clobbering a colleague's change. A second 409 path covers a true race
+between the read and the replace at the Kubernetes API.
+
+Try it: open the same secret's edit page in two tabs, save both — the second
+save gets the conflict prompt. See [Update secret](/api/secrets/) for the API
+contract.
+
+## Size guard (1 MiB)
+
+K8s enforces ~1 MiB per Secret object. Krypton estimates conservatively
+(UTF-8 bytes × 1.4 for base64 inflation) and enforces the limit client-side
+(the form meter blocks) and server-side (`413 Secret is too large`). History
+snapshots count as separate objects, so deep history never breaks the live write.
+
+## Related pages
+
+- [Versions API](/api/versions/) and [Restore API](/api/restore/)
+- [Secrets API](/api/secrets/) for create/update/delete semantics

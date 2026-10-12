@@ -1,0 +1,62 @@
+---
+sidebar_label: Local Development
+sidebar_position: 0
+---
+
+# Local Development
+
+Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster
+(Krypton uses `~/.kube/config` when not running in-cluster).
+
+## Mock-admin loop (no IdP)
+
+```bash npm2yarn
+cd app
+cp .env.example .env   # AUTH_DISABLED=true gives a mock admin, no IdP needed
+pnpm install
+pnpm dev               # http://localhost:3000
+```
+
+`AUTH_DISABLED=true` signs every request in as `dev@krypton.local`
+(`krypton-admin` group) — the fastest way to iterate on UI, forms, and K8s
+wiring against any cluster your kubeconfig can reach.
+
+## Real-SSO loop (local app, real IdP)
+
+Set `AUTH_DISABLED=false` and fill in `OIDC_*` in `app/.env`. Your IdP needs
+the redirect URI registered:
+
+```text
+http://localhost:3000/api/auth/callback
+```
+
+`OIDC_ISSUER` is the issuer identifier, **not** the discovery URL: the app
+appends `/.well-known/openid-configuration` itself, and it must exactly match
+the `issuer` field of that document (Keycloak realms often live under
+`/auth/realms/...`).
+
+Note: OIDC configuration is cached per process — restart `pnpm dev` if you
+change issuer settings or restart your IdP.
+
+## Prefer batteries-included?
+
+The repo-root [sandbox](/guides/sandbox/) spins up a kind cluster with seeded
+fixtures plus Dex as a throwaway OIDC provider (`make up`, then copy
+`sandbox/app.env.sandbox` to `app/.env`). Use it when you want realistic SSO,
+authz fixtures, and consumer workloads without touching a shared cluster.
+
+## Commands
+
+| Command                                 | Purpose                                              |
+| --------------------------------------- | ---------------------------------------------------- |
+| `pnpm dev`                              | Dev server with hot reload                           |
+| `pnpm build` / `pnpm start`             | Production build / serve it                          |
+| `pnpm lint`                             | ESLint                                               |
+| `pnpm e2e`                              | Visual Playwright suite over the production build    |
+| `pnpm exec playwright install chromium` | One-time browser install for `pnpm e2e`              |
+
+:::note
+`pnpm dev` uses your kubeconfig (admin-ish) — it does **not** exercise
+`app/k8s/role.yaml` or the ServiceAccount-token flow. Validate those against
+kind too; the [sandbox guide](/guides/sandbox/) shows how.
+:::

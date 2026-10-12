@@ -1,0 +1,31 @@
+---
+sidebar_label: Restore
+sidebar_position: 4
+---
+
+# Restore API
+
+## Restore a version
+
+```http
+POST /api/namespaces/:namespace/secrets/:name/restore
+```
+
+```json
+{ "version": 1 }
+```
+
+- `version` is the app-level `krypton.io/version` number from the
+  [versions list](/api/versions/) (positive integer, required).
+- Snapshots the **current** state first, so the restore itself is reversible,
+  then replaces the live object with the target snapshot's data (bumping
+  `krypton.io/version` again, stamped with the restoring user).
+- Same namespace, managed-only, and authz gates as updating the secret.
+- Answers `{ "secret": SecretDetail }` for the restored live object.
+- `404` when no snapshot exists for the requested version.
+
+```bash
+curl --cookie "krypton_session=$ALICE" -X POST \
+  -H 'Content-Type: application/json' -d '{"version":1}' \
+  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore
+```

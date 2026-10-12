@@ -11,13 +11,13 @@ global:
 nameOverride: ''
 fullnameOverride: ''
 
-app:
+krypton:
   enabled: true
   replicaCount: 2
   image:
     pullPolicy: IfNotPresent
 
-  nameOverride: app
+  nameOverride: krypton
   fullnameOverride: ''
 
   resources:
@@ -75,7 +75,7 @@ networkPolicy:
             - kube-system
             - openshift-dns
     podSelector: {}
-  app:
+  krypton:
     ingressFrom: []
     # Krypton calls the Kubernetes API (https://kubernetes.default.svc), which
     # is a ClusterIP and cannot be selected by podSelector, so this allows TCP

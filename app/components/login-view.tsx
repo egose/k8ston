@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { IconKey, IconShieldLock } from '@tabler/icons-react';
+import { IconKey } from '@tabler/icons-react';
 import { buttonVariants } from '@egose/shadcn-theme/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@egose/shadcn-theme/components/ui/card';
+import { KryptonMark } from '@/components/krypton-mark';
 
 export function LoginView() {
   const searchParams = useSearchParams();
@@ -14,9 +15,7 @@ export function LoginView() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 pt-16">
       <div className="flex flex-col items-center gap-2 text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <IconShieldLock size={24} />
-        </span>
+        <KryptonMark size={48} />
         <h1 className="text-2xl font-semibold tracking-tight">Sign in to Krypton</h1>
         <p className="text-sm text-muted-foreground">Securely store and share secrets with your team.</p>
       </div>

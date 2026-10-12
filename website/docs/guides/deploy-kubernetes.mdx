@@ -1,0 +1,85 @@
+---
+sidebar_label: Deploy to Kubernetes
+sidebar_position: 2
+---
+
+# Deploy to Kubernetes
+
+Manifests live in `app/k8s/`. Two topologies: namespace-scoped (default, least
+privilege) or cluster-wide (centralized multi-namespace dashboard).
+
+## Namespace scope (default)
+
+```bash
+kubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml
+kubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml
+# real secrets — never commit values:
+kubectl create secret generic krypton-oidc -n krypton \
+  --from-literal=OIDC_CLIENT_SECRET='...' \
+  --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
+kubectl apply -f app/k8s/deployment.yaml
+```
+
+What you get:
+
+| Manifest               | Purpose                                                        |
+| ---------------------- | -------------------------------------------------------------- |
+| `namespace.yaml`       | `krypton` namespace                                            |
+| `serviceaccount.yaml`  | `krypton` ServiceAccount (the identity that calls the K8s API) |
+| `role.yaml`            | `secrets` full verbs + `configmaps` read, own namespace only   |
+| `configmap-app.yaml`   | Non-secret app config (`KRYPTON_*`, `OIDC_*`, `NEXT_PUBLIC_*`) |
+| `configmap-access.yaml`| Namespace fallback rules (`access.json`)                       |
+| `secret-oidc.yaml`     | Template for `krypton-oidc` (create with real values instead)  |
+| `deployment.yaml`      | App deployment (non-root `65532`, read-only root FS, port 3000)|
+
+Then expose via Ingress/Route with TLS and register the OIDC redirect URI
+(`https://<host>/api/auth/callback`).
+
+Liveness and readiness probes hit `/api/config` — unauthenticated and free of
+K8s/OIDC calls, so it is safe to probe (the Helm chart probes the same endpoint).
+
+## Cluster scope (multi-namespace dashboard)
+
+Set `KRYPTON_SCOPE=cluster` in `configmap-app.yaml`, apply `clusterrole.yaml`
+(instead of, or in addition to, `role.yaml`), and optionally narrow with
+`KRYPTON_NAMESPACES="team-a,team-b"`:
+
+```bash
+kubectl apply -f app/k8s/clusterrole.yaml
+```
+
+The ClusterRole adds `namespaces` (get, list, watch) on top of the namespace
+permissions. If the ServiceAccount cannot list namespaces, the app degrades
+gracefully to the allowlist (or its own namespace) instead of failing.
+
+## Enabling "Restart apps"
+
+The feature is disabled by default (least privilege). To enable it, do **both**:
+
+1. Set `KRYPTON_RESTART_ENABLED: 'true'` in `configmap-app.yaml`.
+2. Uncomment the `apps` rule (deployments/statefulsets/daemonsets: get, list,
+   watch, patch) in `role.yaml` (or `clusterrole.yaml`).
+
+Without the flag, the UI button + hint are hidden and the API returns 403.
+Without the RBAC rule, the API fails closed at the Kubernetes API.
+
+## Container image
+
+The `Dockerfile` (repo root, pnpm workspace context) builds
+`ghcr.io/egose/krypton:<tag>` — published on `v*.*.*` tags by the
+_Publish Docker image_ workflow:
+
+```bash
+docker build -t krypton:sandbox -f Dockerfile .
+```
+
+The image runs the Next.js standalone server (`node app/server.js`) as UID
+`65532` on port 3000, matching `app/k8s/deployment.yaml`. Krypton is stateless
+(all state lives in Kubernetes Secrets), so more than one replica is always safe.
+
+## Prefer Helm?
+
+The [Helm guide](/guides/deploy-helm/) covers the `helm/main` chart
+(`helm/krypton` subchart, NetworkPolicy, OpenShift Routes). Prefer raw manifests
+when you want minimal moving parts; prefer Helm when you want templated RBAC
+scope, restart wiring, and access config in one values file.

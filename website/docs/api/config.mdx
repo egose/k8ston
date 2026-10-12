@@ -1,0 +1,34 @@
+---
+sidebar_label: Config
+sidebar_position: 7
+---
+
+# Config API
+
+## Public client configuration
+
+```http
+GET /api/config
+```
+
+The only unauthenticated endpoint besides the login flow. Returns the
+public-safe subset of the effective configuration — no secrets — resolved at
+request time (never prerendered, since deploy-time env differs from build-time):
+
+```json
+{
+  "scope": "namespace",
+  "etcdEncrypted": false,
+  "authDisabled": false,
+  "oidcConfigured": true,
+  "historyLimit": 20,
+  "managedOnly": true,
+  "restartEnabled": false,
+  "appNamespace": "krypton"
+}
+```
+
+Use it in deployment checks: assert `authDisabled: false`,
+`oidcConfigured: true`, and (once apiserver encryption is verified)
+`etcdEncrypted: true`. See [Configuration](/guides/configuration/) for every
+variable behind these flags.

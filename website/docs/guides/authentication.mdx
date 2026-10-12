@@ -1,0 +1,72 @@
+---
+sidebar_label: Authentication
+sidebar_position: 5
+---
+
+# Authentication
+
+Users sign in via generic OIDC SSO — Keycloak, Entra ID, Okta, Google, GitHub,
+or anything speaking discovery + PKCE. Users never need cluster credentials;
+the app's ServiceAccount executes the K8s calls.
+
+## How login works
+
+```text
+Browser ──GET /api/auth/login──▶ Krypton ──discovery──▶ OIDC issuer
+   │                                  │ PKCE + nonce + state cookies
+   │◀──────── redirect to IdP ────────┘
+   │── user authenticates ──▶ IdP ──code──▶ /api/auth/callback
+                                                   │ code exchange, claim mapping
+                                                   ▼
+                                          krypton_session cookie (HS256 JWT, 8h)
+```
+
+1. `GET /api/auth/login` builds the authorization URL (PKCE `S256`, nonce,
+   state) and redirects to the IdP.
+2. `GET /api/auth/callback` exchanges the code, reads claims, and mints a
+   stateless session JWT in an `HttpOnly`, `Secure`-in-production,
+   `SameSite=Lax` cookie.
+3. `GET /api/auth/me` returns the current `SessionUser` (`sub`, `email`,
+   `name`, `groups`) or `401` with `{ user: null }`.
+4. `GET /api/auth/logout` clears the session cookie.
+
+See the [Auth API](/api/auth/) for exact shapes.
+
+## Claim mapping
+
+| Variable               | Default  | Maps to            |
+| ---------------------- | -------- | ------------------ |
+| `OIDC_GROUPS_CLAIM`    | `groups` | `SessionUser.groups` (authz input) |
+| `OIDC_USERNAME_CLAIM`  | `email`  | `SessionUser.email` (identity)     |
+| `OIDC_NAME_CLAIM`      | `name`   | `SessionUser.name` (display)       |
+| `OIDC_SCOPES`          | `openid profile email groups` | Requested scopes |
+
+`email` is the identity: admin matching, `allowed-users`, and
+`last-modified-by` all key off it (lowercased). `groups` is the authorization
+input for `allowed-groups`, namespace rules, and admin groups.
+
+## Issuer rules
+
+- `OIDC_ISSUER` is the issuer identifier, **not** the discovery URL — the app
+  appends `/.well-known/openid-configuration` itself and requires an exact
+  match with the document's `issuer` field.
+- Redirect URI defaults to `<NEXT_PUBLIC_APP_URL>/api/auth/callback`
+  (override with `OIDC_REDIRECT_URI`); register the same value at your IdP.
+- OIDC configuration is cached per process — restart the app after Dex/IdP
+  restarts or issuer changes.
+- `http://` issuers fail closed: loopback hostnames only, explicit
+  `OIDC_ALLOW_HTTP=true` only, and rejected entirely when
+  `NODE_ENV=production`.
+
+## Dev bypass and headless sessions
+
+- `AUTH_DISABLED=true` returns a mock admin (`dev@krypton.local`) for every
+  request. Local development only — assert `authDisabled: false` via
+  [`GET /api/config`](/api/config/) in real environments.
+- `sandbox/scripts/mint-jwt.mjs` mints session JWTs directly (must match
+  `SESSION_SECRET`) for headless authz checks:
+
+```bash
+ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)
+curl --cookie "krypton_session=$ALICE" localhost:3000/api/auth/me
+```

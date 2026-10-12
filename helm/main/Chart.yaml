@@ -5,7 +5,7 @@ type: application
 version: 0.1.0
 appVersion: 0.1.0
 dependencies:
-- name: app
+- name: krypton
   version: 0.1.0
-  repository: file://../_app
-  condition: app.enabled
+  repository: file://../krypton
+  condition: krypton.enabled

@@ -1,0 +1,99 @@
+---
+sidebar_label: Architecture
+sidebar_position: 2
+---
+
+# Architecture
+
+Krypton is a stateless Next.js App Router service. All persistent state lives in
+the Kubernetes API; the app holds no database connection, no disk cache beyond a
+60-second in-memory ConfigMap read-through, and no secret values in logs.
+
+## Request flow
+
+```text
+Browser ──cookie (HS256 session JWT)──▶ Next.js route handler
+                                              │ 1. requireUser() → SessionUser
+                                              │ 2. assertNamespaceAllowed()
+                                              │ 3. read live Secret via CoreV1Api
+                                              │ 4. assertManagedVisible() (404 if unmanaged + managed-only)
+                                              │ 5. canAccessSecret() (annotations → ConfigMap → open)
+                                              ▼
+                                        Kubernetes API (ServiceAccount token in-cluster,
+                                                       ~/.kube/config locally)
+```
+
+Every secrets route follows the same five-step shape: authenticate the session,
+check the namespace scope, read the live object, apply the managed-only gate,
+then evaluate hybrid authorization. Denials and errors are audit-logged with key
+**names** only — values never reach the logs.
+
+## Kubernetes client (`lib/k8s.ts`)
+
+- **In-cluster**: uses the auto-mounted ServiceAccount token
+  (`/var/run/secrets/kubernetes.io/serviceaccount/token`) via `loadFromCluster()`.
+  No credentials to manage; RBAC comes from the bound `Role`/`ClusterRole`.
+- **Local dev**: falls back to `loadFromDefault()` (`~/.kube/config`).
+- **Optional impersonation**: when `KRYPTON_IMPERSONATION=true` and the API server
+  trusts the same OIDC issuer, `Impersonate-User`/`Impersonate-Group` headers
+  forward the human identity so _their_ RBAC is evaluated instead of the
+  ServiceAccount's. Default is `false` (hybrid mode).
+- **Error normalization**: `toK8sError()` unwraps client-node `ApiException`
+  bodies into clean `Kubernetes API (status): message` responses, with a 403
+  hint pointing at missing app RBAC permissions.
+
+## Scopes (`lib/namespaces.ts`)
+
+| Scope                    | Sees                                     | RBAC              |
+| ------------------------ | ---------------------------------------- | ----------------- |
+| `namespace` (default)    | Only the pod's own namespace             | `Role` + binding  |
+| `cluster`                | All namespaces, optionally allowlisted   | `ClusterRole`     |
+
+`KRYPTON_NAMESPACES="team-a,team-b"` narrows cluster scope. If the ServiceAccount
+cannot list namespaces, `/api/namespaces` degrades gracefully to the allowlist
+(or the pod's own namespace) instead of failing.
+
+## Versioning model (`lib/secrets.ts`)
+
+- Every live secret carries `krypton.io/version` (app counter, starts at 1) plus
+  the native `metadata.resourceVersion`.
+- Writes send the loaded `resourceVersion` back; a mismatch is a `409` with a
+  reload prompt (optimistic concurrency, K8s-native).
+- Before every overwrite, the current state is persisted as an immutable snapshot
+  Secret named `<name>-vN`, labeled `krypton.io/history-of=<name>` /
+  `krypton.io/kind=history`, annotated with version, timestamp, and actor.
+- Snapshots are pruned to `KRYPTON_HISTORY_LIMIT` (default 20, newest kept).
+- Restore snapshots the current state first, so rollbacks are reversible.
+
+## Consumer restarts
+
+Pods with **volume-mounted** secrets sync automatically (kubelet delay); pods
+using **environment variables** need a rollout. _Restart apps_ scans
+Deployments, StatefulSets, and DaemonSets for references to the secret
+(`env`, `envFrom`, `volumes`, projected sources with a string-scan fallback)
+and patches the pod template with a `krypton.io/restarted-at` annotation to
+trigger a rolling restart. The feature is disabled by default
+(`KRYPTON_RESTART_ENABLED=false`: button hidden, API returns 403, no `apps`
+permissions needed).
+
+## Project layout
+
+```text
+app/                    # Next.js App Router
+  app/api/namespaces/…  # secrets CRUD, versions, restore, restart-consumers
+  app/api/auth/…        # OIDC login/callback/logout/me
+  app/secrets/[ns]/…    # detail / edit / history views
+  lib/                  # k8s client, OIDC+session, authz, snapshots, validation
+  components/           # dashboard, tables, forms, masked values, history
+  k8s/                  # namespace, SA, Role/ClusterRole, configs, deployment
+helm/                   # helm/main chart + helm/krypton subchart
+sandbox/                # kind cluster + Dex + fixtures + helper scripts
+website/                # this documentation site (Docusaurus)
+```
+
+## Related pages
+
+- [Security Model](/about/security-model/) for guarantees and hardening.
+- [Authentication](/guides/authentication/) and [Authorization](/guides/authorization/)
+  for the SSO + hybrid authz design.
+- [Versioning & History](/guides/versioning-history/) for snapshots, conflicts, and restores.

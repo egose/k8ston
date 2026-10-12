@@ -1,0 +1,90 @@
+---
+sidebar_label: Authorization
+sidebar_position: 6
+---
+
+import CodeBlock from '@theme/CodeBlock';
+
+# Authorization
+
+SSO proves _who you are_; per-secret annotations and one namespace-level
+ConfigMap decide _what you may see_ (`lib/authz.ts`). The app's ServiceAccount
+executes the K8s calls, so SSO users need no cluster identity.
+
+## Decision order
+
+1. **Admins always pass** — `KRYPTON_ADMIN_GROUPS` / `KRYPTON_ADMIN_USERS`
+   (matched against SSO groups / lowercased email).
+2. **Per-secret annotations override everything below.** If a secret has any
+   `allowed-groups`/`allowed-users`, only those decide.
+3. **Namespace fallback** in ConfigMap `<app-namespace>/krypton-access`, key
+   `access.json` (cached 60s in memory).
+4. **No rules anywhere → visible to all authenticated users** (open by default,
+   restricted once rules are added).
+
+Until any admin is configured, every authenticated user is treated as admin
+(bootstrap mode — set admins promptly).
+
+## Per-secret annotations
+
+```mdx-code-block
+import AnnotatedSecret from '!!raw-loader!../../.samples/secret-annotated.yaml';
+
+<CodeBlock language="yaml">{AnnotatedSecret}</CodeBlock>
+```
+
+Managed in the UI on the secret form:
+
+```yaml
+metadata:
+  annotations:
+    krypton.io/allowed-groups: 'dev-team, database-admins'
+    krypton.io/allowed-users: 'alice@company.com'
+```
+
+## Namespace fallback (`access.json`)
+
+```mdx-code-block
+import AccessJson from '!!raw-loader!../../.samples/access-config.json.txt';
+
+<CodeBlock language="json">{AccessJson}</CodeBlock>
+```
+
+Namespaces absent from the map are open to all authenticated users until
+restricted. An invalid `access.json` is ignored with a warning (fail-open to
+step 4, not a crash); a missing ConfigMap simply means no namespace rules.
+
+## Creation is special
+
+A new secret has no annotations yet, so creating in a namespace is decided by
+the **namespace rules alone** — the per-secret allowed groups/users you set in
+the form only take effect _after_ the secret exists. The secrets list response
+includes `canCreate` so the UI disables creation upfront when the rules exclude
+you (POST still enforces server-side: `403`).
+
+## Managed-only mode
+
+Default `KRYPTON_MANAGED_ONLY=true`: secrets _without_
+`krypton.io/managed-by: krypton` are hidden entirely — excluded from lists, 404
+on direct access (read, edit, delete, history, restore, restart) — so K8s-level
+secrets created outside Krypton can't be touched by accident. Set
+`KRYPTON_MANAGED_ONLY=false` to show everything again (legacy adopt-on-edit:
+saving an external secret stamps Krypton annotations onto it).
+
+## Optional K8s-native impersonation
+
+If your API server trusts the same OIDC issuer as the app, set
+`KRYPTON_IMPERSONATION=true` and Krypton forwards
+`Impersonate-User`/`Impersonate-Group` headers so the _human's_ RBAC is evaluated
+instead of the ServiceAccount's. Default is `false` (hybrid mode above).
+
+## Worked example (sandbox)
+
+| Secret                 | Namespace    | Rule source                             | alice (dev-team) | bob (other-team) | carol (frontend-team) | admin |
+| ---------------------- | ------------ | --------------------------------------- | ---------------- | ---------------- | --------------------- | ----- |
+| `database-credentials` | krypton-test | annotation `allowed-groups: dev-team,…` | ✅               | ❌               | ❌                    | ✅    |
+| `feature-flags`        | krypton-test | none (open by default)                  | ✅               | ✅               | ✅                    | ✅    |
+| `frontend-api-keys`    | frontend-ns  | namespace fallback (`frontend-team`)    | ❌               | ❌               | ✅                    | ✅    |
+
+Recreate it headless with `sandbox/scripts/mint-jwt.mjs` — see the
+[Sandbox guide](/guides/sandbox/).

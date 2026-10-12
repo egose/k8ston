@@ -1,0 +1,33 @@
+---
+sidebar_label: Namespaces
+sidebar_position: 1
+---
+
+# Namespaces API
+
+## List allowed namespaces
+
+```http
+GET /api/namespaces
+```
+
+Returns the namespaces the app may operate in, plus the effective scope:
+
+```json
+{ "scope": "cluster", "namespaces": ["frontend-ns", "krypton-test"] }
+```
+
+Behavior (`lib/namespaces.ts`):
+
+- `namespace` scope: exactly `[<pod-own-namespace>]` — by design.
+- `cluster` scope: all namespaces the ServiceAccount can list, filtered by
+  `KRYPTON_NAMESPACES` when set (empty = all).
+- Graceful fallback: if the SA cannot list namespaces, the allowlist is
+  returned (or the pod's own namespace) instead of failing.
+
+Every `:ns` route below re-validates the namespace with
+`assertNamespaceAllowed()` — a namespace outside the list is `403`:
+
+```json
+{ "error": "Namespace \"other\" is not accessible (scope=namespace). Allowed: krypton" }
+```

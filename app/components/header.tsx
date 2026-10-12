@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconKey, IconLogout, IconShieldLock } from '@tabler/icons-react';
+import { IconKey, IconLogout } from '@tabler/icons-react';
 import { Button, buttonVariants } from '@egose/shadcn-theme/components/ui/button';
+import { KryptonMark } from '@/components/krypton-mark';
 import { api } from '@/lib/api-client';
 
 export function Header() {
@@ -28,9 +29,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <IconShieldLock size={18} />
-          </span>
+          <KryptonMark size={32} />
           <span className="text-lg tracking-tight">Krypton</span>
         </Link>
         <div className="flex-1" />

@@ -1,0 +1,35 @@
+---
+sidebar_label: Restart Consumers
+sidebar_position: 5
+---
+
+# Restart Consumers API
+
+## Restart workloads consuming a secret
+
+```http
+POST /api/namespaces/:namespace/secrets/:name/restart-consumers
+```
+
+Triggers a rolling restart of the Deployments, StatefulSets, and DaemonSets in
+the secret's namespace that reference it (env, envFrom, volumes, projected
+sources) by patching their pod template with a `krypton.io/restarted-at`
+annotation. Required for env-var consumers; volume mounts sync via kubelet on
+their own.
+
+```json
+{
+  "deployments": ["api-server"],
+  "statefulSets": [],
+  "daemonSets": [],
+  "note": "Some apps pick up secret changes automatically, others need a restart to see the new values."
+}
+```
+
+- Returns `403 { "error": "Restarting apps is disabled on this deployment" }`
+  unless `KRYPTON_RESTART_ENABLED=true` (which also needs the `apps` RBAC rule).
+- Same namespace, managed-only, and authz gates as updating the secret.
+- The restart is audit-logged with the targeted workload names.
+
+See [Consumer Restarts](/guides/consumer-restarts/) for the scanning rules and
+the sandbox walkthrough.

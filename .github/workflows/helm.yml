@@ -1,0 +1,46 @@
+name: Helm
+
+on:
+  pull_request:
+    paths:
+    - helm/**
+    - .github/workflows/helm.yml
+  push:
+    paths:
+    - helm/**
+    - .github/workflows/helm.yml
+
+jobs:
+  lint-template:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+    - name: Setup Helm
+      uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
+
+    - name: Lint charts
+      run: |
+        helm lint helm/krypton
+        helm dependency update helm/main
+        helm lint helm/main
+
+    - name: Template charts
+      run: |
+        helm template test helm/krypton > /dev/null
+        helm template test helm/krypton \
+          --set rbac.scope=cluster \
+          --set restartEnabled=true \
+          --set ingress.enabled=true \
+          --set httpRoute.enabled=true \
+          --set route.enabled=true \
+          --set accessConfig.enabled=true \
+          --set autoscaling.enabled=true \
+          --set podDisruptionBudget.enabled=true \
+          --set serviceAccount.create=false > /dev/null
+        helm template test helm/main -f helm/main/values.yaml -f helm/main/values-example.yaml > /dev/null
+        helm template test helm/main -f helm/main/values.yaml -f helm/main/values-k8s-prod.example.yaml > /dev/null

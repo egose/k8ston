@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -114,6 +115,7 @@ interface Props {
 
 export function SecretForm({ mode, namespace, initial }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [entries, setEntries] = useState<Entry[]>(() =>
     initial ? toEntries(initial.data) : [{ id: nextId++, key: '', value: '', revealed: false }],
   );
@@ -225,6 +227,10 @@ export function SecretForm({ mode, namespace, initial }: Props) {
           allowedUsers: parseCsv(values.allowedUsers),
         });
         toast.success(`Secret "${name}" created`);
+        // The dashboard list is cached (staleTime 15s) — force a refetch so the
+        // new secret appears when navigating back. (The detail page uses a fresh
+        // query key, so it always fetches.)
+        await queryClient.invalidateQueries({ queryKey: ['secrets', namespace] });
         router.push(`/secrets/${namespace}/${name}`);
       } else {
         if (!initial) return;
@@ -236,6 +242,12 @@ export function SecretForm({ mode, namespace, initial }: Props) {
           resourceVersion: initial.resourceVersion,
         });
         toast.success(`Secret "${initial.name}" updated — previous version saved to history`);
+        // Edit and detail views share the ['secret', ns, name] cache entry: without
+        // invalidation the detail page would render pre-edit data until the 15s
+        // staleTime lapses (router.refresh() only re-fetches RSC payloads).
+        await queryClient.invalidateQueries({ queryKey: ['secret', namespace, initial.name] });
+        await queryClient.invalidateQueries({ queryKey: ['versions', namespace, initial.name] });
+        await queryClient.invalidateQueries({ queryKey: ['secrets', namespace] });
         router.push(`/secrets/${namespace}/${initial.name}`);
         router.refresh();
       }

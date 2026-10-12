@@ -8,7 +8,6 @@ import { parseDocument } from 'yaml';
 import { Button } from '@egose/shadcn-theme/components/ui/button';
 import { Badge } from '@egose/shadcn-theme/components/ui/badge';
 import { Label } from '@egose/shadcn-theme/components/ui/label';
-import { Textarea } from '@egose/shadcn-theme/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@egose/shadcn-theme/components/ui/tabs';
 import {
   Dialog,
@@ -27,6 +26,7 @@ import {
 } from '@egose/shadcn-theme/components/ui/select';
 import { useClipboard } from '@egose/shadcn-theme/hooks/use-clipboard';
 import { VALUE_CONTENT_TYPES, contentTypeLabel, detectContentType, type ValueContentType } from '@/lib/content-type';
+import { prettyXml, validateXml } from '@/lib/xml';
 
 interface Props {
   open: boolean;
@@ -39,10 +39,16 @@ interface Props {
 
 type Override = ValueContentType | 'auto';
 
-// Markdown + Prism are heavy — load only when the Preview tab first opens.
+// Markdown + Shiki are heavy — load only when the Preview tab first opens.
 const ValuePreview = dynamic(() => import('./value-preview').then((m) => m.ValuePreview), {
   ssr: false,
-  loading: () => <div className="h-[300px] animate-pulse rounded border bg-muted/40" />,
+  loading: () => <div className="h-[360px] animate-pulse rounded border bg-muted/40" />,
+});
+
+// CodeMirror is heavy — load only with the dialog, never in the page bundle.
+const ValueEditor = dynamic(() => import('./value-editor').then((m) => m.ValueEditor), {
+  ssr: false,
+  loading: () => <div className="h-[360px] animate-pulse rounded border bg-muted/40" />,
 });
 
 export function ValueDialog({ open, onOpenChange, entryKey, value, mode, onSave }: Props) {
@@ -78,7 +84,11 @@ export function ValueDialog({ open, onOpenChange, entryKey, value, mode, onSave 
     }
   }, [effective, draft]);
 
-  const formatError = jsonError ?? yamlError;
+  // DOMParser only exists in the browser — the dialog renders after user
+  // interaction, and validateXml degrades to null without it.
+  const xmlError = useMemo(() => (effective === 'xml' ? validateXml(draft) : null), [effective, draft]);
+
+  const formatError = jsonError ?? yamlError ?? xmlError;
   const formatDisabled = draft.trim() === '' || formatError !== null;
 
   const stats = useMemo(() => {
@@ -115,9 +125,20 @@ export function ValueDialog({ open, onOpenChange, entryKey, value, mode, onSave 
     }
   };
 
+  const formatXml = () => {
+    try {
+      setDraft(prettyXml(draft));
+    } catch {
+      toast.error('Cannot format: value is not valid XML');
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      {/* sm: prefix is required — the base DialogContent ships sm:max-w-sm,
+          which beats a bare max-w-* at ≥sm viewports (responsive variants sort
+          later in the cascade). */}
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <span className="font-mono">{entryKey || '(unnamed key)'}</span>
@@ -184,6 +205,18 @@ export function ValueDialog({ open, onOpenChange, entryKey, value, mode, onSave 
               Format
             </Button>
           )}
+          {effective === 'xml' && (
+            <Button
+              type="button"
+              variant="secondary"
+              appearance="outline"
+              size="sm"
+              disabled={formatDisabled}
+              onClick={formatXml}
+            >
+              Format
+            </Button>
+          )}
           <div className="flex-1" />
           <Button
             type="button"
@@ -197,21 +230,23 @@ export function ValueDialog({ open, onOpenChange, entryKey, value, mode, onSave 
           </Button>
         </div>
 
-        <Tabs defaultValue="raw">
+        {/* flex-col workaround: upstream Tabs root uses `data-horizontal:flex-col`
+            but only sets `data-orientation="horizontal"`, so the column direction
+            never applies and the list renders beside the content. */}
+        {/* Read-only viewers get the rendered/highlighted preview first —
+            the exact bytes are one click away on Raw. */}
+        <Tabs defaultValue={mode === 'view' ? 'preview' : 'raw'} className="flex-col">
           <TabsList>
             <TabsTrigger value="raw">Raw</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
           <TabsContent value="raw" className="flex flex-col gap-2">
-            <Textarea
-              aria-label="Secret value"
+            <ValueEditor
               value={draft}
-              onChange={(ev) => setDraft(ev.target.value)}
+              onChange={setDraft}
+              contentType={effective}
               readOnly={mode === 'view'}
-              rows={14}
-              className="font-mono text-xs"
               placeholder={mode === 'edit' ? 'Value (multiline supported)' : undefined}
-              spellCheck={false}
             />
             {formatError && <p className="text-xs text-destructive">{formatError}</p>}
           </TabsContent>

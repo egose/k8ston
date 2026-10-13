@@ -44,17 +44,15 @@ afterEach(() => {
 
 it('uses the typed revision contract for both client requests, including URL-encoded keepHistory deletion', async () => {
   const { api } = await import('@/lib/api-client');
-  const fetch = vi
-    .mocked(globalThis.fetch)
-    .mockResolvedValue(
-      Response.json({
-        status: 'pending',
-        name: 'credentials',
-        uid: 'synthetic',
-        history: 'retained',
-        resourceVersion: 'next',
-      }),
-    );
+  const fetch = vi.mocked(globalThis.fetch).mockResolvedValue(
+    Response.json({
+      status: 'pending',
+      name: 'credentials',
+      uid: 'synthetic',
+      history: 'retained',
+      resourceVersion: 'next',
+    }),
+  );
   const revision = 'opaque/rv?x=1&y=2';
   const deleted = await api.deleteSecret('unit-test', 'credentials', { resourceVersion: revision, keepHistory: true });
   expect(deleted.status).toBe('pending');

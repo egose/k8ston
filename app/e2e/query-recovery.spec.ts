@@ -77,11 +77,9 @@ for (const status of [503, 403]) {
     expect(state.listReads).toBe(0); // A URL namespace cannot bypass unknown namespace discovery.
     pending.release();
     await expect(
-      page
-        .getByRole('alert')
-        .filter({
-          hasText: status === 403 ? 'You do not have permission to list namespaces.' : 'Unable to load namespaces.',
-        }),
+      page.getByRole('alert').filter({
+        hasText: status === 403 ? 'You do not have permission to list namespaces.' : 'Unable to load namespaces.',
+      }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'New secret' })).toBeDisabled();
     await expect(page.getByText(/No namespaces are available|No secrets found|Select a namespace\./)).toHaveCount(0);

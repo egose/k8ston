@@ -31,28 +31,36 @@ krypton:
   # krypton takes no extra CLI args (`node app/server.js` standalone).
   args: []
 
-  # Non-secret krypton configuration, e.g. KRYPTON_SCOPE, KRYPTON_NAMESPACES,
-  # KRYPTON_ADMIN_GROUPS, OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_SCOPES,
-  # NEXT_PUBLIC_APP_URL. Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET)
-  # belong in a Kubernetes Secret referenced by envSecretName. Full variable
-  # reference: app/.env.example.
+  # Non-secret krypton configuration, e.g. KRYPTON_ADMIN_GROUPS, OIDC_ISSUER,
+  # OIDC_CLIENT_ID, OIDC_SCOPES, NEXT_PUBLIC_APP_URL. Secret values
+  # (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes Secret
+  # referenced by envSecretName. Full variable reference: app/.env.example.
+  # Chart-managed keys (KRYPTON_SCOPE, KRYPTON_NAMESPACES,
+  # KRYPTON_RESTART_ENABLED, KRYPTON_ACCESS_CONFIGMAP) are derived from the
+  # rbac/restartEnabled/accessConfig values below — omit them or set the same
+  # effective value (mismatches fail rendering with guidance).
   env: {}
   envSecretName: ''
 
-  # RBAC for the app ServiceAccount. Must match KRYPTON_SCOPE in `env` above:
-  # `namespace` (own namespace only, the default) or `cluster` (centralized
-  # multi-namespace dashboard, optionally narrowed with KRYPTON_NAMESPACES).
+  # RBAC for the app ServiceAccount. The chart derives KRYPTON_SCOPE from
+  # `scope` (and a curated KRYPTON_NAMESPACES allowlist from
+  # `extraNamespaces`): `namespace` (own namespace only, the default) or
+  # `cluster` (centralized multi-namespace dashboard, optionally narrowed with
+  # KRYPTON_NAMESPACES in `env`). See helm/krypton/values.yaml and its README
+  # for the full effective-configuration reference.
   rbac:
     create: true
     scope: namespace
 
-  # "Restart apps" feature (KRYPTON_RESTART_ENABLED + the apps RBAC rule for
-  # deployments/statefulsets/daemonsets). Default false (least privilege):
+  # "Restart apps" feature: the single effective value driving BOTH the
+  # KRYPTON_RESTART_ENABLED runtime flag AND the apps RBAC rule for
+  # deployments/statefulsets/daemonsets. Default false (least privilege):
   # the UI button is hidden and the API returns 403. Set true to enable.
   restartEnabled: false
 
   # Namespace-level ownership fallback ConfigMap (krypton-access / access.json).
   # Per-secret annotations override these rules (see app/k8s/configmap-access.yaml).
+  # When enabled, KRYPTON_ACCESS_CONFIGMAP is derived from the ConfigMap name.
   accessConfig:
     enabled: false
 

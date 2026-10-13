@@ -67,14 +67,27 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             {{- end }}
-          {{- $env := merge ($global.env | default dict) (.Values.env | default dict) -}}
-            {{- if not (hasKey $env "KRYPTON_RESTART_ENABLED") }}
-            - name: KRYPTON_RESTART_ENABLED
-              value: {{ .Values.restartEnabled | quote }}
+          {{- $cfg := include "krypton.effectiveConfig" . | fromYaml -}}
+          {{- $managed := include "krypton.managedEnvKeys" . | fromYamlArray -}}
+            {{- if $cfg.scope }}
+            - name: KRYPTON_SCOPE
+              value: {{ $cfg.scope | quote }}
             {{- end }}
-            {{- range $k, $v := $env }}
+            {{- if $cfg.namespaces }}
+            - name: KRYPTON_NAMESPACES
+              value: {{ $cfg.namespaces | quote }}
+            {{- end }}
+            - name: KRYPTON_RESTART_ENABLED
+              value: {{ $cfg.restartEnabled | quote }}
+            {{- if $cfg.accessConfigMap }}
+            - name: KRYPTON_ACCESS_CONFIGMAP
+              value: {{ $cfg.accessConfigMap | quote }}
+            {{- end }}
+            {{- range $k, $v := $cfg.env }}
+            {{- if not (has $k $managed) }}
             - name: {{ $k | quote }}
               value: {{ $v | quote }}
+            {{- end }}
             {{- end }}
           {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}

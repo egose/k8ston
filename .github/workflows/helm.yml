@@ -44,3 +44,6 @@ jobs:
           --set serviceAccount.create=false > /dev/null
         helm template test helm/main -f helm/main/values.yaml -f helm/main/values-example.yaml > /dev/null
         helm template test helm/main -f helm/main/values.yaml -f helm/main/values-k8s-prod.example.yaml > /dev/null
+
+    - name: Chart regression assertions
+      run: helm/krypton/tests/render-regressions.sh

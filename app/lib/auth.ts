@@ -16,6 +16,12 @@ const NONCE_COOKIE = 'krypton_nonce';
 const STATE_COOKIE = 'krypton_state';
 
 function sessionKey(): Uint8Array {
+  // Validate at use time, not module import: the same image can be built
+  // without runtime secrets, and AUTH_DISABLED does not need session JWTs.
+  const secret = config.sessionSecret.trim();
+  if (secret.length < 32 || secret === 'dev-only-insecure-secret-change-me-32chars!!') {
+    throw new Error('SESSION_SECRET must be an explicit key of at least 32 characters, not the development fallback');
+  }
   return new TextEncoder().encode(config.sessionSecret);
 }
 
@@ -41,14 +47,22 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
 
 export async function verifySessionToken(token: string): Promise<SessionUser | null> {
   try {
-    const { payload } = await jose.jwtVerify(token, sessionKey(), { issuer: 'krypton' });
-    const { sub, email, name, groups } = payload as unknown as SessionUser;
-    if (typeof sub !== 'string' || typeof email !== 'string') return null;
+    const { payload } = await jose.jwtVerify(token, sessionKey(), {
+      issuer: 'krypton',
+      algorithms: ['HS256'],
+      requiredClaims: ['sub', 'email', 'iat', 'exp'],
+    });
+    const { sub, email, name, groups, iat, exp } = payload;
+    if (typeof sub !== 'string' || !sub.trim() || typeof email !== 'string' || !email.trim()) return null;
+    if (typeof iat !== 'number' || typeof exp !== 'number' || iat > Math.floor(Date.now() / 1000) || exp <= iat)
+      return null;
+    if (name !== undefined && typeof name !== 'string') return null;
+    if (groups !== undefined && (!Array.isArray(groups) || !groups.every((g) => typeof g === 'string'))) return null;
     return {
       sub,
       email,
-      name: typeof name === 'string' ? name : email,
-      groups: Array.isArray(groups) ? groups.filter((g): g is string => typeof g === 'string') : [],
+      name: name ?? email,
+      groups: groups ?? [],
     };
   } catch {
     return null;
@@ -107,9 +121,7 @@ async function getOidcConfiguration(): Promise<openid.Configuration> {
   const insecure = server.protocol === 'http:';
   if (insecure) {
     if (!isLoopbackHostname(server.hostname)) {
-      throw new Error(
-        `OIDC issuer "${config.oidc.issuer}" must use HTTPS (plain HTTP is only allowed for loopback issuers)`,
-      );
+      throw new Error('OIDC issuer must use HTTPS (plain HTTP is only allowed for loopback issuers)');
     }
     if (process.env.NODE_ENV === 'production') {
       throw new Error('OIDC_ALLOW_HTTP is rejected when NODE_ENV=production');
@@ -139,12 +151,7 @@ function cookieOpts(maxAge: number) {
 }
 
 function extractGroups(claims: Record<string, unknown>): string[] {
-  const candidates = [
-    config.oidc.groupsClaim,
-    'groups',
-    'roles',
-    'realm_access.roles' in claims ? 'realm_access.roles' : undefined,
-  ].filter(Boolean) as string[];
+  const candidates = [config.oidc.groupsClaim, 'groups', 'roles', 'realm_access.roles'].filter(Boolean);
   for (const path of candidates) {
     const value = path.split('.').reduce<unknown>((acc, key) => {
       if (typeof acc === 'object' && acc !== null && key in acc) {
@@ -163,13 +170,14 @@ function extractGroups(claims: Record<string, unknown>): string[] {
 function extractClaim(claims: Record<string, unknown>, primary: string, fallbacks: string[]): string {
   for (const key of [primary, ...fallbacks]) {
     const v = claims[key];
-    if (typeof v === 'string' && v) return v;
+    if (typeof v === 'string' && v.trim()) return v;
   }
   return '';
 }
 
 /** Build the IdP login URL and stash PKCE/nonce/state in short-lived cookies. */
 export async function getAuthorizationUrl(): Promise<URL> {
+  sessionKey();
   const oidc = await getOidcConfiguration();
   const codeVerifier = openid.randomPKCECodeVerifier();
   const codeChallenge = await openid.calculatePKCECodeChallenge(codeVerifier);
@@ -194,16 +202,21 @@ export async function getAuthorizationUrl(): Promise<URL> {
 
 /** Exchange the callback code for tokens and derive the SessionUser. */
 export async function handleOidcCallback(currentUrl: URL): Promise<SessionUser> {
-  const oidc = await getOidcConfiguration();
   const store = await cookies();
   const expectedState = store.get(STATE_COOKIE)?.value;
   const nonce = store.get(NONCE_COOKIE)?.value;
   const codeVerifier = store.get(PKCE_COOKIE)?.value;
 
-  // one-time values
+  // Consume even incomplete or failed transactions. A retry must start a new
+  // login; never downgrade missing cookies into optional openid-client checks.
   store.delete(PKCE_COOKIE);
   store.delete(NONCE_COOKIE);
   store.delete(STATE_COOKIE);
+  if (!expectedState || !nonce || !codeVerifier) {
+    throw new Error('OIDC login transaction is missing or expired; start a new sign-in');
+  }
+  sessionKey();
+  const oidc = await getOidcConfiguration();
 
   // openid-client derives the token-request `redirect_uri` from `currentUrl`
   // by stripping query params. Behind a TLS-terminating Ingress/Route,
@@ -230,19 +243,26 @@ export async function handleOidcCallback(currentUrl: URL): Promise<SessionUser> 
   const claims = tokens.claims();
   if (!claims) throw new Error('OIDC callback did not return ID token claims');
   const record = claims as unknown as Record<string, unknown>;
+  const sub = record.sub;
+  if (typeof sub !== 'string' || !sub.trim()) throw new Error('OIDC ID token is missing a subject');
 
   // Prefer userinfo when available for fresh group membership.
   let merged: Record<string, unknown> = { ...record };
   try {
-    if (tokens.access_token) {
-      const info = await openid.fetchUserInfo(oidc, tokens.access_token, openid.skipSubjectCheck as never);
+    if (tokens.access_token && oidc.serverMetadata().userinfo_endpoint) {
+      const info = await openid.fetchUserInfo(oidc, tokens.access_token, sub);
       merged = { ...merged, ...(info as unknown as Record<string, unknown>) };
     }
-  } catch {
-    // fall back to ID token claims only
+  } catch (err) {
+    // openid-client reports a UserInfo sub mismatch with this code. Do not
+    // mistake a different identity for an unavailable optional endpoint, and
+    // do not expose the error cause (which contains the returned claims).
+    if (err instanceof openid.ClientError && err.code === 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED') {
+      throw new Error('OIDC UserInfo subject does not match the ID token');
+    }
+    // Preserve ID-token-only login when optional UserInfo is unavailable.
   }
 
-  const sub = extractClaim(merged, 'sub', []);
   const email = extractClaim(merged, config.oidc.usernameClaim, ['email', 'preferred_username', 'upn']).toLowerCase();
   const name = extractClaim(merged, config.oidc.nameClaim, ['name', 'preferred_username']);
   if (!sub || !email) throw new Error('OIDC claims are missing sub/email');
@@ -255,25 +275,91 @@ function randomToken(): string {
 }
 
 // ---------------------------------------------------------------------------
-// Error reporting — flatten OIDC failures into actionable log fields
+// Error reporting — classify OIDC failures without copying provider values
 // ---------------------------------------------------------------------------
 
 export interface AuthErrorDetails {
   message: string;
-  /** low-level cause code: EAI_AGAIN, ECONNREFUSED, CERT_HAS_EXPIRED, ... */
+  /** Allowlisted system/library or application classification only. */
   code?: string;
-  hostname?: string;
-  /** IdP's own error (Keycloak's error/error_description from the callback URL) */
+  /** Known OAuth/OIDC code, or the fixed provider_error fallback. */
   idpError?: string;
-  idpDescription?: string;
+  descriptionCode?: 'redirect_uri' | 'provided' | 'omitted';
   hint?: string;
 }
+
+const idpCodes = new Set([
+  'invalid_request',
+  'unauthorized_client',
+  'access_denied',
+  'unsupported_response_type',
+  'invalid_scope',
+  'server_error',
+  'temporarily_unavailable',
+  'interaction_required',
+  'login_required',
+  'account_selection_required',
+  'consent_required',
+  'invalid_request_uri',
+  'invalid_request_object',
+  'request_not_supported',
+  'request_uri_not_supported',
+  'registration_not_supported',
+  'invalid_grant',
+  'invalid_client',
+  'unsupported_grant_type',
+]);
+
+export function classifyIdpError(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  return typeof value === 'string' && value.length <= 64 && idpCodes.has(value) ? value : 'provider_error';
+}
+
+const systemCodes = new Set([
+  'EAI_AGAIN',
+  'ENOTFOUND',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'CERT_HAS_EXPIRED',
+  'ERR_TLS_CERT_ALTNAME_INVALID',
+  'SELF_SIGNED_CERT_IN_CHAIN',
+  'DEPTH_ZERO_SELF_SIGNED_CERT',
+  'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
+  'OAUTH_INVALID_RESPONSE',
+  'OAUTH_RESPONSE_IS_NOT_JSON',
+  'OAUTH_RESPONSE_BODY_ERROR',
+  'OAUTH_AUTHORIZATION_RESPONSE_ERROR',
+  'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED',
+  'OAUTH_JWT_CLAIM_COMPARISON_FAILED',
+  'OAUTH_KEY_SELECTION_FAILED',
+  'OAUTH_HTTP_REQUEST_FORBIDDEN',
+]);
+
+const localAuthErrors = new Map([
+  [
+    'SESSION_SECRET must be an explicit key of at least 32 characters, not the development fallback',
+    'session_configuration',
+  ],
+  ['OIDC is not configured', 'oidc_configuration'],
+  ['OIDC issuer must use HTTPS (plain HTTP is only allowed for loopback issuers)', 'oidc_configuration'],
+  ['OIDC_ALLOW_HTTP is rejected when NODE_ENV=production', 'oidc_configuration'],
+  ['OIDC issuer uses plain HTTP: set OIDC_ALLOW_HTTP=true to allow it (loopback sandbox only)', 'oidc_configuration'],
+  ['OIDC login transaction is missing or expired; start a new sign-in', 'transaction_expired'],
+  ['OIDC callback did not return ID token claims', 'identity_invalid'],
+  ['OIDC ID token is missing a subject', 'identity_invalid'],
+  ['OIDC UserInfo subject does not match the ID token', 'identity_mismatch'],
+  ['OIDC claims are missing sub/email', 'identity_invalid'],
+]);
 
 function causeChain(err: unknown): Record<string, unknown>[] {
   const chain: Record<string, unknown>[] = [];
   let cur: unknown = err;
   const seen = new Set<unknown>();
-  while (cur && typeof cur === 'object' && !seen.has(cur)) {
+  while (cur && typeof cur === 'object' && !seen.has(cur) && chain.length < 8) {
     seen.add(cur);
     chain.push(cur as Record<string, unknown>);
     cur = (cur as { cause?: unknown }).cause;
@@ -282,59 +368,69 @@ function causeChain(err: unknown): Record<string, unknown>[] {
 }
 
 /**
- * Flatten OIDC failures into loggable fields plus an operator hint. Covers
- * IdP error responses (?error= on the callback), DNS/TLS/network fetch
- * failures from discovery/token/userinfo, and issuer mismatches.
+ * Error messages, descriptions, hostnames, and arbitrary string codes can all
+ * carry tokens/claims/headers. Examine at most eight causes and 2 KiB per text
+ * diagnostic, then emit fixed classifications/guidance only.
  */
-export function describeAuthError(err: unknown): AuthErrorDetails {
-  const message = err instanceof Error ? err.message : String(err);
-  const out: AuthErrorDetails = { message };
-  for (const link of causeChain(err)) {
-    // oauth4webapi AuthorizationResponseError carries the IdP's verdict
-    // (?error=&error_description=) as .error/.error_description.
-    if (typeof link.error === 'string' && !out.idpError) {
-      out.idpError = link.error;
-      if (typeof link.error_description === 'string') out.idpDescription = link.error_description;
+export function describeAuthError(err: unknown, params?: URLSearchParams): AuthErrorDetails {
+  const out: AuthErrorDetails = { message: 'Sign-in failed.' };
+  const describeProvider = (code: unknown, description: unknown) => {
+    out.idpError = classifyIdpError(code);
+    if (typeof description === 'string' && description) {
+      out.descriptionCode =
+        description.length > 2048 || Buffer.byteLength(description, 'utf8') > 2048
+          ? 'omitted'
+          : /redirect_uri/i.test(description)
+            ? 'redirect_uri'
+            : 'provided';
     }
-    // undici/node fetch system errors surface on `cause`.
-    if (typeof link.code === 'string' && !out.code) {
+  };
+  for (const link of causeChain(err)) {
+    if (link.error !== undefined && !out.idpError) describeProvider(link.error, link.error_description);
+    if (typeof link.code === 'string' && link.code.length <= 64 && systemCodes.has(link.code) && !out.code) {
       out.code = link.code;
-      if (typeof link.hostname === 'string') out.hostname = link.hostname;
-      else if (typeof link.host === 'string') out.hostname = link.host;
+    }
+    if (
+      typeof link.message === 'string' &&
+      link.message.length <= 2048 &&
+      Buffer.byteLength(link.message, 'utf8') <= 2048 &&
+      !out.code
+    ) {
+      out.code = localAuthErrors.get(link.message);
+      if (!out.code && /issuer/i.test(link.message) && /match|mismatch|expected/i.test(link.message))
+        out.code = 'issuer_mismatch';
     }
   }
+  if (!out.idpError && params?.has('error')) describeProvider(params.get('error'), params.get('error_description'));
 
   if (
     (out.idpError === 'invalid_request' || out.idpError === 'invalid_grant') &&
-    /redirect_uri/i.test(out.idpDescription ?? out.message)
+    out.descriptionCode === 'redirect_uri'
   ) {
-    // invalid_request = authorize phase (registration missing/wrong);
-    // invalid_grant = token phase (authorize succeeded, so registration exists
-    // but the token redirect_uri differed — e.g. http vs https behind a
-    // TLS-terminating ingress, host mismatch, or trailing slash).
     const phase = out.idpError === 'invalid_grant' ? 'token' : 'authorize';
-    out.hint =
-      `redirect_uri mismatch (${phase} phase): register exactly "${config.oidc.redirectUri}" ` +
-      `as a Valid Redirect URI for client "${config.oidc.clientId}", and ensure ` +
-      `NEXT_PUBLIC_APP_URL scheme/host matches the public ingress URL (https, no trailing slash)`;
+    out.hint = `Check redirect_uri registration (${phase} phase), OIDC_REDIRECT_URI, and the public ingress scheme/host.`;
   } else if (out.idpError === 'invalid_scope') {
-    out.hint = `IdP rejected the requested scopes ("${config.oidc.scopes}"): drop unknown scopes via OIDC_SCOPES`;
-  } else if (out.idpError && !out.hint) {
-    out.hint = `IdP rejected the login (${out.idpError}): verify client "${config.oidc.clientId}", realm, and redirect URI registration`;
+    out.hint = 'IdP rejected the requested scopes. Review OIDC_SCOPES.';
+  } else if (out.idpError) {
+    out.hint = 'IdP rejected the login. Verify client, realm, and redirect URI registration.';
+  } else if (out.code === 'session_configuration') {
+    out.hint =
+      'Configure SESSION_SECRET with an explicit key of at least 32 characters, excluding the development fallback.';
+  } else if (out.code === 'oidc_configuration') {
+    out.hint =
+      'Check OIDC_ISSUER/OIDC_CLIENT_ID and the HTTPS requirement; HTTP is permitted only for explicitly enabled local development.';
+  } else if (out.code === 'transaction_expired') {
+    out.hint = 'Start a new sign-in. The transaction cookies were missing or expired.';
   } else if (out.code === 'EAI_AGAIN' || out.code === 'ENOTFOUND') {
-    out.hint =
-      `pod DNS cannot resolve ${out.hostname ?? 'the IdP host'}: allow UDP/TCP 53 egress ` +
-      `to the cluster DNS (kube-system on K8s, openshift-dns on OpenShift)`;
-  } else if (out.code && /^(ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH)$/.test(out.code)) {
-    out.hint =
-      `cannot reach the IdP at ${out.hostname ?? config.oidc.issuer}: allow TCP 443 egress ` +
-      `(NetworkPolicy / cluster egress firewall)`;
+    out.hint = 'Pod DNS cannot resolve the IdP. Check DNS configuration and UDP/TCP 53 egress.';
+  } else if (out.code && /^(ECONNREFUSED|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH)$/.test(out.code)) {
+    out.hint = 'Cannot reach the IdP. Check TCP 443 egress, NetworkPolicy, and the cluster egress firewall.';
   } else if (out.code && /CERT|SELF_SIGNED|UNABLE_TO_VERIFY|DEPTH_ZERO/.test(out.code)) {
-    out.hint = 'IdP TLS certificate is not trusted by the container (corporate MITM proxy CA missing from the image?)';
-  } else if (/issuer/i.test(message) && /match|mismatch|expected/i.test(message)) {
-    out.hint =
-      `OIDC_ISSUER must exactly match the "issuer" field of ${config.oidc.issuer}/.well-known/openid-configuration ` +
-      `(Keycloak realms often live under /auth/realms/...)`;
+    out.hint = 'Check the IdP certificate trust chain, hostname, and validity in the container.';
+  } else if (out.code === 'issuer_mismatch') {
+    out.hint = 'OIDC_ISSUER must exactly match the issuer in provider discovery metadata.';
+  } else if (out.code === 'identity_mismatch' || out.code === 'identity_invalid') {
+    out.hint = 'The provider identity could not be verified. Check ID-token and UserInfo subject/claim configuration.';
   }
   return out;
 }

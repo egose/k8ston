@@ -13,14 +13,17 @@ executes the K8s calls, so SSO users need no cluster identity.
 
 ## Decision order
 
-1. **Admins always pass** — `KRYPTON_ADMIN_GROUPS` / `KRYPTON_ADMIN_USERS`
+After namespace scope and live-object visibility checks:
+
+1. **Admins always pass authorization** — `KRYPTON_ADMIN_GROUPS` / `KRYPTON_ADMIN_USERS`
    (matched against SSO groups / lowercased email).
 2. **Per-secret annotations override everything below.** If a secret has any
    `allowed-groups`/`allowed-users`, only those decide.
 3. **Namespace fallback** in ConfigMap `<app-namespace>/krypton-access`, key
    `access.json` (cached 60s in memory).
-4. **No rules anywhere → visible to all authenticated users** (open by default,
-   restricted once rules are added).
+4. **Confirmed absence of rules → visible to all authenticated users** (open by
+   default, restricted once rules are added). A policy read/validation failure
+   returns `503`, not an open-policy decision.
 
 Until any admin is configured, every authenticated user is treated as admin
 (bootstrap mode — set admins promptly).
@@ -42,6 +45,30 @@ metadata:
     krypton.io/allowed-users: 'alice@company.com'
 ```
 
+Annotations use a simple comma-separated list with **no quoting or escaping** for
+literal commas. Create/PUT `allowedGroups` and `allowedUsers` arrays accept at most
+**256 entries each**, with at most **256 UTF-8 bytes per raw entry**, including
+surrounding whitespace. Each entry is trimmed using the same whitespace rules as
+the reader. Comma-containing, empty, whitespace-only, or oversized entries return
+**400 before any Secret/snapshot write**, without echoing values or dropping entries.
+Order, duplicates, internal whitespace, and case are preserved; groups match exactly
+and user emails match case-insensitively. Session/impersonation groups retain their
+separate transport contract; these bounds apply to stored ACL collections.
+
+`[]` explicitly clears just that annotation; omitted PUT fields keep their stored
+values. Both ACLs empty means namespace fallback, which can intentionally be open.
+Omitted create fields default to `[]`. The UI's comma-list fields still split on
+commas, trim, and discard blank segments before submitting: `team-a, ,team-b` becomes
+`["team-a", "team-b"]`, and a blank field submits `[]`. The UI cannot express a
+literal-comma principal; API `["team-a,team-b"]` is rejected rather than split.
+
+**ACL input upgrade:** previous API versions accepted comma-containing entries that
+expanded into multiple principals, and whitespace-only entries that could restore
+open fallback. Update API callers and all writer replicas to this validation contract.
+Existing annotations are not rewritten or migrated; reads still split/trim/drop blank
+segments, and omitted PUT fields and restores retain existing ACL values. Review and
+correct affected live ACLs: CSV cannot recover the original array intent.
+
 ## Namespace fallback (`access.json`)
 
 ```mdx-code-block
@@ -50,9 +77,37 @@ import AccessJson from '!!raw-loader!../../.samples/access-config.json.txt';
 <CodeBlock language="json">{AccessJson}</CodeBlock>
 ```
 
-Namespaces absent from the map are open to all authenticated users until
-restricted. An invalid `access.json` is ignored with a warning (fail-open to
-step 4, not a crash); a missing ConfigMap simply means no namespace rules.
+Namespaces absent from a valid map are open to all authenticated users until
+restricted. `{}` and namespace entries with empty rule lists are valid open
+policies. Entries accept only `groups` and `users` string arrays; omitted lists
+default to empty, and unknown fields are rejected to catch misspelled rules.
+Each policy array has the same 256-entry / 256-UTF-8-byte ceilings; a violation is
+invalid policy, not an open fallback. Namespace lookups use own properties, so a
+valid namespace named `constructor` follows the same absent/empty/explicit rules.
+
+Unlike annotations, namespace JSON arrays preserve each entry exactly, including
+literal commas and surrounding whitespace; they are **not split or trimmed**.
+`{ "groups": ["team-a,team-b"] }` matches only that whole group, not either component.
+The same applies to `users` (with existing case-insensitive email comparison).
+This representation remains available for comma-containing principals when namespace
+fallback applies; explicit per-secret ACLs still take precedence.
+
+Only a Kubernetes **404** reading the ConfigMap means no namespace rules exist.
+An existing ConfigMap with missing/empty `access.json`, invalid JSON/schema, or
+a failed read (including 403 and timeout) yields
+`503 { "error": "Namespace access policy is unavailable" }` for decisions needing
+namespace policy. Admins and explicit live-secret ACL decisions keep their
+precedence and do not require a policy read.
+
+Each process caches valid policy or confirmed absence for **60 seconds from read
+completion**. Concurrent misses share a single read. At expiry, requests wait for
+a fresh policy; if refresh fails, the old policy is not used. Failures are not
+cached, so the next request retries. Changes may take up to one cache TTL to be
+observed by each process. Logs contain only a failure category and, for API read
+failures, a numeric HTTP status; policy contents and raw transport errors are omitted.
+
+**Upgrade:** repair malformed ConfigMaps and read permissions before rollout.
+An intentionally open existing ConfigMap must contain valid `access.json: '{}'`.
 
 ## Creation is special
 
@@ -60,7 +115,10 @@ A new secret has no annotations yet, so creating in a namespace is decided by
 the **namespace rules alone** — the per-secret allowed groups/users you set in
 the form only take effect _after_ the secret exists. The secrets list response
 includes `canCreate` so the UI disables creation upfront when the rules exclude
-you (POST still enforces server-side: `403`).
+you (POST still enforces server-side: `403`). Policy failures return `503` for
+non-admin creation **and list requests**. Lists need the policy for `canCreate`
+even when empty or containing only explicitly authorized secrets; they return
+an error rather than a partial list or an invented creation hint.
 
 ## Managed-only mode
 
@@ -68,15 +126,57 @@ Default `KRYPTON_MANAGED_ONLY=true`: secrets _without_
 `krypton.io/managed-by: krypton` are hidden entirely — excluded from lists, 404
 on direct access (read, edit, delete, history, restore, restart) — so K8s-level
 secrets created outside Krypton can't be touched by accident. Set
-`KRYPTON_MANAGED_ONLY=false` to show everything again (legacy adopt-on-edit:
+`KRYPTON_MANAGED_ONLY=false` to show unmanaged live secrets (legacy adopt-on-edit:
 saving an external secret stamps Krypton annotations onto it).
+
+## History uses current live authorization
+
+History objects (`krypton.io/kind=history`) are always excluded from lists and
+return **404 on direct GET/PUT/DELETE/history/restore/restart routes**, in both
+managed-only modes and for admins too. A managed annotation cannot override the
+history label. All named-secret operations share `lib/secret-access.ts`, which
+loads a current live object, checks visibility, then evaluates its authorization.
+
+Read history via `/secrets/:liveName/versions` and restore via
+`/secrets/:liveName/restore`. These endpoints check the **live object's current
+ACL** before accessing snapshots. Copied historical ACLs never grant access:
+a user denied by the current live rules cannot regain access through an older
+snapshot that listed them.
+Clients previously addressing snapshot names must switch to the live endpoints.
 
 ## Optional K8s-native impersonation
 
-If your API server trusts the same OIDC issuer as the app, set
-`KRYPTON_IMPERSONATION=true` and Krypton forwards
-`Impersonate-User`/`Impersonate-Group` headers so the _human's_ RBAC is evaluated
-instead of the ServiceAccount's. Default is `false` (hybrid mode above).
+Set `KRYPTON_IMPERSONATION=true` when the session email and groups match the
+intended Kubernetes RBAC subjects. The app's ServiceAccount must have the
+`impersonate` verb for those users and **all** their groups; their RBAC then
+authorizes the human operations. Krypton's visibility and application ACL checks
+still apply, including to users considered Krypton admins.
+
+- Namespace requests, live-secret CRUD, history reads/writes/pruning, and all
+  Deployment/StatefulSet/DaemonSet **lists and patches** carry the human identity.
+- The session email is sent as `Impersonate-User`. Every session group is a
+  separate repeated `Impersonate-Group` header, including when a group contains a
+  literal comma. There is **no application group-count cap**, joining, or splitting.
+- Values must be nonempty printable ASCII with no leading/trailing whitespace.
+  Unsupported user/group values fail with 400 rather than being silently changed.
+  API-server/proxy header-size limits can reject the whole request; groups are
+  never silently truncated. Impersonated API requests do not follow redirects.
+- The SDK's supported per-request `httpApi` extension sends raw header pairs,
+  preserving its ServiceAccount authentication and TLS dispatcher and the
+  JSON-Patch content type. Clients and KubeConfig hold no human identity.
+- The application's access-policy ConfigMap is deliberately fetched **as the
+  ServiceAccount**, with the same process-wide 60s cache and coalesced reads above.
+  Its cache never depends on the requesting human's Kubernetes permissions.
+- Default `KRYPTON_IMPERSONATION=false` uses hybrid mode. Explicit
+  `AUTH_DISABLED=true` bypasses human impersonation for local development. A real
+  signed session for `dev@krypton.local` is impersonated just like any other user.
+
+**Upgrade:** earlier versions overwrote repeated groups, processed only the first
+32 groups, and omitted impersonation on workload lists. Review ServiceAccount
+impersonation grants for the full group set and human workload list/patch RBAC.
+Map unsupported identity values to header-safe IdP subjects and matching RBAC
+bindings; failure to represent an identity never falls back to the service identity
+for secret or workload operations.
 
 ## Worked example (sandbox)
 

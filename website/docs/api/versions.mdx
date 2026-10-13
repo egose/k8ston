@@ -11,8 +11,14 @@ sidebar_position: 3
 GET /api/namespaces/:namespace/secrets/:name/versions
 ```
 
-Same namespace, managed-only, and authz gates as reading the secret — history
-is only visible to readers of the live object.
+Same live-object visibility and authorization gates as reading the secret —
+history is only visible to readers of the **current live object**. `:name` must
+be its live name: a snapshot name returns 404 in both managed-only modes, even
+for admins. Copied historical ACLs cannot grant access after live ACL revocation.
+Only validated immutable snapshots bound to this live **UID** are returned. A
+same-name replacement cannot read a predecessor's retained history. Unbound legacy
+and malformed snapshots are quarantined, including from admin access through this
+API; see the [upgrade/recovery guide](/guides/versioning-history/#upgrade-and-operator-reviewed-recovery).
 
 ```json
 {
@@ -21,20 +27,46 @@ is only visible to readers of the live object.
   "versions": [
     {
       "version": 2,
-      "snapshotName": "database-credentials-v2",
+      "snapshotName": "krypton-h-7b6ad742c31e4d37b5c8a90486d05a10-v2",
       "snapshotAt": "2026-01-05T09:30:00Z",
       "snapshotBy": "alice@company.com",
       "keys": ["DATABASE_URL"],
-      "data": { "DATABASE_URL": "postgres://…" }
+      "data": { "DATABASE_URL": "postgres://…" },
+      "binaryKeys": [],
+      "binaryData": {}
     }
   ]
 }
 ```
 
-Versions sort newest-first and are pruned to `KRYPTON_HISTORY_LIMIT`
-(default 20). Each entry is a real Kubernetes Secret
-(`<name>-vN`, labeled `krypton.io/kind=history`) with decoded `data` —
-inspectable via `kubectl` as well as the API.
+Versions sort by app counter descending. Each entry is a real immutable Opaque
+Kubernetes Secret (`krypton-h-<UID hash>-vN`, labeled `krypton.io/kind=history`),
+with full source UID/resourceVersion/name/type annotations. Treat `snapshotName`
+as an opaque returned identifier, not a name to reconstruct or use on live routes.
+The response contains decoded DTOs, not internal raw/metadata storage records.
+Response `data` contains lossless text only; `binaryData` holds
+original base64 for non-UTF-8/binary-control values, with names in `binaryKeys`.
+`keys` covers both maps. These use the same [data contract](/api/secrets/) as the
+live detail, and the UI offers masked, read-only base64 viewing/copying.
+
+Restore uses the internal raw snapshot, not these decoded DTOs. Never construct
+a plaintext PUT by dropping binary keys or pasting `binaryData` into `data`.
+
+Retention is **1–100** eligible snapshots per UID, default **20**, applied during
+update/restore attempts. This endpoint does not truncate the inventory to hide a
+cleanup backlog. Failed cleanup can leave more records; failed live replacements
+can leave pre-write snapshots, including one numbered like the current live state.
+History is not a complete log of successful commits or all external native edits.
+A failed Kubernetes list returns 503, not a misleading empty history. Every UID-bound
+history operation (including restore lookup, pruning, deletion, and final confirmation)
+uses the shared complete page reader. Raw inventories allow 1,000 objects / 160 MiB,
+100 objects per page and at most 100 pages. Metadata-only cleanup has an 8 MiB
+projection budget and the same object/page caps, without visiting data values.
+Over-budget or malformed/repeated-token inventories fail explicitly; no partial
+history or guessed absence is returned. Full per-user options and UID selectors
+are preserved on every page. These are per-inventory application bounds, after SDK
+response decoding; see [collection budgets](/api/overview/#request-and-collection-budgets).
+This value-bearing response and its errors send `Cache-Control: no-store`.
 
 See [Versioning & History](/guides/versioning-history/) for the snapshot model
 and [Restore](/api/restore/) for rolling back.

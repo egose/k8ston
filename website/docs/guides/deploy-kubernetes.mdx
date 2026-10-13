@@ -49,8 +49,10 @@ kubectl apply -f app/k8s/clusterrole.yaml
 ```
 
 The ClusterRole adds `namespaces` (get, list, watch) on top of the namespace
-permissions. If the ServiceAccount cannot list namespaces, the app degrades
-gracefully to the allowlist (or its own namespace) instead of failing.
+permissions. A configured `KRYPTON_NAMESPACES` allowlist resolves/checks locally
+without namespace-list calls, so curated deployments can instead grant resource
+permissions in just those namespaces. Without an allowlist, failed/incomplete
+namespace discovery returns an error; it no longer falls back to the pod namespace.
 
 ## Enabling "Restart apps"
 

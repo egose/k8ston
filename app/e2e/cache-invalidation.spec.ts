@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import type { SecretDetail as Detail } from '../lib/secrets';
 
 /**
  * Post-mutation cache freshness: React Query staleTime is 15s and the edit
@@ -9,22 +10,6 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 const devUser = { sub: 'dev', email: 'dev@krypton.local', name: 'Local Developer', groups: ['krypton-admin'] };
-
-interface Detail {
-  namespace: string;
-  name: string;
-  type: string;
-  keys: string[];
-  keyCount: number;
-  description: string;
-  version: number;
-  resourceVersion: string;
-  creationTimestamp: string;
-  allowedGroups: string[];
-  allowedUsers: string[];
-  managedByKrypton: boolean;
-  data: Record<string, string>;
-}
 
 const baseDetail = (): Detail => ({
   namespace: 'demo',
@@ -39,7 +24,10 @@ const baseDetail = (): Detail => ({
   allowedGroups: [],
   allowedUsers: [],
   managedByKrypton: true,
+  immutable: false,
+  binaryKeys: [],
   data: { DB_HOST: 'db.internal' },
+  binaryData: {},
 });
 
 interface State {
@@ -61,6 +49,8 @@ const summaryOf = (d: Detail) => ({
   allowedGroups: d.allowedGroups,
   allowedUsers: d.allowedUsers,
   managedByKrypton: d.managedByKrypton,
+  immutable: d.immutable,
+  binaryKeys: d.binaryKeys,
 });
 
 const freshState = (): State => {
@@ -117,7 +107,12 @@ async function mockMutable(page: Page, state: State) {
     const req = r.request();
     if (req.method() === 'GET') return r.fulfill({ json: { secret: state.detail } });
     if (req.method() === 'PUT') {
-      const body = req.postDataJSON() as { data: Record<string, string>; description?: string };
+      const body = req.postDataJSON() as {
+        data: Record<string, string>;
+        description?: string;
+        resourceVersion: string;
+      };
+      expect(body.resourceVersion).toBe(state.detail.resourceVersion);
       state.versions = [
         {
           version: state.detail.version,
@@ -126,6 +121,8 @@ async function mockMutable(page: Page, state: State) {
           snapshotBy: 'dev@krypton.local',
           keys: state.detail.keys,
           data: state.detail.data,
+          binaryData: state.detail.binaryData,
+          binaryKeys: state.detail.binaryKeys,
         },
       ];
       state.detail = {
@@ -141,8 +138,17 @@ async function mockMutable(page: Page, state: State) {
       return r.fulfill({ json: { secret: state.detail } });
     }
     if (req.method() === 'DELETE') {
+      expect(new URL(req.url()).searchParams.get('resourceVersion')).toBe(state.detail.resourceVersion);
       state.list = state.list.filter((s) => s['name'] !== state.detail.name);
-      return r.fulfill({ json: { deleted: state.detail.name } });
+      return r.fulfill({
+        json: {
+          status: 'deleted',
+          deleted: state.detail.name,
+          name: state.detail.name,
+          uid: 'synthetic-cache-uid',
+          history: 'cleaned',
+        },
+      });
     }
     return r.continue();
   });
@@ -171,7 +177,7 @@ test('delete → dashboard drops the row without a manual reload', async ({ page
   await page.waitForURL('**/secrets/demo/app-config', { timeout: 30_000 });
   await expect(page.getByText('Version history')).toBeVisible();
   await page.getByRole('button', { name: 'Delete' }).click();
-  await page.getByRole('button', { name: 'Delete permanently' }).click();
+  await page.getByRole('button', { name: 'Request deletion' }).click();
   await page.waitForURL('**/?ns=demo', { timeout: 30_000 });
   // Scoped to the table: the "deleted" toast also names the secret.
   await expect(page.locator('table tbody tr', { hasText: 'app-config' })).toHaveCount(0);

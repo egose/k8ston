@@ -7,6 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "test:unit": "vitest run --config app/vitest.config.ts",
     "release": "release-it",
     "changelog": "repo-toolkit-changelog",
     "build-artifact": "repo-toolkit-build-artifact --config release-artifact.config.json",

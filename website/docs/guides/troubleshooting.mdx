@@ -18,48 +18,161 @@ sidebar_position: 9
 - Check Dex health: the discovery doc must answer at
   `http://localhost:5556/dex/.well-known/openid-configuration` (`make logs`
   for Dex container logs).
+- Callback logs expose classified codes/hints, not raw provider descriptions or
+  authorization response values. `descriptionCode: redirect_uri` points to redirect
+  registration; `omitted` means a diagnostic exceeded 2 KiB. `provider_error` is
+  the fixed replacement for an unknown/oversized IdP code. `redirectBaseMatches`
+  compares origin/path without logging either URL; false can be normal behind a
+  reverse proxy because the token exchange uses the configured public redirect.
 
 ## 403 from the app vs 403 from Kubernetes
 
 - `You are not allowed to …` → Krypton authz denied it (annotations /
   namespace rules / admin config). Check the visibility matrix in
   [Authorization](/guides/authorization/).
-- `Kubernetes API (403): … — Access denied. Contact your administrator (the app
-  is missing Kubernetes RBAC permission).` → the ServiceAccount lacks RBAC.
-  Verify with `kubectl auth can-i … --as=system:serviceaccount:<ns>:krypton`
-  (see the [Sandbox guide](/guides/sandbox/)) and check scope vs Role.
+- `Kubernetes API (403): Access denied. …` → Kubernetes denied the effective
+  identity. In hybrid mode review ServiceAccount RBAC; in impersonation mode
+  review **human RBAC and SA impersonation grants for every group**. It does not
+  invariably mean missing app ServiceAccount resource permissions. Inspect the
+  configured scope/Role and use operator-side authorization checks with the
+  intended identity. Raw API payload/header text is intentionally suppressed.
 
 ## 404 on a secret that exists
 
 - `KRYPTON_MANAGED_ONLY=true` (default) hides secrets without
   `krypton.io/managed-by: krypton` — excluded from lists, 404 on direct access.
   Either manage the secret through Krypton or set the flag to `false`.
-- History snapshots (`<name>-vN`) are always hidden from the secrets list.
+- History snapshots are always hidden from the live list and direct routes. Use
+  the authorized live object's history endpoints. An empty history list can mean
+  unbound legacy or predecessor-UID snapshots are quarantined, not erased.
 
 ## 409 on save
 
-The secret changed since you loaded it (or a concurrent write raced yours).
-Reload and retry — your values are preserved in the form. See
-[Versioning & History](/guides/versioning-history/).
+The secret changed since you loaded it (or a concurrent write raced yours). The
+failed save keeps your draft. On the edit form, **Reload latest** fetches the live
+Secret and, **only on success**, replaces every field and its resourceVersion
+together. It also clears pending bulk text. Review the fresh state and re-apply
+your changes before saving. A failed reload preserves the draft and original
+revision; retry the same button after resolving the error.
 
-## 413 on save
+Background refreshes and reconnects never replace the draft's fields or revision.
+An available newer revision is announced, but saving the old draft still conflicts.
+Drafts are memory-only and can survive client navigation while Next retains the
+page; a full reload, sign-out, closed tab, or route eviction can discard them. See
+[Versioning & History](/guides/versioning-history/#optimistic-concurrency-409s).
 
-The payload exceeds ~1 MiB. Split the secret or move large blobs (certs,
-bundles) to a volume/registry instead.
+An explicit **snapshot identity/content conflict** needs review of the occupied
+version's UID, source revision, and immutable bytes. A native edit after a failed
+Krypton write can leave the same app counter with a different source revision;
+reloading alone does not resolve that collision. Follow the
+[reviewed recovery procedure](/guides/versioning-history/#upgrade-and-operator-reviewed-recovery)
+instead of relabeling or overwriting old snapshots.
+
+Restore/delete conflicts also provide **Reload latest**, which fetches fresh live
+and history data before closing the confirmation for review. A failed reload keeps
+the error visible. These requests now require the expected live resourceVersion;
+missing revisions return 400. Do not automatically retry with a newer revision.
+
+## 503 history/configuration failure
+
+Use a decimal `KRYPTON_HISTORY_LIMIT` from 1 to 100 (default 20 when unset).
+History creation/list failures or failed/pending pruning block the live replacement.
+Resolve Kubernetes permissions, quota/admission errors, or snapshot finalizers,
+then retry; an exact-source retry also retries cleanup. Failed DELETE history cleanup
+does not attempt live deletion, preserving the authorization object for a retry.
+Earlier partial cleanup is not rolled back. If a concurrent writer removes the live
+object, or live deletion/confirmation has an uncertain outcome, reload first; an
+operator must handle old-UID leftovers when there is no live object to authorize.
+
+## Deletion is pending (202)
+
+The DELETE request was accepted but the Secret still exists, commonly because of
+finalizers. The UI keeps it visible and disables edit/restore while pending.
+Reload to check progress and obtain the latest resourceVersion before retrying.
+An operator may need to resolve the responsible controller/finalizer. History
+cleanup can already have completed; a pending result does not promise an undo or
+that every copy was erased. See [deletion semantics](/api/secrets/#delete-secret).
+
+## 400 / 413 on save
+
+Malformed JSON/UTF-8, invalid length headers, invalid individual data maps, or ACLs
+over 256 entries / 256 UTF-8 bytes per entry return 400. A streaming JSON envelope
+over **16 MiB** or an oversized merged/native data payload returns 413. The larger
+envelope accommodates escaping; the conservative 1 MiB data limit still applies.
+Split large data or move blobs to suitable storage. Also check ingress request
+limits if rejection happens before the application. Validation issues identify
+known top-level fields without echoing submitted values or arbitrary nested keys.
+
+## Incomplete inventory / collection budget
+
+Lists follow 100-object Kubernetes pages with finite per-inventory page, object,
+and byte budgets. The response includes a fixed reason such as `page_limit`,
+`item_limit`, `byte_limit`, `invalid_continue`, `repeated_continue`, or
+`inconsistent_page`; raw tokens/objects are excluded. A list failure is not an empty
+namespace/history or a successful partial result. Retry a fresh request after
+repair. An expired token is not automatically restarted. Review large history
+backlogs through operator tooling; incomplete discovery never authorizes cleanup
+or workload patches based on earlier pages of that failed inventory. See the
+[exact budgets and accounting limits](/api/overview/#request-and-collection-budgets).
 
 ## Namespace missing from the list
 
+- Loading and failed discovery are shown separately from a successful empty list.
+  Use **Retry namespaces** after resolving an error. A namespace URL parameter must
+  still identify an available namespace before the dashboard enables creation.
 - `namespace` scope shows only the pod's own namespace — by design.
-- `cluster` scope needs the `namespaces` get/list/watch grant; without it the
-  app falls back to `KRYPTON_NAMESPACES` (or its own namespace).
-- `KRYPTON_NAMESPACES` acts as an allowlist in cluster scope — a typo hides
-  namespaces silently.
+- In `cluster` scope, a configured `KRYPTON_NAMESPACES` list is returned/checked
+  locally with no namespace-list calls. Check spelling and per-namespace resource
+  RBAC; configured entries do not prove the namespace exists or is readable.
+- With an empty allowlist, complete namespace discovery needs namespace-list RBAC
+  for the effective identity. **Upgrade:** discovery failures now surface an error
+  rather than a silently incomplete own-namespace fallback. Use an explicit
+  allowlist for curated multi-namespace deployments without cluster-wide listing.
+
+## New secret is disabled / history did not load
+
+**New secret** requires successful namespace discovery and an explicit allowed
+creation hint from that namespace's secret list. It remains disabled while those
+checks are loading, missing, or failed, even if an older cached hint allowed creation.
+Use **Retry secrets** on the dashboard or **Retry create permission** on a direct
+create page. An explicit denial needs an access-rule/RBAC change or another namespace.
+These hints are only upfront guidance; the server checks permission again on submit.
+
+History load failures show **Retry history**, with separate permission-denied and
+unavailable guidance. They do not mean there are no snapshots. The UI hides stale
+restore choices after a failed history refresh; retry to obtain fresh choices.
+Only a successful empty response shows “No previous versions yet.”
+
+## Bulk entries have not appeared / import validation failed
+
+Typing or pasting does not add rows until you choose **Import entries**. Every
+nonblank line must be `KEY=value`; `KEY=` is an intentional empty value. CRLF and
+blank lines are supported, keys are trimmed, and values keep spaces and additional
+`=` characters. Quotes and shell escapes are literal; use the expanded editor for
+multiline values.
+
+Malformed lines, invalid keys, duplicate new/existing keys, unsupported text, and
+oversized combined data reject the whole import. Both the current rows and bulk
+draft remain intact so you can correct the error. Existing keys are never replaced.
+Import or clear pending bulk text before saving. A row with a value but no key is
+an error, not a row that will be silently discarded.
 
 ## _Restart apps_ missing / 403
 
-The button is hidden and the API returns 403 unless **both**
-`KRYPTON_RESTART_ENABLED=true` **and** the `apps` RBAC rule are in place. See
-[Consumer Restarts](/guides/consumer-restarts/).
+The button is hidden and the API returns 403 while
+`KRYPTON_RESTART_ENABLED=false`. Enabling the flag also requires workload
+`list`/`patch` RBAC for Deployments, StatefulSets, and DaemonSets. If the button is
+visible but requests fail, inspect the persistent per-workload/discovery details:
+207 `partial` means some patches were acknowledged; 503 `failed` means none were
+acknowledged. Failed discovery is not "no targets". In impersonation mode, check
+the complete human identity's RBAC and the ServiceAccount's impersonation grants.
+In hybrid mode, check ServiceAccount workload RBAC.
+
+An acknowledged patch is only a rollout request. Check progress/readiness and
+credential uptake independently, including paused/OnDelete/partitioned workloads.
+Before retrying, inspect actual state: transport failures can follow applied
+patches, and another request can roll earlier successes again. See
+[Consumer Restarts](/guides/consumer-restarts/) and the [API result contract](/api/restart-consumers/).
 
 ## etcd warning banner won't go away
 

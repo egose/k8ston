@@ -1,10 +1,11 @@
-import type { V1Secret } from '@kubernetes/client-node';
+import type { V1ConfigMap, V1Secret } from '@kubernetes/client-node';
 import { ANNOTATIONS, config } from './config';
 import { getCoreApi, getPodNamespace } from './k8s';
 import type { SessionUser } from './auth';
-import { auditLog, namespaceAccessSchema, type NamespaceAccessMap } from './validation';
+import { namespaceAccessSchema, type NamespaceAccessMap } from './validation';
 import { HttpError } from './http';
-import { isManagedByKrypton } from './secrets';
+import { isVisibleLiveSecret } from './secrets';
+import { errorStatus } from './errors';
 
 /**
  * Hybrid authorization (for SSO users that do NOT exist in the cluster):
@@ -19,7 +20,8 @@ import { isManagedByKrypton } from './secrets';
  * key "access.json": { "<namespace>": { "groups": [...], "users": [...] } }
  *
  * Default when NO rules exist anywhere: allow all authenticated users
- * (open by default, restricted once rules are added). Admins always pass.
+ * (open by default, restricted once rules are added). Policy failures are
+ * unavailable, never absent. Admins and explicit Secret ACLs take precedence.
  */
 
 export function isAdmin(user: SessionUser): boolean {
@@ -51,58 +53,69 @@ function userMatches(user: SessionUser, groups: string[], users: string[]): bool
 // Namespace-level rules (ConfigMap cache, 60s TTL — still no DB/disk)
 // ---------------------------------------------------------------------------
 
-let cache: { at: number; data: NamespaceAccessMap } | null = null;
+let cache: { expiresAt: number; data: NamespaceAccessMap } | null = null;
+let pendingRead: Promise<NamespaceAccessMap> | null = null;
 const CACHE_TTL_MS = 60_000;
 
-export async function getNamespaceAccessMap(): Promise<NamespaceAccessMap> {
-  const now = Date.now();
-  if (cache && now - cache.at < CACHE_TTL_MS) return cache.data;
-  let data: NamespaceAccessMap = {};
+function policyUnavailable(
+  reason: 'read_failed' | 'missing_data' | 'invalid_json' | 'invalid_schema',
+  status?: number,
+): HttpError {
+  // SDK errors can embed response headers, credentials, and policy contents.
+  // Log only our classification and a validated numeric HTTP status.
+  console.warn('[krypton] namespace access policy unavailable', { reason, ...(status ? { status } : {}) });
+  return new HttpError(503, 'Namespace access policy is unavailable');
+}
+
+async function readNamespaceAccessMap(): Promise<NamespaceAccessMap> {
+  let res: V1ConfigMap;
   try {
-    const api = getCoreApi();
-    const res = await api.readNamespacedConfigMap({
+    // Application policy is read as the ServiceAccount, even in impersonation
+    // mode. This shared cache must not depend on an individual human's RBAC.
+    res = await getCoreApi().readNamespacedConfigMap({
       namespace: getPodNamespace(),
       name: config.accessConfigMap,
     });
-    const raw = res.data?.['access.json'];
-    if (raw) {
-      const parsed = namespaceAccessSchema.safeParse(JSON.parse(raw));
-      if (parsed.success) data = parsed.data;
-      else console.warn('[krypton] invalid access.json in ConfigMap, ignoring');
-    }
   } catch (err: unknown) {
-    // Missing ConfigMap = no namespace rules; not fatal.
-    const code = (err as { code?: number })?.code;
-    if (code !== 404) console.warn('[krypton] failed to read access ConfigMap', err);
+    // client-node ApiException.code carries the HTTP status. Only an actual
+    // not-found read is intentional absence; never inspect the error payload.
+    const status = errorStatus(err);
+    if (status === 404) return {};
+    throw policyUnavailable('read_failed', status);
   }
-  cache = { at: now, data };
-  return data;
+
+  const raw = res?.data?.['access.json'];
+  if (typeof raw !== 'string' || !raw.trim()) throw policyUnavailable('missing_data');
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw policyUnavailable('invalid_json');
+  }
+  const parsed = namespaceAccessSchema.safeParse(value);
+  if (!parsed.success) throw policyUnavailable('invalid_schema');
+  return parsed.data;
 }
 
 /**
- * Hide unmanaged (non-Krypton) secrets entirely when KRYPTON_MANAGED_ONLY=true:
- * 404 as if the secret didn't exist, so K8s-level secrets created outside
- * Krypton can't be viewed, edited, or deleted by accident. Call right after
- * reading the live object, before the authz check.
+ * Cache valid policy (including confirmed absence) for 60s from completion.
+ * Misses share one read. An expired map is never served during/after a failed
+ * refresh, and failures are retried on the next request instead of cached.
  */
-export function assertManagedVisible(
-  action: string,
-  user: SessionUser,
-  namespace: string,
-  name: string,
-  secret: V1Secret,
-): void {
-  if (config.managedOnly && !isManagedByKrypton(secret)) {
-    auditLog({
-      action,
-      user: user.email,
-      namespace,
-      name,
-      result: 'deny',
-      detail: 'unmanaged secret hidden (KRYPTON_MANAGED_ONLY=true)',
-    });
-    throw new HttpError(404, `Secret "${name}" not found in "${namespace}"`);
+export async function getNamespaceAccessMap(): Promise<NamespaceAccessMap> {
+  if (cache && Date.now() < cache.expiresAt) return cache.data;
+  if (!pendingRead) {
+    cache = null;
+    pendingRead = readNamespaceAccessMap()
+      .then((data) => {
+        cache = { expiresAt: Date.now() + CACHE_TTL_MS, data };
+        return data;
+      })
+      .finally(() => {
+        pendingRead = null;
+      });
   }
+  return pendingRead;
 }
 
 export function secretRules(secret: V1Secret): { groups: string[]; users: string[] } {
@@ -121,7 +134,7 @@ export async function canAccessSecret(user: SessionUser, namespace: string, secr
   if (hasSecretRules) return userMatches(user, rules.groups, rules.users);
 
   const nsMap = await getNamespaceAccessMap();
-  const nsRules = nsMap[namespace];
+  const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
   if (nsRules && (nsRules.groups.length > 0 || nsRules.users.length > 0)) {
     return userMatches(user, nsRules.groups, nsRules.users);
   }
@@ -133,7 +146,7 @@ export async function canAccessSecret(user: SessionUser, namespace: string, secr
 export async function canCreateInNamespace(user: SessionUser, namespace: string): Promise<boolean> {
   if (isAdmin(user)) return true;
   const nsMap = await getNamespaceAccessMap();
-  const nsRules = nsMap[namespace];
+  const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
   if (!nsRules || (nsRules.groups.length === 0 && nsRules.users.length === 0)) return true;
   return userMatches(user, nsRules.groups, nsRules.users);
 }
@@ -144,9 +157,10 @@ export async function filterVisibleSecrets(
   namespace: string,
   secrets: V1Secret[],
 ): Promise<V1Secret[]> {
-  if (isAdmin(user)) return secrets;
+  const live = secrets.filter(isVisibleLiveSecret);
+  if (isAdmin(user)) return live;
   const out: V1Secret[] = [];
-  for (const s of secrets) {
+  for (const s of live) {
     if (await canAccessSecret(user, namespace, s)) out.push(s);
   }
   return out;

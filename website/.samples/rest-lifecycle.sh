@@ -17,8 +17,8 @@ curl --cookie "krypton_session=$BOB" \
 # 3. Create a secret (201; stamps krypton.io/managed-by + version=1)
 curl --cookie "krypton_session=$ALICE" -X POST \
   -H 'Content-Type: application/json' \
-  -d '{"name":"demo-secret","data":{"API_KEY":"s3cr3t"},"description":"Demo"}' \ # pragma: allowlist secret
-  $BASE/api/namespaces/$NS/secrets
+  $BASE/api/namespaces/$NS/secrets \
+  -d '{"name":"demo-secret","data":{"API_KEY":"s3cr3t"},"description":"Demo"}'
 
 # 4. Read it back (detail includes decoded data + resourceVersion)
 curl --cookie "krypton_session=$ALICE" \
@@ -35,15 +35,22 @@ curl --cookie "krypton_session=$ALICE" -X PUT \
 # 6. History + reversible restore (snapshots current state first)
 curl --cookie "krypton_session=$ALICE" \
   $BASE/api/namespaces/$NS/secrets/demo-secret/versions
+RV=$(curl -fsS --cookie "krypton_session=$ALICE" \
+  $BASE/api/namespaces/$NS/secrets/demo-secret | jq -er .secret.resourceVersion)
 curl --cookie "krypton_session=$ALICE" -X POST \
   -H 'Content-Type: application/json' \
-  -d '{"version":1}' \
+  -d "$(jq -cn --arg rv "$RV" '{version:1,resourceVersion:$rv}')" \
   $BASE/api/namespaces/$NS/secrets/demo-secret/restore
 
 # 7. Restart env-var consumers (needs KRYPTON_RESTART_ENABLED=true)
 curl --cookie "krypton_session=$ALICE" -X POST \
   $BASE/api/namespaces/$NS/secrets/demo-secret/restart-consumers
 
-# 8. Delete (snapshots go too, unless ?keepHistory=true)
-curl --cookie "krypton_session=$ALICE" -X DELETE \
+# 8. Delete with the reviewed live revision (add keepHistory=true to retain copies).
+# 409 requires reload/review, not automatic retry. 202 means still present, e.g.
+# pending finalizers. Cleanup is ordered, not an atomic erase across K8s objects.
+RV=$(curl -fsS --cookie "krypton_session=$ALICE" \
+  $BASE/api/namespaces/$NS/secrets/demo-secret | jq -er .secret.resourceVersion)
+curl --cookie "krypton_session=$ALICE" -G -X DELETE \
+  --data-urlencode "resourceVersion=$RV" \
   $BASE/api/namespaces/$NS/secrets/demo-secret

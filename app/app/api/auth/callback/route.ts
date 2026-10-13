@@ -1,6 +1,7 @@
 import { connection, NextResponse } from 'next/server';
 import { config } from '@/lib/config';
 import { createSessionToken, describeAuthError, handleOidcCallback, setSessionCookie } from '@/lib/auth';
+import { noStore } from '@/lib/http';
 
 export async function GET(req: Request) {
   // Never prerender: token exchange needs request cookies + deploy-time env.
@@ -17,43 +18,33 @@ export async function GET(req: Request) {
         result: 'allow',
       }),
     );
-    return NextResponse.redirect(new URL('/', config.appUrl));
+    return noStore(NextResponse.redirect(new URL('/', config.appUrl)));
   } catch (err) {
-    // Next.js probes this route during prerendering; rethrow the bailout
-    // signal instead of logging it as a real auth failure.
-    if ((err as Error)?.message?.includes('bail out of prerendering')) throw err;
-    const details = describeAuthError(err);
-    // Belt & braces: the IdP's verdict is also in the callback query string.
+    // connection() is outside this try: prerendering bails out before auth work.
+    // Never rethrow based on text/cause fields controlled by the provider.
     const callbackUrl = new URL(req.url);
-    const params = callbackUrl.searchParams;
-    const idpError = details.idpError ?? params.get('error') ?? undefined;
-    const idpDescription = details.idpDescription ?? params.get('error_description') ?? undefined;
-    // Log expected vs actual redirect base (origin+path only — the query
-    // holds the single-use authorization code and must stay out of logs).
-    // A mismatch here is the classic invalid_grant "Incorrect redirect_uri".
-    const actualBase = `${callbackUrl.origin}${callbackUrl.pathname}`;
+    const details = describeAuthError(err, callbackUrl.searchParams);
+    // Classify proxy/registration mismatch without logging request or config URLs.
+    let redirectBaseMatches = false;
+    try {
+      const expected = new URL(config.oidc.redirectUri);
+      redirectBaseMatches = callbackUrl.origin === expected.origin && callbackUrl.pathname === expected.pathname;
+    } catch {
+      /* Invalid configuration remains a classified sign-in failure. */
+    }
     console.error(
       JSON.stringify({
         ts: new Date().toISOString(),
         app: 'krypton',
         action: 'auth.callback',
         result: 'error',
-        detail: details.message,
-        ...(details.code ? { code: details.code } : {}),
-        ...(details.hostname ? { hostname: details.hostname } : {}),
-        ...(idpError ? { idpError } : {}),
-        ...(idpDescription ? { idpDescription } : {}),
-        clientId: config.oidc.clientId,
-        expectedRedirectUri: config.oidc.redirectUri,
-        callbackUri: actualBase,
-        ...(details.hint ? { hint: details.hint } : {}),
+        ...details,
+        redirectBaseMatches,
       }),
     );
-    // Land on /login (not /) so the error banner actually renders, carrying
-    // the short IdP code for bug reports. error_description stays server-side:
-    // it can echo back request details and would bloat the URL.
+    // Only allowlisted OAuth/OIDC codes (or provider_error) reach the login URL.
     const next = new URL('/login?auth=error', config.appUrl);
-    if (idpError) next.searchParams.set('idp_error', idpError);
-    return NextResponse.redirect(next);
+    if (details.idpError) next.searchParams.set('idp_error', details.idpError);
+    return noStore(NextResponse.redirect(next));
   }
 }

@@ -79,15 +79,16 @@ unmanaged secrets are hidden entirely (excluded from lists, 404 on access).
 
 Walk the matrix above by logging in as each user. Then:
 
-- **Versioning**: edit `database-credentials` twice → `<name>-v1/-v2` snapshots
+- **Versioning**: edit `database-credentials` twice → UID-bound v1/v2 snapshots
   appear (`kubectl get secret -n krypton-test -l krypton.io/kind=history`);
   restore v1 in the UI (restores snapshot first, so rollback is reversible).
 - **409 conflicts**: open the same secret's edit page in two tabs/sessions, save
   both — the second gets the resourceVersion-mismatch prompt.
 - **1 MiB guard**: paste a large value — the form meter blocks; forced API calls 413.
 - **Restart consumers**: edit `database-credentials`, hit _Restart apps_,
-  then `kubectl rollout history deploy/api-server -n krypton-test` shows a new
-  revision with the fresh env value (the sandbox sets
+  then inspect `kubectl rollout status deploy/api-server -n krypton-test` and
+  rollout history. The UI confirms the request only; verify application credential
+  uptake separately without printing values (the sandbox sets
   `KRYPTON_RESTART_ENABLED=true`; the default is `false`).
 - **Redaction**: `grep` the `pnpm dev` log — key names only, never values.
 - **External adoption** (`KRYPTON_MANAGED_ONLY=false` only): editing
@@ -144,8 +145,10 @@ kubectl auth can-i 'list namespaces' --as=system:serviceaccount:krypton:krypton 
 ```
 
 Note: with `KRYPTON_SCOPE=cluster` but only the namespace Role applied, the
-app degrades gracefully — `/api/namespaces` falls back to the pod's own
-namespace instead of failing, since the SA cannot list namespaces.
+app requires an explicit `KRYPTON_NAMESPACES=krypton` allowlist to avoid namespace
+discovery. Allowlist resolution makes no namespace-list calls. An empty allowlist
+requires namespace-list RBAC and now returns an error if discovery fails instead
+of silently falling back to the pod namespace.
 
 Cheap static checks that need no cluster at all:
 

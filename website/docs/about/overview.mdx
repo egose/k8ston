@@ -30,8 +30,9 @@ Browser ──SSO login──▶ Krypton (Next.js)
   namespace-level ConfigMap decide _what you may see_. The app's ServiceAccount
   executes the K8s calls.
 - **History**: K8s overwrites secrets in place, so Krypton snapshots the previous
-  state into a separate Secret (`<name>-vN`) before every write — rollbacks are
-  one click, and restores are reversible because the current state is snapshotted first.
+  state into an immutable, UID/resourceVersion-bound Secret before updates and
+  restores. Rollbacks preserve raw bytes and current access rules within the
+  [retained history](/guides/versioning-history/).
 
 ## What Krypton is not
 
@@ -55,7 +56,7 @@ Browser ──SSO login──▶ Krypton (Next.js)
 | Authorization        | Admins bypass; per-secret annotations override namespace fallback       |
 | Concurrency          | Optimistic writes on `metadata.resourceVersion` (409 + reload on drift) |
 | Size guard           | 1 MiB per-object limit enforced client- and server-side (413)           |
-| Consumer rollout     | Optional _Restart apps_ for env-var consumers (opt-in, default off)     |
+| Consumer rollout     | Opt-in bounded rollout requests for explicit Secret consumers; reports partial failures |
 | Deployment           | Raw manifests (`app/k8s/`) or Helm (`helm/main` + `helm/krypton` subchart) |
 
 ## Where to go next

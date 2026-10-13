@@ -12,20 +12,60 @@ POST /api/namespaces/:namespace/secrets/:name/restore
 ```
 
 ```json
-{ "version": 1 }
+{ "version": 1, "resourceVersion": "123456" }
 ```
 
 - `version` is the app-level `krypton.io/version` number from the
   [versions list](/api/versions/) (positive integer, required).
-- Snapshots the **current** state first, so the restore itself is reversible,
-  then replaces the live object with the target snapshot's data (bumping
+- `resourceVersion` is the **required**, nonblank opaque revision from the loaded
+  **live** Secret. Missing/invalid input returns 400. After current live
+  authorization, a mismatch returns **409 before history reads, snapshots, pruning,
+  or live writes**. A terminating live Secret also returns 409 before history access.
+- The target must be a validated immutable snapshot bound to the current live
+  **UID**. Predecessor lifetimes and unbound legacy snapshots are never adopted by
+  name; their recovery requires [operator review](/guides/versioning-history/#upgrade-and-operator-reviewed-recovery).
+- Validates the target data against the **live** type and immutable state before
+  any snapshot/write. Then snapshots the **current** state so the restore itself
+  is reversible, and replaces the live object with the target snapshot's data (bumping
   `krypton.io/version` again, stamped with the restoring user).
+- Copies **raw base64** byte-for-byte, including binary and special-key values;
+  it never decodes/re-encodes through text. Live UID, owner references, finalizers,
+  immutable state, type, description, and ACLs are retained. Snapshot lifecycle
+  metadata/type is not adopted.
+- Immutable Secrets reject changed bytes/keys with 422 before side effects.
+  Byte-identical restores are allowed by the API; UI restores are disabled for
+  immutable Secrets. Create a new Secret to change immutable data.
+- Controller-owned service-account token restores and invalid built-in type data
+  return 422 before snapshots or mutation; use TokenRequest/controller management
+  for service-account tokens.
 - Same namespace, managed-only, and authz gates as updating the secret.
-- Answers `{ "secret": SecretDetail }` for the restored live object.
-- `404` when no snapshot exists for the requested version.
+  Authorization uses the current live ACL, never a snapshot's historical rules.
+  Snapshot names themselves return 404 on live routes.
+- Answers `{ "secret": SecretDetail }` with text `data` and base64 `binaryData`
+  for the restored live object (see [Secrets API](/api/secrets/)).
+- `404` when no eligible UID-bound snapshot exists for the requested version.
+- `409` if the expected revision is stale, the live object is terminating, the
+  current-state snapshot slot cannot be verified as the same source
+  UID/resourceVersion and actual immutable content, or the live replacement races
+  another write. `503` if snapshot creation or required pruning fails. Failed or
+  pending pruning blocks replacement and can leave a saved source snapshot.
+- Snapshot and pruning operations are non-atomic with the live replacement;
+  older history may already have been pruned if the later replacement fails.
+  The handler rechecks the authorized live UID/resourceVersion after reading the
+  target, then saves the current state. Replacement carries the original **live
+  UID and resourceVersion**, so a later ACL/data change or same-name replacement
+  conflicts at Kubernetes CAS. Rechecks are not a cross-object lock; earlier
+  snapshot/pruning effects can survive the conflict.
+
+**Upgrade:** older `{ "version": N }` requests now fail with 400. Send both fields
+from the reviewed live/history state. On 409, **Reload latest** fetches actual live
+and history queries and closes the dialog only after both succeed; review and
+confirm again. Failed reloads keep the error visible. Success immediately installs
+the returned live detail/revision and refreshes history and the namespace list.
+No automatic restore retry is performed with a silently updated revision.
 
 ```bash
 curl --cookie "krypton_session=$ALICE" -X POST \
-  -H 'Content-Type: application/json' -d '{"version":1}' \
+  -H 'Content-Type: application/json' -d '{"version":1,"resourceVersion":"123456"}' \
   localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore
 ```

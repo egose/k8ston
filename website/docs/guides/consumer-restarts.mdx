@@ -7,13 +7,15 @@ sidebar_position: 8
 
 Editing a Secret does not automatically update the pods that consume it:
 
-- **Volume-mounted** secrets sync automatically (kubelet delay, no action needed).
+- Ordinary Secret/projected **volume mounts** usually sync after a kubelet delay.
+  `subPath` mounts do not receive updates; applications may need to reload files.
 - **Environment-variable** secrets are frozen at container start — those pods
   need a rollout to see new values.
 
-_Restart apps_ closes that gap: it finds the workloads referencing a secret and
-triggers a rolling restart by patching their pod template with a
-`krypton.io/restarted-at` annotation.
+_Restart apps_ finds explicit consumers and **requests a rollout** by patching
+their pod template with a `krypton.io/restarted-at` annotation. An acknowledged
+patch does not prove a rollout completed, that pods are healthy, or that an
+application is using the new credential.
 
 ## Enabling the feature
 
@@ -29,31 +31,79 @@ Disabled by default (least privilege). Enabling takes **both** steps:
   verbs: [get, list, watch, patch]
 ```
 
-Without the flag, the UI button + hint are hidden and the API returns 403.
-Without the rule, the API fails closed at the Kubernetes API.
+Without the flag, the UI button + hint are hidden and the API returns 403 before
+workload discovery, even for admins. With the flag enabled, missing workload
+permissions produce classified list/patch failures, displayed in the UI. In
+impersonation mode every list and patch carries the complete human identity; the
+ServiceAccount needs impersonation grants and the human needs workload RBAC.
 
 ## What it scans
 
 In the secret's namespace, Krypton inspects Deployments, StatefulSets, and
 DaemonSets for references to the secret name across:
 
-- `env[].valueFrom.secretKeyRef.name`
-- `envFrom[].secretRef.name`
+- `env[].valueFrom.secretKeyRef.name` and `envFrom[].secretRef.name` across normal,
+  init (including sidecars), and ephemeral containers, where present in the template
 - `volumes[].secret.secretName`
-- Projected sources and friends via a conservative JSON string-scan fallback
-  (`"secretName":"<name>"` plus a name containment check)
+- `volumes[].projected.sources[].secret.name`, including projected-only consumers
+- `imagePullSecrets[].name`
 
-Matching workloads are patched (strategic-merge on the pod template metadata)
-and reported back grouped by kind:
+Names must match exactly. Key selection, optional references, property order, and
+envFrom prefixes do not change the name match. Literal env values, command
+arguments, ConfigMaps, volume/container names, annotations, and name substrings
+do not count. Several references in one workload still produce just one patch.
+
+The scan is limited to those three controller templates. It does not scan direct
+Pods, Jobs/CronJobs, storage-driver Secret references, ServiceAccount-inherited
+pull secrets, or live-Pod-only injection/debug containers. These require native
+operator tooling. `no_targets` means no supported explicit template references
+were found, not that every application in the namespace is current.
+
+## Reading the result
+
+Discovery settles before patching; at most **four patches are in flight per
+request across all kinds**. Each kind's complete inventory is required before
+patching any of its workloads. Other successfully listed kinds can proceed if
+one list fails. A failed/incomplete list is unknown, never an empty inventory.
+Every patch carries the inspected workload UID and resourceVersion as JSON
+Patch `test` preconditions, so a replaced or edited workload fails instead of
+receiving an unrelated rollout. Matches without a usable identity are reported
+as incomplete and never patched by name alone.
+
+- **Requested** (HTTP 200, success notification): all matched patches acknowledged,
+  discovery complete. Check the rollout separately.
+- **No targets** (HTTP 200, info): all three inventories completed with no matches;
+  no rollout requested.
+- **Partial** (HTTP 207, warning): at least one acknowledged patch, with named patch
+  failures and/or unknown kind inventories shown below the summary.
+- **Failed** (HTTP 503, error): no patches acknowledged and at least one patch/list
+  failure. This includes unknown inventories with zero known matches.
+
+The details remain visible after the notification disappears. Only acknowledged
+workloads appear under **Rollout requested**. For example:
 
 ```json
 {
-  "deployments": ["api-server"],
-  "statefulSets": [],
-  "daemonSets": [],
-  "note": "Some apps pick up secret changes automatically, others need a restart to see the new values."
+  "status": "requested",
+  "matched": 1,
+  "requested": [{ "kind": "Deployment", "name": "api-server" }],
+  "failures": [],
+  "discoveryFailures": [],
+  "message": "Rollout requested for 1 workload.",
+  "note": "Only acknowledged pod-template patches are reported as requested. Rollout completion, readiness, and credential uptake are not verified."
 }
 ```
+
+Paused Deployments, OnDelete/partitioned strategies, image caching, and application
+behavior can delay or prevent credential uptake even after an acknowledged patch.
+Inspect rollout state, readiness, and application behavior with your normal
+operational tooling. Resolve permission/unavailability errors before retrying.
+A conflict or rejected patch means the workload was replaced or edited after
+discovery: inspect its current revision and references, then retry only if the
+rollout is still wanted. A transport failure may follow an applied patch;
+retrying scans all kinds again and can request another rollout for earlier
+successes. Krypton adds no watcher, transaction, or background retry. The cap
+is per request, not a cluster-wide limit.
 
 ## Trying it in the sandbox
 
@@ -61,11 +111,15 @@ The sandbox sets `KRYPTON_RESTART_ENABLED=true` and ships an `api-server`
 Deployment consuming `database-credentials` via env and `feature-flags` via volume:
 
 1. Edit `database-credentials` in the UI and hit _Restart apps_.
-2. `kubectl rollout history deploy/api-server -n krypton-test` shows a new
-   revision with the fresh env value.
+2. The UI reports the acknowledged rollout request. Inspect
+   `kubectl rollout status deploy/api-server -n krypton-test` and rollout history
+   for progress/revision changes; history alone does not verify env values.
+3. Verify application behavior using the rotated credential without printing it.
 
 ## API contract
 
 `POST /api/namespaces/:namespace/secrets/:name/restart-consumers` — same
 namespace, managed-only, and authz gates as every other secret route, plus the
-feature flag. See the [Restart API](/api/restart-consumers/).
+feature flag. The old per-kind success arrays have been replaced by the typed
+status/requested/failure result. Clients must preserve partial and failed reports.
+See the [Restart API](/api/restart-consumers/) for fields, codes, and upgrade details.

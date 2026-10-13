@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
 import { getCoreApi, requestOptions } from '@/lib/k8s';
-import { HttpError, isConflict, jsonError, requireUser } from '@/lib/http';
+import { HttpError, isConflict, jsonError, jsonResponse, readJson, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
 import { canCreateInNamespace, filterVisibleSecrets } from '@/lib/authz';
-import { assertSizeOk, buildLiveSecret, isHistorySnapshot, isManagedByKrypton, toSummary } from '@/lib/secrets';
-import { config } from '@/lib/config';
+import { assertSizeOk, buildLiveSecret, toSummary } from '@/lib/secrets';
 import { auditLog, createSecretSchema } from '@/lib/validation';
+import { LABELS } from '@/lib/config';
+import { COLLECTION_LIMITS, readK8sCollection } from '@/lib/k8s-list';
 
 export async function GET(_req: Request, ctx: RouteContext<'/api/namespaces/[namespace]/secrets'>) {
   try {
@@ -14,14 +14,24 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/namespaces/[nam
     await assertNamespaceAllowed(namespace, user);
 
     const core = getCoreApi();
-    const res = await core.listNamespacedSecret({ namespace }, requestOptions(user));
-    // Hide history snapshots always; hide unmanaged (non-Krypton) secrets too
-    // when KRYPTON_MANAGED_ONLY=true so they can't be touched by accident.
-    const live = (res.items ?? []).filter(
-      (s) => !isHistorySnapshot(s) && (!config.managedOnly || isManagedByKrypton(s)),
+    const opts = requestOptions(user);
+    // A negative selector also includes label-less, annotation-managed Secrets.
+    // Managed visibility and live ACLs remain enforced after collection.
+    const secrets = await readK8sCollection(
+      (page) =>
+        core.listNamespacedSecret(
+          {
+            namespace,
+            labelSelector: `${LABELS.kind}!=history`,
+            ...page,
+          },
+          opts,
+        ),
+      COLLECTION_LIMITS.liveSecrets,
+      (secret) => secret,
     );
-    const visible = await filterVisibleSecrets(user, namespace, live);
-    return NextResponse.json({
+    const visible = await filterVisibleSecrets(user, namespace, secrets);
+    return jsonResponse({
       namespace,
       secrets: visible.map((s) => toSummary(namespace, s)),
       // UX hint so the UI can disable creation upfront (POST still enforces).
@@ -48,7 +58,7 @@ export async function POST(req: Request, ctx: RouteContext<'/api/namespaces/[nam
       throw new HttpError(403, `You are not allowed to create secrets in "${namespace}"`);
     }
 
-    const body = createSecretSchema.parse(await req.json());
+    const body = createSecretSchema.parse(await readJson(req));
     const data = { ...body.data, ...(body.stringData ?? {}) };
     assertSizeOk(data);
 
@@ -79,7 +89,7 @@ export async function POST(req: Request, ctx: RouteContext<'/api/namespaces/[nam
         resourceVersion: created.metadata?.resourceVersion,
         result: 'allow',
       });
-      return NextResponse.json({ secret: toSummary(namespace, created) }, { status: 201 });
+      return jsonResponse({ secret: toSummary(namespace, created) }, { status: 201 });
     } catch (err: unknown) {
       if (isConflict(err)) {
         throw new HttpError(409, `Secret "${body.name}" already exists in "${namespace}"`);

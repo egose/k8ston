@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { Button } from '@egose/shadcn-theme/components/ui/button';
 import { Alert } from '@egose/shadcn-theme/components/ui/alert';
-import { api } from '@/lib/api-client';
+import { ApiError } from '@/lib/api-client';
+import { secretListQueryOptions } from '@/lib/secret-queries';
 import { SecretForm } from './secret-form';
 
 /**
@@ -15,34 +16,73 @@ import { SecretForm } from './secret-form';
  */
 export function CreateSecretView({ namespace }: { namespace: string }) {
   const router = useRouter();
-  const { data, isLoading, error } = useQuery({
-    // Shared with the dashboard — no extra fetch when navigating from there.
-    queryKey: ['secrets', namespace],
-    queryFn: () => api.listSecrets(namespace),
-  });
+  // Shared with the dashboard — no extra fetch when navigating from there.
+  const { data, isPending, isFetching, isSuccess, error, refetch } = useQuery(secretListQueryOptions(namespace));
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (error) {
+  if (isPending)
     return (
-      <p className="text-sm text-destructive">{error instanceof Error ? error.message : 'Failed to load namespace'}</p>
+      <p role="status" className="text-sm text-muted-foreground">
+        Checking create permission…
+      </p>
     );
-  }
-  if (data && !data.canCreate) {
-    return (
-      <div className="flex flex-col gap-3">
-        <Alert variant="warning">
-          <div>
-            You are not allowed to create secrets in &ldquo;{namespace}&rdquo;. Contact your administrator if you need
-            access.
+  return (
+    <div className="flex flex-col gap-3">
+      {isFetching && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Checking create permission…
+        </p>
+      )}
+      {(error || typeof data?.canCreate !== 'boolean') && (
+        <Alert variant="danger" role="alert">
+          <div className="flex flex-col gap-2 text-sm">
+            <p>
+              {error instanceof ApiError && error.status === 403
+                ? 'You do not have permission to access this namespace.'
+                : 'Create permission is unavailable.'}{' '}
+              {error?.message}
+            </p>
+            <div>
+              <Button
+                variant="secondary"
+                appearance="outline"
+                size="sm"
+                loading={isFetching}
+                onClick={() => void refetch()}
+              >
+                Retry create permission
+              </Button>
+            </div>
           </div>
         </Alert>
-        <div>
-          <Button variant="secondary" appearance="outline" size="sm" onClick={() => router.back()}>
-            <IconArrowLeft size={14} /> Back
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  return <SecretForm mode="create" namespace={namespace} />;
+      )}
+      {!error && data?.canCreate === false && (
+        <>
+          <Alert variant="warning" role="alert">
+            <div>
+              You are not allowed to create secrets in &ldquo;{namespace}&rdquo;. Contact your administrator if you need
+              access.
+            </div>
+          </Alert>
+          <div className="flex gap-2">
+            <Button variant="secondary" appearance="outline" size="sm" onClick={() => router.back()}>
+              <IconArrowLeft size={14} /> Back
+            </Button>
+            <Button
+              variant="secondary"
+              appearance="outline"
+              size="sm"
+              loading={isFetching}
+              onClick={() => void refetch()}
+            >
+              Retry create permission
+            </Button>
+          </div>
+        </>
+      )}
+      {/* A failed background check disables submission without discarding a draft. */}
+      {data?.canCreate === true && (
+        <SecretForm key={namespace} mode="create" namespace={namespace} canCreate={isSuccess && !isFetching} />
+      )}
+    </div>
+  );
 }

@@ -1,3 +1,5 @@
+import { HttpError } from './errors';
+
 /**
  * Krypton — centralized configuration from environment.
  *
@@ -20,6 +22,8 @@ function bool(value: string | undefined, fallback = false): boolean {
 
 export type KryptonScope = 'namespace' | 'cluster';
 
+export const HISTORY_LIMIT_MAX = 100;
+
 export const config = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000',
   /** namespace the app itself runs in (injected via downward API in k8s/) */
@@ -36,8 +40,15 @@ export const config = {
   adminGroups: csv(process.env.KRYPTON_ADMIN_GROUPS),
   adminUsers: csv(process.env.KRYPTON_ADMIN_USERS).map((s) => s.toLowerCase()),
 
-  /** cap on stored historical snapshot Secrets per secret */
-  historyLimit: Number.parseInt(process.env.KRYPTON_HISTORY_LIMIT ?? '20', 10) || 20,
+  /** Positive, bounded retention per live UID. Validate before any history write. */
+  get historyLimit() {
+    const value = process.env.KRYPTON_HISTORY_LIMIT ?? '20';
+    const limit = Number(value);
+    if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(limit) || limit > HISTORY_LIMIT_MAX) {
+      throw new HttpError(503, `KRYPTON_HISTORY_LIMIT must be an integer from 1 to ${HISTORY_LIMIT_MAX}`);
+    }
+    return limit;
+  },
 
   /**
    * When true (default), secrets WITHOUT the krypton.io/managed-by=krypton
@@ -51,9 +62,9 @@ export const config = {
   etcdEncrypted: bool(process.env.KRYPTON_ETCD_ENCRYPTED, false),
 
   /**
-   * When true AND the cluster API server trusts the same OIDC issuer,
-   * forward Impersonate-User / Impersonate-Group headers so K8s RBAC
-   * authorizes the human instead of the app ServiceAccount.
+   * Forward the session email and all groups so K8s RBAC authorizes the human.
+   * Subjects must match cluster RBAC; the SA needs impersonate permission.
+   * Application access-policy reads still use the SA and its shared cache.
    * Default false = hybrid mode (SSO auth + annotation/ConfigMap authz).
    */
   impersonation: bool(process.env.KRYPTON_IMPERSONATION, false),
@@ -68,7 +79,8 @@ export const config = {
   restartEnabled: bool(process.env.KRYPTON_RESTART_ENABLED, false),
 
   authDisabled: bool(process.env.AUTH_DISABLED, false),
-  sessionSecret: process.env.SESSION_SECRET ?? 'dev-only-insecure-secret-change-me-32chars!!',
+  /** Validated lazily by auth.ts: builds and explicit auth bypass need no key. */
+  sessionSecret: process.env.SESSION_SECRET ?? '',
   sessionMaxAgeSec: Number.parseInt(process.env.SESSION_MAX_AGE ?? '28800', 10) || 28800, // 8h
 
   oidc: {
@@ -115,6 +127,18 @@ export const ANNOTATIONS = {
   get historyOf() {
     return `${config.annotationPrefix}/history-of`;
   },
+  get historyFormat() {
+    return `${config.annotationPrefix}/history-format`;
+  },
+  get sourceUid() {
+    return `${config.annotationPrefix}/source-uid`;
+  },
+  get sourceResourceVersion() {
+    return `${config.annotationPrefix}/source-resource-version`;
+  },
+  get sourceType() {
+    return `${config.annotationPrefix}/source-type`;
+  },
   get snapshotAt() {
     return `${config.annotationPrefix}/snapshot-at`;
   },
@@ -127,8 +151,16 @@ export const LABELS = {
   get managedBy() {
     return `${config.annotationPrefix}/managed-by`;
   },
+  /** Legacy name-only label; never use it to authorize or select history. */
   get historyOf() {
     return `${config.annotationPrefix}/history-of`;
+  },
+  /** Hashes keep selectors valid even for opaque, long source identities. */
+  get sourceUid() {
+    return `${config.annotationPrefix}/source-uid`;
+  },
+  get sourceResourceVersion() {
+    return `${config.annotationPrefix}/source-resource-version`;
   },
   /** distinguishes live secrets from historical snapshots */
   get kind() {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { K8S_SECRET_SIZE_LIMIT } from './config';
+import { isSecretText, secretKeyError } from './secret-rules';
 
 /** DNS-subdomain name (K8s object names). */
 export const k8sName = z
@@ -28,39 +29,127 @@ export function slugifyK8sName(value: string): string {
     .replace(/^[.-]+|[.-]+$/g, '');
 }
 
+// Zod's record/object parsers deliberately strip __proto__. Validate the raw
+// map BEFORE any such parser, then copy own entries with CreateDataProperty
+// semantics. All valid Kubernetes keys (including __proto__) survive this boundary.
 export const secretDataSchema = z
-  .record(z.string(), z.string())
+  .unknown()
+  .transform((input, ctx): Record<string, string> => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      ctx.addIssue({ code: 'custom', message: 'Data must be an object of text values' });
+      return z.NEVER;
+    }
+    const entries = Object.entries(input);
+    let valid = true;
+    for (const [key, value] of entries) {
+      const keyError = secretKeyError(key);
+      if (keyError) {
+        valid = false;
+        ctx.addIssue({ code: 'custom', path: [key], message: keyError });
+      }
+      if (typeof value !== 'string' || !isSecretText(value)) {
+        valid = false;
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message:
+            'Values must be valid Unicode text without binary control characters; use Kubernetes tooling with base64 data for binary values',
+        });
+      }
+    }
+    if (!valid) return z.NEVER;
+    return Object.fromEntries(entries) as Record<string, string>;
+  })
   .refine((data) => estimateSecretSize(data) <= K8S_SECRET_SIZE_LIMIT, {
     message: 'Secret is too large (maximum 1 MB)',
   });
 
+export const secretTypeSchema = z
+  .string()
+  .refine((type) => type.isWellFormed(), 'Type must be valid Unicode')
+  .transform((type) => type || 'Opaque');
+
+const readOnlyBinaryData = z
+  .never({
+    error: 'binaryData is a read-only response field; use Kubernetes tooling with base64 data to write binary values',
+  })
+  .optional();
+
+export const ACL_ENTRY_LIMIT = 256;
+export const ACL_ENTRY_BYTE_LIMIT = 256;
+const aclEntry = z
+  .string()
+  .max(ACL_ENTRY_BYTE_LIMIT)
+  .refine(
+    (value) => new TextEncoder().encode(value).byteLength <= ACL_ENTRY_BYTE_LIMIT,
+    'ACL entries must be at most 256 UTF-8 bytes',
+  );
+// Bound raw input before trimming. CSV annotations cannot represent a comma in
+// one principal or a blank member; namespace JSON arrays keep their exact values.
+export const annotationAclSchema = z
+  .array(
+    aclEntry
+      .transform((entry) => entry.trim())
+      .pipe(
+        z
+          .string()
+          .min(1)
+          .refine((entry) => !entry.includes(','), 'ACL annotation entries must not contain commas'),
+      ),
+  )
+  .max(ACL_ENTRY_LIMIT);
+
 export const createSecretSchema = z.object({
   name: k8sName,
-  type: z.string().default('Opaque'),
+  type: secretTypeSchema.default('Opaque'),
   data: secretDataSchema.default({}),
-  stringData: z.record(z.string(), z.string()).optional(),
+  stringData: secretDataSchema.optional(),
+  binaryData: readOnlyBinaryData,
   description: z.string().max(1024).optional().default(''),
-  allowedGroups: z.array(z.string().min(1)).default([]),
-  allowedUsers: z.array(z.string().min(1)).default([]),
+  allowedGroups: annotationAclSchema.default([]),
+  allowedUsers: annotationAclSchema.default([]),
 });
 
 export const updateSecretSchema = z.object({
-  data: secretDataSchema,
+  /** Omit to preserve all native bytes for metadata-only updates. {} clears data. */
+  data: secretDataSchema.optional(),
+  binaryData: readOnlyBinaryData,
+  stringData: z
+    .never({ error: 'stringData is only supported on create; use plaintext data for text updates' })
+    .optional(),
   description: z.string().max(1024).optional(),
-  allowedGroups: z.array(z.string().min(1)).optional(),
-  allowedUsers: z.array(z.string().min(1)).optional(),
+  allowedGroups: annotationAclSchema.optional(),
+  allowedUsers: annotationAclSchema.optional(),
   /** optimistic concurrency: must match current metadata.resourceVersion */
   resourceVersion: z.string().min(1, 'resourceVersion is required for safe updates'),
 });
 
+/** Kubernetes revisions are opaque strings, never app-level version numbers. */
+const expectedResourceVersion = z.string().refine((value) => value.trim().length > 0, {
+  message: 'resourceVersion is required; reload the live Secret before retrying',
+});
+
+export const deleteSecretSchema = z.object({
+  resourceVersion: expectedResourceVersion,
+  keepHistory: z.boolean().optional(),
+});
+
+export const restoreSecretSchema = z.object({
+  version: z.number().int().positive(),
+  resourceVersion: expectedResourceVersion,
+});
+
 export type CreateSecretInput = z.infer<typeof createSecretSchema>;
 export type UpdateSecretInput = z.infer<typeof updateSecretSchema>;
+export type DeleteSecretInput = z.infer<typeof deleteSecretSchema>;
+export type RestoreSecretInput = z.infer<typeof restoreSecretSchema>;
 
 /** Approximate serialized size of the secret data section (UTF-8 bytes). */
 export function estimateSecretSize(data: Record<string, string>): number {
   let size = 0;
+  const encoder = new TextEncoder();
   for (const [k, v] of Object.entries(data)) {
-    size += Buffer.byteLength(k, 'utf8') + Buffer.byteLength(v ?? '', 'utf8');
+    size += encoder.encode(k).length + encoder.encode(v).length;
   }
   // base64 inflates ~33% in etcd; account for it conservatively
   return Math.ceil(size * 1.4);
@@ -69,10 +158,12 @@ export function estimateSecretSize(data: Record<string, string>): number {
 /** Namespace-level access rules stored in the krypton-access ConfigMap. */
 export const namespaceAccessSchema = z.record(
   z.string(),
-  z.object({
-    groups: z.array(z.string()).default([]),
-    users: z.array(z.string()).default([]),
-  }),
+  z
+    .object({
+      groups: z.array(aclEntry).max(ACL_ENTRY_LIMIT).default([]),
+      users: z.array(aclEntry).max(ACL_ENTRY_LIMIT).default([]),
+    })
+    .strict(),
 );
 export type NamespaceAccessMap = z.infer<typeof namespaceAccessSchema>;
 

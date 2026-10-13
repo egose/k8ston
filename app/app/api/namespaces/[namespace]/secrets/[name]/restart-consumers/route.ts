@@ -1,17 +1,14 @@
-import { NextResponse } from 'next/server';
-import { getCoreApi, requestOptions } from '@/lib/k8s';
-import { HttpError, jsonError, requireUser } from '@/lib/http';
+import { HttpError, jsonError, jsonResponse, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
-import { assertManagedVisible, canAccessSecret } from '@/lib/authz';
-import { restartConsumers } from '@/lib/secrets';
+import { loadAuthorizedLiveSecret } from '@/lib/secret-access';
+import { consumerRequestFailure, restartConsumers } from '@/lib/consumers';
 import { auditLog } from '@/lib/validation';
 import { config } from '@/lib/config';
 
 type Ctx = RouteContext<'/api/namespaces/[namespace]/secrets/[name]/restart-consumers'>;
 
 /**
- * Trigger a rolling restart of workloads consuming this secret.
- * Required for env-var consumers; volume mounts sync via kubelet on their own.
+ * Request pod-template rollouts; completion/readiness/credential uptake is not checked.
  * Disabled entirely when KRYPTON_RESTART_ENABLED=false (403).
  */
 export async function POST(_req: Request, ctx: Ctx) {
@@ -24,28 +21,36 @@ export async function POST(_req: Request, ctx: Ctx) {
     }
     await assertNamespaceAllowed(namespace, user);
 
-    const core = getCoreApi();
-    const live = await core.readNamespacedSecret({ namespace, name }, requestOptions(user));
-    assertManagedVisible('secret.restart', user, namespace, name, live);
-    if (!(await canAccessSecret(user, namespace, live))) {
-      auditLog({ action: 'secret.restart', user: user.email, namespace, name, result: 'deny' });
-      throw new HttpError(403, 'You are not allowed to modify this secret');
-    }
+    await loadAuthorizedLiveSecret('secret.restart', user, namespace, name);
 
-    const result = await restartConsumers(namespace, name, user);
+    const result = await restartConsumers(namespace, name, user).catch((err: unknown) => {
+      auditLog({
+        action: 'secret.restart',
+        user: user.email,
+        namespace,
+        name,
+        result: 'error',
+        detail: JSON.stringify({ stage: 'prepare', ...consumerRequestFailure(err) }),
+      });
+      throw err;
+    });
     auditLog({
       action: 'secret.restart',
       user: user.email,
       namespace,
       name,
-      result: 'allow',
+      result: result.status === 'partial' || result.status === 'failed' ? 'error' : 'allow',
       detail: JSON.stringify({
-        deployments: result.deployments,
-        statefulSets: result.statefulSets,
-        daemonSets: result.daemonSets,
+        status: result.status,
+        matched: result.matched,
+        requested: result.requested,
+        failures: result.failures,
+        discoveryFailures: result.discoveryFailures,
       }),
     });
-    return NextResponse.json(result);
+    return jsonResponse(result.status === 'failed' ? { ...result, error: result.message } : result, {
+      status: result.status === 'failed' ? 503 : result.status === 'partial' ? 207 : 200,
+    });
   } catch (err) {
     return jsonError(err);
   }

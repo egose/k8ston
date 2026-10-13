@@ -16,7 +16,7 @@ secrets (`OIDC_CLIENT_SECRET`, `SESSION_SECRET`) go in the `krypton-oidc` Secret
 | `KRYPTON_SCOPE`                                      | `namespace`                                           | `namespace` (own NS only) or `cluster`                           |
 | `KRYPTON_NAMESPACE`                                  | `krypton`                                             | Fallback for the app's own namespace (downward API wins in-cluster) |
 | `KRYPTON_NAMESPACES`                                 | —                                                     | Comma allowlist for cluster scope                                |
-| `KRYPTON_HISTORY_LIMIT`                              | `20`                                                  | Snapshots kept per secret                                        |
+| `KRYPTON_HISTORY_LIMIT`                              | `20`                                                  | Eligible snapshots per live UID, integer 1–100                   |
 | `KRYPTON_MANAGED_ONLY`                               | `true`                                                | Hide secrets without `managed-by=krypton` (404)                  |
 | `KRYPTON_ETCD_ENCRYPTED`                             | `false`                                               | Set `true` once apiserver encryption is on                       |
 | `KRYPTON_IMPERSONATION`                              | `false`                                               | Forward SSO identity to K8s RBAC                                 |
@@ -25,13 +25,54 @@ secrets (`OIDC_CLIENT_SECRET`, `SESSION_SECRET`) go in the `krypton-oidc` Secret
 | `KRYPTON_ANNOTATION_PREFIX`                          | `krypton.io`                                          | Annotation/label prefix                                          |
 | `KRYPTON_ACCESS_CONFIGMAP`                           | `krypton-access`                                      | Namespace-rules ConfigMap name                                   |
 | `AUTH_DISABLED`                                      | `false`                                               | `true` = mock admin, local dev only                              |
-| `SESSION_SECRET`                                     | —                                                     | ≥32-char HMAC key for session JWTs                               |
+| `SESSION_SECRET`                                     | — (required with auth)                                 | ≥32-char random HMAC key; no development fallback                |
 | `SESSION_MAX_AGE`                                    | `28800`                                               | Session lifetime in seconds (8h)                                 |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | —                                                  | SSO provider (discovery-based)                                   |
 | `OIDC_REDIRECT_URI`                                  | `<APP_URL>/api/auth/callback`                         | Override the derived redirect URI                                |
 | `OIDC_ALLOW_HTTP`                                    | `false`                                               | Allow `http://` issuers — loopback + non-prod only (sandbox Dex) |
 | `OIDC_SCOPES` / `OIDC_GROUPS_CLAIM` / `OIDC_USERNAME_CLAIM` / `OIDC_NAME_CLAIM` | `openid profile email groups` / `groups` / `email` / `name` | Claim mapping                                    |
 | `NEXT_PUBLIC_APP_URL`                                | `http://localhost:3000`                               | Public URL (derives OIDC redirect)                               |
+
+## Namespace discovery and API budgets
+
+In cluster scope, nonempty `KRYPTON_NAMESPACES` is resolved and checked locally:
+names are sorted/deduplicated and require no Kubernetes namespace-list requests.
+Actual operations still enforce existence and resource RBAC. With an empty allowlist,
+the app requires a complete paginated namespace inventory; failed discovery now
+returns an error instead of silently falling back to its own namespace.
+
+Fixed [API budgets](/api/overview/#request-and-collection-budgets) cover the 16 MiB
+streaming JSON envelope, 256-entry/256-byte ACL arrays, and per-inventory page,
+object, and byte limits. They are application constants, not new environment
+settings. Data-size validation and deployment ingress request limits also apply.
+
+## History retention and upgrade
+
+`KRYPTON_HISTORY_LIMIT` accepts decimal integers **1–100**; only an unset value
+defaults to **20**. Empty, zero, negative, fractional, malformed (including
+whitespace/leading zeros), and out-of-range values return 503 before history
+writes and from `/api/config`. Zero does not disable pruning or select unlimited
+retention. Pruning failures are reported and block live replacement; a failed
+operation can leave a snapshot and a temporary retention backlog.
+
+This bound applies to eligible snapshots of one live UID. Legacy/unbound objects
+and retained predecessor lifetimes need separate operator recovery/cleanup. Upgrade
+writer replicas together and keep prefix/retention settings consistent; no automatic
+name-based migration exists. See [Versioning & History](/guides/versioning-history/).
+
+## Session key requirement
+
+Authentication fails closed if `SESSION_SECRET` is missing, empty, shorter than
+32 characters after trimming surrounding whitespace, or equal to the former
+public development fallback. Supply a fresh random value before enabling auth
+(for example, `openssl rand -hex 32`); use the same key on all replicas. The key
+itself is not trimmed or logged.
+
+Upgrading installations that used the old fallback requires replacing that key.
+Key changes invalidate existing sessions. Builds need no runtime signing key,
+and explicit `AUTH_DISABLED=true` still works without one. See
+[Authentication](/guides/authentication/#signing-key-and-upgrade-behavior) for
+session validation and OIDC transaction behavior.
 
 ## Flags that deserve a second thought
 
@@ -43,9 +84,12 @@ secrets (`OIDC_CLIENT_SECRET`, `SESSION_SECRET`) go in the `krypton-oidc` Secret
   everything again (legacy adopt-on-edit: saving an external secret stamps
   Krypton annotations onto it).
 - **`KRYPTON_IMPERSONATION`** — default `false` (hybrid mode: the app
-  ServiceAccount executes, Krypton enforces authz itself). Set `true` only when
-  the API server trusts the same OIDC issuer, so `Impersonate-User`/`Group`
-  headers evaluate the _human's_ RBAC instead.
+  ServiceAccount executes, Krypton enforces authz itself). When enabled, session
+  email/groups must match cluster RBAC and the SA needs permission to impersonate
+  the user and every group. All human operations, including workload lists, send
+  the complete identity; access-policy reads remain service-scoped.
+  `AUTH_DISABLED=true` explicitly bypasses human impersonation. See
+  [identity transport and upgrade requirements](/guides/authorization/#optional-k8s-native-impersonation).
 - **`KRYPTON_RESTART_ENABLED`** — default `false` (button hidden, API 403, no
   `apps` permissions needed). Enabling requires the `apps` RBAC rule too.
 - **`OIDC_ALLOW_HTTP`** — refused for non-loopback issuers and when

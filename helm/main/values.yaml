@@ -60,7 +60,8 @@ krypton:
 
   # Namespace-level ownership fallback ConfigMap (krypton-access / access.json).
   # Per-secret annotations override these rules (see app/k8s/configmap-access.yaml).
-  # When enabled, KRYPTON_ACCESS_CONFIGMAP is derived from the ConfigMap name.
+  # Namespace groups/users see all teams; team members see only their team's
+  # secrets. When enabled, KRYPTON_ACCESS_CONFIGMAP is derived from the ConfigMap name.
   accessConfig:
     enabled: false
 

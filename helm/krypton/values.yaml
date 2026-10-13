@@ -115,6 +115,9 @@ rbac:
 # match `name` or rendering fails. `key` must stay `access.json` (hardcoded by
 # the runtime reader). When disabled, set KRYPTON_ACCESS_CONFIGMAP in `env` to
 # point at an externally managed ConfigMap.
+# Namespace groups/users see ALL secrets (every team + unassigned); team
+# members see only their team's secrets. Secrets carry krypton.io/team
+# (missing/blank = unassigned, namespace rules only).
 accessConfig:
   enabled: false
   name: krypton-access
@@ -124,6 +127,13 @@ accessConfig:
   #   production:
   #     groups: [dev-team, database-admins]
   #     users: [alice@company.com]
+  #     teams:
+  #       - name: team1
+  #         groups: [team1-dev]
+  #         users: []
+  #       - name: team2
+  #         groups: []
+  #         users: [bob@company.com]
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/

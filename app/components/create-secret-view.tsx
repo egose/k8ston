@@ -25,6 +25,9 @@ export function CreateSecretView({ namespace }: { namespace: string }) {
         Checking create permission…
       </p>
     );
+  const canCreateUnassigned = data?.canCreate === true;
+  const creatableTeams = data?.creatableTeams ?? [];
+  const canCreateAny = canCreateUnassigned || creatableTeams.length > 0;
   return (
     <div className="flex flex-col gap-3">
       {isFetching && (
@@ -55,7 +58,7 @@ export function CreateSecretView({ namespace }: { namespace: string }) {
           </div>
         </Alert>
       )}
-      {!error && data?.canCreate === false && (
+      {!error && !canCreateAny && (
         <>
           <Alert variant="warning" role="alert">
             <div>
@@ -80,8 +83,15 @@ export function CreateSecretView({ namespace }: { namespace: string }) {
         </>
       )}
       {/* A failed background check disables submission without discarding a draft. */}
-      {data?.canCreate === true && (
-        <SecretForm key={namespace} mode="create" namespace={namespace} canCreate={isSuccess && !isFetching} />
+      {canCreateAny && (
+        <SecretForm
+          key={namespace}
+          mode="create"
+          namespace={namespace}
+          canCreate={isSuccess && !isFetching && canCreateUnassigned}
+          teams={data?.teams ?? []}
+          creatableTeams={creatableTeams}
+        />
       )}
     </div>
   );

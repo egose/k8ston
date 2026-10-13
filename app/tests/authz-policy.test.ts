@@ -16,7 +16,7 @@ const live: V1Secret = {
   data: { credential: Buffer.from('synthetic-live-value').toString('base64') },
 };
 const unavailable = { error: 'Namespace access policy is unavailable' };
-const restrictedMap = { [namespace]: { groups: ['operators'], users: [] } };
+const restrictedMap = { [namespace]: { groups: ['operators'], users: [], teams: [] } };
 const policy = (value: unknown): V1ConfigMap => ({ data: { 'access.json': JSON.stringify(value) } });
 const apiFailure = (status: number) =>
   new ApiException(status, privateMarker, JSON.stringify({ message: privateMarker }), {
@@ -255,9 +255,16 @@ describe('intentional absence and authorization precedence', () => {
       expect((await request('read')).status).toBe(200);
       const list = await request('list');
       expect(list.status).toBe(200);
-      expect(await list.json()).toMatchObject({ canCreate: true, secrets: [{ name: 'credentials' }] });
+      // Admin listing degrades to no teams (instead of 503) when policy is down.
+      expect(await list.json()).toMatchObject({
+        canCreate: true,
+        secrets: [{ name: 'credentials' }],
+        teams: [],
+        creatableTeams: [],
+      });
       expect((await request('create')).status).toBe(201);
-      expect(core.readNamespacedConfigMap).not.toHaveBeenCalled();
+      // Read/create bypass policy entirely; list touches it once for teams (fails, caught).
+      expect(core.readNamespacedConfigMap).toHaveBeenCalledTimes(1);
     },
   );
 
@@ -365,7 +372,7 @@ describe('single-flight policy cache and refresh', () => {
     expect((await request('create')).status).toBe(403);
     const list = await request('list');
     expect(list.status).toBe(200);
-    expect(await list.json()).toEqual({ namespace, secrets: [], canCreate: false });
+    expect(await list.json()).toEqual({ namespace, secrets: [], canCreate: false, teams: [], creatableTeams: [] });
     expect(core.readNamespacedConfigMap).toHaveBeenCalledTimes(3);
     expect(core.createNamespacedSecret).toHaveBeenCalledTimes(1);
   });

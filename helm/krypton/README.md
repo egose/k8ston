@@ -44,7 +44,7 @@ See [values.yaml](values.yaml) for the full reference. Key settings:
 | `rbac.scope`               | `namespace`             | `namespace` (own namespace only) or `cluster` (centralized multi-namespace dashboard).  |
 | `rbac.extraNamespaces`     | `[]`                    | Curated extra namespaces (namespace scope only): Roles plus a derived allowlist.        |
 | `restartEnabled`           | `false`                 | Enable the "restart apps" feature (`KRYPTON_RESTART_ENABLED` + `apps` RBAC rule).       |
-| `accessConfig.enabled`     | `false`                 | Render the namespace ownership fallback ConfigMap (`access.json`).                      |
+| `accessConfig.enabled`     | `false`                 | Render the namespace ownership fallback ConfigMap (`access.json`, incl. `teams`).       |
 | `ingress.enabled`          | `false`                 | Expose via Ingress.                                                                     |
 | `route.enabled`            | `false`                 | Expose via OpenShift Route.                                                             |
 | `httpRoute.enabled`        | `false`                 | Expose via Gateway API HTTPRoute.                                                       |
@@ -99,3 +99,7 @@ contradiction error.
 - With `accessConfig.enabled: true`, `KRYPTON_ACCESS_CONFIGMAP` is now derived
   from `accessConfig.name`, and `accessConfig.key` must be `access.json` (the
   runtime reader hardcodes it) — a custom key now fails rendering.
+- Namespace entries accept an optional `teams` array (up to 64 teams, unique
+  DNS-label names); secrets opt in via the `krypton.io/team` annotation.
+  Deploy the app before adding `teams` — older releases reject the unknown
+  field as invalid policy.

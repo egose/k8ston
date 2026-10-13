@@ -189,6 +189,11 @@ export function SecretDetail({ namespace, name }: Props) {
             <Badge variant="secondary" size="sm">
               {secret.type}
             </Badge>
+            {secret.team ? (
+              <Badge variant="secondary" size="sm">
+                team: {secret.team}
+              </Badge>
+            ) : null}
             {secret.version > 0 && (
               <Badge variant="primary" appearance="outline" size="sm">
                 v{secret.version}
@@ -215,7 +220,9 @@ export function SecretDetail({ namespace, name }: Props) {
             </div>
             <div>
               <span className="text-muted-foreground">allowed groups: </span>
-              {secret.allowedGroups.length > 0 ? secret.allowedGroups.join(', ') : '— (namespace default)'}
+              {secret.allowedGroups.length > 0
+                ? secret.allowedGroups.join(', ')
+                : `— (${secret.team ? `team "${secret.team}" or namespace` : 'namespace'} default)`}
             </div>
             <div>
               <span className="text-muted-foreground">allowed users: </span>

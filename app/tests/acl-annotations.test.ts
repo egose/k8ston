@@ -88,7 +88,10 @@ it('keeps namespace JSON principals exact, including commas and whitespace, with
   const policy = {
     'unit-test': { groups: ['team-a,team-b', ' padded ', '\t'], users: ['alice@example.test,bob@example.test'] },
   };
-  expect(namespaceAccessSchema.parse(policy)).toEqual(policy);
+  // teams defaults to [] (open, no team restrictions).
+  expect(namespaceAccessSchema.parse(policy)).toEqual({
+    'unit-test': { ...policy['unit-test'], teams: [] },
+  });
   for (const field of ['groups', 'users']) {
     expect(
       namespaceAccessSchema.safeParse({ 'unit-test': { [field]: Array(ACL_ENTRY_LIMIT + 1).fill('member') } }).success,

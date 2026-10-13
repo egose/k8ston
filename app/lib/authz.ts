@@ -15,13 +15,21 @@ import { errorStatus } from './errors';
  * Annotations on a Secret:
  *   krypton.io/allowed-groups: "dev-team, database-admins"
  *   krypton.io/allowed-users:  "alice@company.com, bob@company.com"
+ *   krypton.io/team: "team1" (single team; missing/blank = unassigned)
  *
  * Namespace fallback lives in ConfigMap <app-namespace>/krypton-access,
- * key "access.json": { "<namespace>": { "groups": [...], "users": [...] } }
+ * key "access.json":
+ *   { "<namespace>": { "groups": [...], "users": [...],
+ *     "teams": [{ "name": "team1", "groups": [...], "users": [...] }] } }
  *
- * Default when NO rules exist anywhere: allow all authenticated users
- * (open by default, restricted once rules are added). Policy failures are
- * unavailable, never absent. Admins and explicit Secret ACLs take precedence.
+ * Decision order: admins → per-secret ACL → team/namespace policy → open.
+ * Namespace groups/users see ALL secrets (every team + unassigned); team
+ * members see only their team's secrets. Unassigned secrets use namespace
+ * rules only (teams never restrict them). Empty team rules grant nothing
+ * (unlike empty namespace rules, which are open). Unknown teams fail closed
+ * unless the namespace is completely unrestricted. Default when NO rules
+ * exist anywhere: allow all authenticated users. Policy failures are
+ * unavailable, never absent.
  */
 
 export function isAdmin(user: SessionUser): boolean {
@@ -126,6 +134,42 @@ export function secretRules(secret: V1Secret): { groups: string[]; users: string
   };
 }
 
+/** Single-team assignment; missing/blank/whitespace-only = unassigned. */
+export function secretTeam(secret: V1Secret): string | undefined {
+  const raw = secret.metadata?.annotations?.[ANNOTATIONS.team];
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function hasRules(groups: string[], users: string[]): boolean {
+  return groups.length > 0 || users.length > 0;
+}
+
+type NamespaceRules = NonNullable<NamespaceAccessMap[string]>;
+
+/** True when the namespace has no restrictions at all (no ns rules, no team with rules). */
+function isUnrestricted(nsRules: NamespaceRules): boolean {
+  if (hasRules(nsRules.groups, nsRules.users)) return false;
+  return !nsRules.teams.some((t) => hasRules(t.groups, t.users));
+}
+
+/** Shared assigned-secret/team-creation decision (namespace already failed or is open). */
+function teamDecision(user: SessionUser, nsRules: NamespaceRules, team: string, nsMatched: boolean): boolean {
+  if (nsMatched) return true;
+  const nsHas = hasRules(nsRules.groups, nsRules.users);
+  const teamRule = nsRules.teams.find((t) => t.name === team);
+  if (!teamRule) {
+    // Unknown team fails closed unless the namespace is completely unrestricted.
+    return isUnrestricted(nsRules);
+  }
+  if (!hasRules(teamRule.groups, teamRule.users)) {
+    // Empty team rules grant nothing; open only when the namespace is also open.
+    return !nsHas;
+  }
+  return userMatches(user, teamRule.groups, teamRule.users);
+}
+
 /** Can `user` read (and therefore manage) this secret? */
 export async function canAccessSecret(user: SessionUser, namespace: string, secret: V1Secret): Promise<boolean> {
   if (isAdmin(user)) return true;
@@ -133,22 +177,67 @@ export async function canAccessSecret(user: SessionUser, namespace: string, secr
   const hasSecretRules = rules.groups.length > 0 || rules.users.length > 0;
   if (hasSecretRules) return userMatches(user, rules.groups, rules.users);
 
+  const team = secretTeam(secret);
   const nsMap = await getNamespaceAccessMap();
   const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
-  if (nsRules && (nsRules.groups.length > 0 || nsRules.users.length > 0)) {
-    return userMatches(user, nsRules.groups, nsRules.users);
+  // No namespace entry → open to all authenticated users.
+  if (!nsRules) return true;
+  const nsHas = hasRules(nsRules.groups, nsRules.users);
+  const nsMatched = nsHas && userMatches(user, nsRules.groups, nsRules.users);
+
+  // Unassigned secrets use namespace rules only; teams never restrict them.
+  if (!team) {
+    if (nsHas) return nsMatched;
+    return true;
   }
-  // No rules anywhere → open to all authenticated users.
-  return true;
+  // Assigned: namespace sees all, else the secret's team decides.
+  return teamDecision(user, nsRules, team, nsMatched);
 }
 
-/** Can `user` create secrets in `namespace` (namespace rules only)? */
-export async function canCreateInNamespace(user: SessionUser, namespace: string): Promise<boolean> {
+/**
+ * Can `user` create secrets in `namespace`?
+ * - Unassigned (`team` omitted/blank): namespace rules only (team membership
+ *   never grants it; open when the namespace has no rules).
+ * - Assigned: namespace match (sees all) OR the target team's rules match.
+ */
+export async function canCreateInNamespace(user: SessionUser, namespace: string, team?: string): Promise<boolean> {
   if (isAdmin(user)) return true;
+  const normalized = team?.trim() ? team.trim() : undefined;
   const nsMap = await getNamespaceAccessMap();
   const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
-  if (!nsRules || (nsRules.groups.length === 0 && nsRules.users.length === 0)) return true;
-  return userMatches(user, nsRules.groups, nsRules.users);
+  if (!nsRules) return true;
+  const nsHas = hasRules(nsRules.groups, nsRules.users);
+  const nsMatched = nsHas && userMatches(user, nsRules.groups, nsRules.users);
+
+  if (!normalized) {
+    if (nsHas) return nsMatched;
+    return true;
+  }
+  return teamDecision(user, nsRules, normalized, nsMatched);
+}
+
+/** Team names defined in the namespace policy (for dropdowns; membership still enforced server-side). */
+export async function listNamespaceTeams(namespace: string): Promise<string[]> {
+  const nsMap = await getNamespaceAccessMap();
+  const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
+  return nsRules ? nsRules.teams.map((t) => t.name) : [];
+}
+
+/** Teams `user` may create assigned secrets in (namespace match = all teams). */
+export async function listCreatableTeams(user: SessionUser, namespace: string): Promise<string[]> {
+  if (isAdmin(user)) return listNamespaceTeams(namespace);
+  const nsMap = await getNamespaceAccessMap();
+  const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
+  if (!nsRules) return [];
+  const nsHas = hasRules(nsRules.groups, nsRules.users);
+  // Namespace match sees all teams; unrestricted namespaces need no team grant.
+  if (nsHas && userMatches(user, nsRules.groups, nsRules.users)) return nsRules.teams.map((t) => t.name);
+  if (!nsHas && isUnrestricted(nsRules)) return nsRules.teams.map((t) => t.name);
+  // Mirrors canCreateInNamespace per team: empty teams are creatable iff the
+  // namespace itself is open, otherwise only on explicit team membership.
+  return nsRules.teams
+    .filter((t) => (hasRules(t.groups, t.users) ? userMatches(user, t.groups, t.users) : !nsHas))
+    .map((t) => t.name);
 }
 
 /** Filter a secret list down to what `user` may see. */

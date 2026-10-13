@@ -19,8 +19,9 @@ After namespace scope and live-object visibility checks:
    (matched against SSO groups / lowercased email).
 2. **Per-secret annotations override everything below.** If a secret has any
    `allowed-groups`/`allowed-users`, only those decide.
-3. **Namespace fallback** in ConfigMap `<app-namespace>/krypton-access`, key
-   `access.json` (cached 60s in memory).
+3. **Team + namespace fallback** in ConfigMap `<app-namespace>/krypton-access`, key
+   `access.json` (cached 60s in memory). Namespace members see all secrets;
+   team members see only their team's secrets (see [Teams](#teams)).
 4. **Confirmed absence of rules → visible to all authenticated users** (open by
    default, restricted once rules are added). A policy read/validation failure
    returns `503`, not an open-policy decision.
@@ -79,8 +80,9 @@ import AccessJson from '!!raw-loader!../../.samples/access-config.json.txt';
 
 Namespaces absent from a valid map are open to all authenticated users until
 restricted. `{}` and namespace entries with empty rule lists are valid open
-policies. Entries accept only `groups` and `users` string arrays; omitted lists
-default to empty, and unknown fields are rejected to catch misspelled rules.
+policies. Entries accept `groups` and `users` string arrays plus an optional
+`teams` array (see [Teams](#teams)); omitted lists default to empty, and unknown
+fields are rejected to catch misspelled rules.
 Each policy array has the same 256-entry / 256-UTF-8-byte ceilings; a violation is
 invalid policy, not an open fallback. Namespace lookups use own properties, so a
 valid namespace named `constructor` follows the same absent/empty/explicit rules.
@@ -109,16 +111,62 @@ failures, a numeric HTTP status; policy contents and raw transport errors are om
 **Upgrade:** repair malformed ConfigMaps and read permissions before rollout.
 An intentionally open existing ConfigMap must contain valid `access.json: '{}'`.
 
+## Teams
+
+Each namespace entry may define up to **64 teams**:
+
+```json
+{
+  "production": {
+    "groups": ["platform-leads"],
+    "users": [],
+    "teams": [{ "name": "team1", "groups": ["team1-dev"], "users": [] }]
+  }
+}
+```
+
+Secrets opt into a team with the `krypton.io/team` annotation (one team per
+secret; missing/blank means unassigned). Team names are DNS labels (lowercase,
+1–63 chars) and must be unique per namespace. Nested `groups`/`users` follow
+the same 256-entry / 256-byte ceilings and exact-match semantics as namespace
+arrays (groups case-sensitive, users case-insensitive).
+
+- **Namespace members see everything** — every team plus unassigned secrets.
+- **Team members see only their team's secrets.** Unassigned secrets use
+  namespace rules alone, so team membership never grants them.
+- **Empty team rules grant nothing** (unlike empty namespace rules, which are
+  open): a team with no members is visible only to namespace members — or to
+  everyone when the namespace itself is also unrestricted.
+- **Unknown teams fail closed**: a secret assigned to a team missing from the
+  policy is denied unless the namespace is completely unrestricted.
+- **Per-secret ACLs still win**: an explicit `allowed-groups`/`allowed-users`
+  annotation decides alone, ignoring both namespace and team rules.
+
+The secrets list shows a team dropdown (filter) and each secret's team; the
+create/edit form assigns the team. Moving a secret to another team (or to
+unassigned) requires creation rights in the target, so members cannot escalate
+secrets into teams they cannot create in. Unknown teams are rejected with
+`400`; forbidden targets with `403`.
+
+**Teams upgrade:** deploy the app before adding `teams` to `access.json` —
+older releases reject the unknown field as invalid policy (`503`). Existing
+policies without `teams` and secrets without the annotation behave exactly as
+before.
+
 ## Creation is special
 
-A new secret has no annotations yet, so creating in a namespace is decided by
-the **namespace rules alone** — the per-secret allowed groups/users you set in
-the form only take effect _after_ the secret exists. The secrets list response
-includes `canCreate` so the UI disables creation upfront when the rules exclude
-you (POST still enforces server-side: `403`). Policy failures return `503` for
-non-admin creation **and list requests**. Lists need the policy for `canCreate`
-even when empty or containing only explicitly authorized secrets; they return
-an error rather than a partial list or an invented creation hint.
+A new secret has no annotations yet, so creating is decided by the **namespace
+and team rules for the chosen target** — the per-secret allowed groups/users
+you set in the form only take effect _after_ the secret exists. Unassigned
+creation uses namespace rules alone; assigned creation also accepts the target
+team's members. The secrets list response includes `canCreate` (unassigned),
+`teams`, and `creatableTeams` so the UI disables creation upfront when the
+rules exclude you (POST still enforces server-side: `403`). Policy failures
+return `503` for non-admin creation **and list requests**. Lists need the policy
+for `canCreate` even when empty or containing only explicitly authorized
+secrets; they return an error rather than a partial list or an invented
+creation hint. Admin lists degrade to empty team hints instead of failing when
+only the teams lookup is unavailable.
 
 ## Managed-only mode
 

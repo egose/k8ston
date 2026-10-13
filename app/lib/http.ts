@@ -82,6 +82,7 @@ export function jsonError(err: unknown): NextResponse {
       'description',
       'allowedGroups',
       'allowedUsers',
+      'team',
       'resourceVersion',
       'version',
       'keepHistory',

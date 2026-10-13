@@ -4,11 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@egose/shadcn-theme/components/ui/alert';
 import { Button } from '@egose/shadcn-theme/components/ui/button';
 import { ApiError } from '@/lib/api-client';
-import { secretQueryOptions } from '@/lib/secret-queries';
+import { secretListQueryOptions, secretQueryOptions } from '@/lib/secret-queries';
 import { SecretForm } from './secret-form';
 
 export function EditSecretView({ namespace, name }: { namespace: string; name: string }) {
   const { data, isPending, isFetching, error, refetch } = useQuery(secretQueryOptions(namespace, name));
+  // Shared with the dashboard — teams + move targets, no extra fetch from there.
+  const listQuery = useQuery(secretListQueryOptions(namespace));
 
   if (isPending)
     return (
@@ -51,7 +53,15 @@ export function EditSecretView({ namespace, name }: { namespace: string; name: s
         </Alert>
       )}
       {/* Activity and query refreshes retain the draft. Only identity changes remount it. */}
-      <SecretForm key={`${namespace}/${name}`} mode="edit" namespace={namespace} initial={data.secret} />
+      <SecretForm
+        key={`${namespace}/${name}`}
+        mode="edit"
+        namespace={namespace}
+        initial={data.secret}
+        canCreate={listQuery.data?.canCreate}
+        teams={listQuery.data?.teams ?? (data.secret.team ? [data.secret.team] : [])}
+        creatableTeams={listQuery.data?.creatableTeams ?? []}
+      />
     </div>
   );
 }

@@ -61,9 +61,13 @@ export const api = {
   namespaces: () => request<{ scope: string; namespaces: string[] }>('/api/namespaces'),
 
   listSecrets: (ns: string) =>
-    request<{ namespace: string; secrets: SecretSummary[]; canCreate: boolean }>(
-      `/api/namespaces/${encodeURIComponent(ns)}/secrets`,
-    ),
+    request<{
+      namespace: string;
+      secrets: SecretSummary[];
+      canCreate: boolean;
+      teams: string[];
+      creatableTeams: string[];
+    }>(`/api/namespaces/${encodeURIComponent(ns)}/secrets`),
   getSecret: (ns: string, name: string, signal?: AbortSignal) =>
     request<{ secret: SecretDetail }>(`/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}`, {
       signal,
@@ -78,6 +82,7 @@ export const api = {
       description?: string;
       allowedGroups?: string[];
       allowedUsers?: string[];
+      team?: string;
     },
   ) =>
     request<{ secret: SecretSummary }>(`/api/namespaces/${encodeURIComponent(ns)}/secrets`, {
@@ -92,6 +97,7 @@ export const api = {
       description?: string;
       allowedGroups?: string[];
       allowedUsers?: string[];
+      team?: string;
       resourceVersion: string;
     },
   ) =>

@@ -110,6 +110,10 @@ export const ANNOTATIONS = {
   get allowedUsers() {
     return `${config.annotationPrefix}/allowed-users`;
   },
+  /** Single-team assignment; missing/blank = unassigned (namespace default). */
+  get team() {
+    return `${config.annotationPrefix}/team`;
+  },
   /** monotonically increasing app-level version counter */
   get version() {
     return `${config.annotationPrefix}/version`;

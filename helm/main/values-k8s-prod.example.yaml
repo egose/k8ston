@@ -14,7 +14,7 @@ global:
 
 krypton:
   enabled: true
-  envSecretName: krypton-oidc # pragma: allowlist secret
+  envSecretName: krypton-oidc
   # Krypton is stateless (Kubernetes Secrets are the datastore), so more than
   # one replica is always safe.
   replicaCount: 2
@@ -51,8 +51,9 @@ krypton:
   route:
     enabled: true
     host: krypton.apps.example.com
-  # For a centralized multi-namespace dashboard instead, set KRYPTON_SCOPE to
-  # `cluster` above, rbac.scope to `cluster` below, and optionally narrow with
+  # For a centralized multi-namespace dashboard instead, set rbac.scope to
+  # `cluster` below (KRYPTON_SCOPE above may then be dropped — the chart
+  # derives it — or set to `cluster`), and optionally narrow with
   # KRYPTON_NAMESPACES="team-a,team-b".
   rbac:
     create: true

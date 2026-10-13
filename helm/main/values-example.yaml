@@ -6,7 +6,7 @@ krypton:
   # Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes
   # Secret referenced by envSecretName; non-secret configuration goes in `env`.
   # Full variable reference: app/.env.example.
-  envSecretName: krypton-oidc # pragma: allowlist secret
+  envSecretName: krypton-oidc
   # Krypton is stateless (all state lives in Kubernetes Secrets), so more than
   # one replica is always safe.
   replicaCount: 2

@@ -1,0 +1,34 @@
+title = "Krypton gitleaks configuration"
+
+# Scan with the default rule set. False positives from committed fixtures
+# (fake credentials by design) are handled with path allowlists below —
+# no inline suppression comments needed in source files.
+[extend]
+useDefault = true
+
+# Sandbox, test, sample, and placeholder manifests ship committed fake
+# credentials (e.g. sandbox-only OIDC secrets, synthetic TLS fixtures,
+# e2e/docs example payloads, CHANGE-ME placeholders). Flagging them would
+# only add noise, so they are excluded by path.
+[[allowlists]]
+description = "Committed fixtures use fake credentials by design"
+paths = [
+  '''sandbox/''',
+  '''app/e2e/''',
+  '''app/tests/''',
+  '''website/\.samples/''',
+  '''app/k8s/secret-oidc\.yaml''',
+  '''helm/main/values-example\.yaml''',
+  '''helm/main/values-k8s-prod\.example\.yaml''',
+]
+
+# Generated artifacts mirror the global `exclude` in .pre-commit-config.yaml:
+# dependency lockfiles and the generated changelog are never secret sources.
+[[allowlists]]
+description = "Lockfiles and generated artifacts"
+paths = [
+  '''pnpm-lock\.yaml$''',
+  '''package-lock\.json$''',
+  '''yarn\.lock$''',
+  '''CHANGELOG\.md$''',
+]

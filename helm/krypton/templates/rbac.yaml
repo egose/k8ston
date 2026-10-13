@@ -1,11 +1,12 @@
-{{- if .Values.rbac.create -}}
+{{- $cfg := include "krypton.effectiveConfig" . | fromYaml -}}
+{{- if $cfg.rbacCreate -}}
 {{- $global := .Values.global | default dict -}}
 {{- $serviceAccountName := .Values.serviceAccountName | default ($global.serviceAccountName | default (include "krypton.serviceAccountName" .)) -}}
-{{- $isCluster := eq (.Values.rbac.scope | default "namespace") "cluster" -}}
+{{- $isCluster := eq $cfg.rbacScope "cluster" -}}
 {{- if $isCluster }}
-# Cluster-wide permissions (KRYPTON_SCOPE=cluster) for a centralized dashboard
-# managing secrets across namespaces. Narrow with KRYPTON_NAMESPACES to
-# allowlist namespaces (see app/k8s/clusterrole.yaml).
+# Cluster-wide permissions (effective KRYPTON_SCOPE=cluster) for a centralized
+# dashboard managing secrets across namespaces. Narrow with KRYPTON_NAMESPACES
+# to allowlist namespaces (see app/k8s/clusterrole.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -22,7 +23,7 @@ rules:
 - apiGroups: ['']
   resources: [namespaces]
   verbs: [get, list, watch]
-{{- if .Values.restartEnabled }}
+{{- if $cfg.restartEnabled }}
 - apiGroups: [apps]
   resources: [deployments, statefulsets, daemonsets]
   verbs: [get, list, watch, patch]
@@ -43,9 +44,12 @@ roleRef:
   name: {{ include "krypton.fullname" . }}
   apiGroup: rbac.authorization.k8s.io
 {{- else }}
-# Namespace-scoped permissions (KRYPTON_SCOPE=namespace, the default). Krypton
-# can only manage secrets in its own namespace; add rbac.extraNamespaces to
-# grant per-namespace access elsewhere (see app/k8s/role.yaml).
+# Namespaced permissions (see app/k8s/role.yaml). Without
+# rbac.extraNamespaces the effective runtime scope is KRYPTON_SCOPE=namespace
+# (own namespace only, the default). With rbac.extraNamespaces the chart
+# renders curated multi-namespace access: effective KRYPTON_SCOPE=cluster with
+# a derived KRYPTON_NAMESPACES allowlist (release namespace plus extras),
+# served by these namespaced Roles only (no ClusterRole).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -61,7 +65,7 @@ rules:
 - apiGroups: ['']
   resources: [configmaps]
   verbs: [get, list, watch]
-{{- if .Values.restartEnabled }}
+{{- if $cfg.restartEnabled }}
   # Consumer restart (rollout via pod-template annotation patch)
 - apiGroups: [apps]
   resources: [deployments, statefulsets, daemonsets]

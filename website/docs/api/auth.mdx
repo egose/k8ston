@@ -7,6 +7,7 @@ sidebar_position: 6
 
 Generic OIDC (discovery + PKCE) with stateless HS256 session JWTs. See
 [Authentication](/guides/authentication/) for the design.
+All JSON responses/errors and redirects explicitly send `Cache-Control: no-store`.
 
 ## Start login
 
@@ -14,12 +15,15 @@ Generic OIDC (discovery + PKCE) with stateless HS256 session JWTs. See
 GET /api/auth/login
 ```
 
-- With `AUTH_DISABLED=true`, short-circuits to a dev session and redirects to `/`.
+- With `AUTH_DISABLED=true`, redirects to `/`; requests use the mock local user
+  without minting a session JWT or requiring a signing key.
 - Without OIDC configured, answers `501` (operator must set
   `OIDC_ISSUER`/`OIDC_CLIENT_ID`, or `AUTH_DISABLED=true` for local dev).
-- Otherwise redirects to the IdP authorization endpoint. When the IdP is
-  unreachable, answers `502` with the issuer, cause code, and hint (logged
-  server-side with hostname detail).
+- Otherwise requires a valid `SESSION_SECRET` and redirects to the IdP
+  authorization endpoint. Invalid signing-key configuration or an unreachable
+  IdP answers `502` with fixed error text and any available **allowlisted** cause
+  code/fixed hint. Server logs classify configuration/network failures without raw
+  messages, hostnames, transport headers, token/claim values, or issuer URLs.
 
 ## OIDC callback
 
@@ -31,9 +35,28 @@ Exchanges the code, maps claims (`email` identity, `groups` authz input,
 `name` display), sets the `krypton_session` cookie (`HttpOnly`,
 `Secure` in production, `SameSite=Lax`, 8h default), and redirects to `/`.
 
+All state, nonce, and PKCE cookies must be present and nonempty before any token
+exchange. Every callback attempt consumes them, including failures; start a new
+login to retry. State and nonce must match, the IdP checks the PKCE verifier, and
+an ID token with a subject is required. UserInfo supplements claims only when
+its subject matches that ID token; mismatch rejects login. Missing/unavailable
+optional UserInfo falls back to ID-token claims.
+
 On failure (including IdP verdicts like `invalid_grant` from a redirect-URI
-mismatch), redirects to `/login?auth=error` carrying the short `idp_error`
-code — the single-use code and `error_description` stay out of URLs and logs.
+mismatch), redirects to `/login?auth=error` with an optional `idp_error`.
+Only known OAuth/OIDC codes (such as `invalid_grant`, `invalid_scope`, and
+`access_denied`) are retained; unknown, malformed, or oversized codes become
+`provider_error`. The code classifier accepts at most 64 characters and never
+copies arbitrary provider codes into URLs or logs.
+
+**Diagnostic upgrade:** raw `error_description`, code/state values, and upstream
+messages/headers are omitted from failure redirects **and logs**. Descriptions are
+classified as `descriptionCode: redirect_uri`, `provided`, or `omitted` (over 2 KiB).
+At most eight error causes and 2 KiB per text diagnostic are examined. Logs retain
+allowlisted system/library codes, fixed operator hints, and a boolean
+`redirectBaseMatches` comparing request/configured redirect origins and paths.
+This can be false behind a proxy; the exchange still normalizes to the configured
+public redirect. Login 502 responses no longer include a raw `issuer` URL.
 
 ## Current user
 
@@ -46,7 +69,9 @@ GET /api/auth/me
 ```
 
 Answers `401 { "user": null }` when unauthenticated — the one endpoint that
-does not use the `{ "error": … }` shape.
+does not use the `{ "error": … }` shape. Invalid signing-key configuration,
+expired/forged sessions, unsupported JWT algorithms, and malformed required
+claims are unauthenticated. See [session validation](/guides/authentication/#signing-key-and-upgrade-behavior).
 
 ## Logout
 

@@ -33,7 +33,7 @@ function getHighlighter(): HighlighterCore {
   return highlighter;
 }
 
-/** Values above this size skip highlighting (plain <pre>) to avoid jank. */
+/** Shared whole-preview/highlighting limit, in UTF-16 code units (String.length). */
 export const HIGHLIGHT_BUDGET = 128 * 1024;
 
 const FENCE_ALIASES: Record<string, ShikiLang> = {

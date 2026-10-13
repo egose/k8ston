@@ -23,7 +23,9 @@ Browser ──GET /api/auth/login──▶ Krypton ──discovery──▶ OIDC
 
 1. `GET /api/auth/login` builds the authorization URL (PKCE `S256`, nonce,
    state) and redirects to the IdP.
-2. `GET /api/auth/callback` exchanges the code, reads claims, and mints a
+2. `GET /api/auth/callback` requires all three transaction cookies, consumes
+   them even on failure, and validates state, nonce, and PKCE during the code
+   exchange. It reads ID-token claims and mints a
    stateless session JWT in an `HttpOnly`, `Secure`-in-production,
    `SameSite=Lax` cookie.
 3. `GET /api/auth/me` returns the current `SessionUser` (`sub`, `email`,
@@ -31,6 +33,32 @@ Browser ──GET /api/auth/login──▶ Krypton ──discovery──▶ OIDC
 4. `GET /api/auth/logout` clears the session cookie.
 
 See the [Auth API](/api/auth/) for exact shapes.
+
+An incomplete or failed transaction requires a new login. The IdP enforces
+single-use authorization codes; Krypton keeps no server-side transaction store.
+When UserInfo is available, its `sub` must match the validated ID-token `sub`
+before any claims are merged. A subject mismatch rejects login. Providers with
+no UserInfo endpoint, or unavailable optional UserInfo, can still authenticate
+using their ID-token claims alone.
+
+## Signing key and upgrade behavior
+
+With auth enabled, `SESSION_SECRET` must be an explicit random key of at least
+32 characters (generate one with `openssl rand -hex 32`). Missing, empty, short,
+whitespace-only, and the former public development fallback keys fail closed:
+login cannot create a session and cookies cannot authenticate. Validation errors
+name the setting, never its value. Use the same key on every replica.
+
+On upgrade, replace the old development fallback in copied examples or deployment
+configuration before enabling auth. Changing the key invalidates existing
+sessions; users sign in again. Key validation happens when auth is used, allowing
+builds without runtime secrets and explicit `AUTH_DISABLED=true` local bypass
+without a JWT.
+
+Only HS256 session JWTs with issuer `krypton`, nonempty string `sub` and `email`,
+numeric `iat`/`exp`, and an unexpired lifetime are accepted. Future-issued sessions
+and malformed name/group claims are rejected. Omitted names and groups keep the
+email/empty-list defaults.
 
 ## Claim mapping
 
@@ -45,6 +73,12 @@ See the [Auth API](/api/auth/) for exact shapes.
 `last-modified-by` all key off it (lowercased). `groups` is the authorization
 input for `allowed-groups`, namespace rules, and admin groups.
 
+Groups use the first nonempty string-array claim from the configured
+`OIDC_GROUPS_CLAIM` path, `groups`, `roles`, then nested `realm_access.roles`
+(Keycloak). Dotted configured paths are supported; empty or unusable candidates
+fall through to the next one. Non-string group entries are ignored when mapping
+provider claims.
+
 ## Issuer rules
 
 - `OIDC_ISSUER` is the issuer identifier, **not** the discovery URL — the app
@@ -52,6 +86,9 @@ input for `allowed-groups`, namespace rules, and admin groups.
   match with the document's `issuer` field.
 - Redirect URI defaults to `<NEXT_PUBLIC_APP_URL>/api/auth/callback`
   (override with `OIDC_REDIRECT_URI`); register the same value at your IdP.
+  Behind a TLS-terminating proxy, the code exchange uses that registered public
+  URI rather than the internal request host, preserving the callback parameters.
+  Use a redirect URI without its own query string or fragment.
 - OIDC configuration is cached per process — restart the app after Dex/IdP
   restarts or issuer changes.
 - `http://` issuers fail closed: loopback hostnames only, explicit
@@ -61,7 +98,8 @@ input for `allowed-groups`, namespace rules, and admin groups.
 ## Dev bypass and headless sessions
 
 - `AUTH_DISABLED=true` returns a mock admin (`dev@krypton.local`) for every
-  request. Local development only — assert `authDisabled: false` via
+  request; login redirects to `/` without minting a session token or requiring
+  a signing key. Local development only — assert `authDisabled: false` via
   [`GET /api/config`](/api/config/) in real environments.
 - `sandbox/scripts/mint-jwt.mjs` mints session JWTs directly (must match
   `SESSION_SECRET`) for headless authz checks:

@@ -9,21 +9,95 @@ import CodeBlock from '@theme/CodeBlock';
 
 The API is plain REST over JSON, authenticated with the `krypton_session`
 cookie (an HS256 session JWT minted at OIDC login). Values cross the API
-boundary as **plain strings** — base64 stays inside Kubernetes.
+boundary as **plaintext `data` for text values** and **base64 `binaryData` for
+non-text values** in authorized detail/history responses. Summary `binaryKeys`
+contains names only. Create/update `data` remains plaintext; metadata-only PUTs
+omit it. See the [data contract](/api/secrets/) before round-tripping responses.
 
 ## Conventions
 
-- **Auth**: every endpoint except `GET /api/config` requires a session;
+- **Auth**: Secret/namespace endpoints require a session; configuration and
+  login/callback/logout are public entry points. Protected
   unauthenticated calls get `401 { "error": "Authentication required" }`.
   (The one exception is `GET /api/auth/me`, which answers `401 { "user": null }`.)
 - **Errors**: `{ "error": "<message>" }` with the HTTP status. Zod validation
-  failures answer `400 { "error": "Validation failed", "issues": [...] }`.
-- **Gates**: every secrets route enforces, in order, namespace scope →
-  managed-only visibility (404) → hybrid authorization (403). See
+  failures answer `400 { "error": "Validation failed", "issues": [...] }`, with
+  at most 20 issues containing known top-level paths and fixed code/message
+  classifications. Submitted values, arbitrary nested keys, enum values, upstream
+  messages, and raw headers are omitted. Unexpected failures use fixed guidance.
+- **Caching**: API JSON successes/errors and auth redirects explicitly send
+  `Cache-Control: no-store`, including authenticated metadata lists and failures.
+- **Gates**: secrets routes enforce namespace scope. Named-secret routes then
+  enforce live-object visibility (404 for snapshots in both modes, and for
+  unmanaged secrets in managed-only mode) → hybrid authorization (403). See
   [Authorization](/guides/authorization/).
-- **Kubernetes failures** surface as
-  `Kubernetes API (<status>): <detail>` — a 403 there means the app's
-  ServiceAccount lacks RBAC, not that the user failed Krypton authz.
+- **Policy unavailable**: decisions that need namespace fallback return
+  `503 { "error": "Namespace access policy is unavailable" }` on malformed policy
+  or failed ConfigMap reads. This includes non-admin creation and list hints.
+  Admins and explicit live ACLs keep precedence; only a confirmed ConfigMap 404
+  or valid empty rules mean intentionally open policy.
+- **History**: snapshots are immutable and UID/source-resourceVersion bound.
+  Unbound legacy/predecessor history is quarantined. Snapshot identity/content
+  conflicts return 409; snapshot creation/list/pruning failures use controlled
+  503 errors. Cleanup may be partial; see [history semantics](/guides/versioning-history/).
+- **Restore/delete revisions**: both require the caller's expected live
+  resourceVersion (restore JSON, DELETE query). Missing input is 400; stale input
+  is 409 before history side effects. DELETE returns a typed status: 200 `deleted`
+  for confirmed live absence, 202 `pending` while it still exists. Ordered cleanup
+  is retryable but nontransactional; it does not promise atomic erasure of all copies.
+- **Consumer rollouts**: acknowledged pod-template patches are rollout requests,
+  not verified readiness or credential uptake. The [restart result](/api/restart-consumers/)
+  distinguishes 200 `requested`/`no_targets`, 207 `partial`, and 503 `failed`, with
+  structured patch and discovery failures. Retain those result bodies; failed
+  inventories must not be treated as empty. Gate/preparation errors keep `{ error }`.
+- **Other Kubernetes failures** retain numeric statuses with
+  `Kubernetes API (<status>): <fixed guidance>`. A 403 can mean effective human
+  RBAC or ServiceAccount impersonation permission denial in impersonation mode,
+  or ServiceAccount RBAC in hybrid mode. Kubernetes 401s are distinct from expired
+  app sessions. Raw Kubernetes Status messages/bodies/headers are never forwarded.
+
+## Request and collection budgets
+
+Create, update, and restore accept an inclusive **16 MiB UTF-8 JSON envelope**
+(16,777,216 bytes). Oversized `Content-Length` is rejected before reading; chunked
+and understated-length bodies are counted as they arrive and cancelled on overflow
+(413). Malformed JSON/UTF-8 and invalid length headers are 400 before mutation.
+The envelope accommodates JSON escaping and overlapping create `data`/`stringData`;
+the separate conservative 1 MiB data validation still applies. Individual text maps
+use `ceil(1.4 × UTF-8 key/value bytes) <= 1 MiB` (schema failures are 400); oversized
+merged create data or native restore bytes return 413. Upstream ingress limits may
+reject requests earlier.
+
+Submitted ACL arrays allow **256 nonempty strings each, at most 256 UTF-8 bytes
+per entry**. Policy rule arrays use the same count/byte ceilings; invalid policy
+remains unavailable, never absent. These limits do not truncate session groups.
+
+Kubernetes collections use **100-object pages, at most 100 pages per inventory**:
+
+| Inventory | Raw object limit | Aggregate JSON bytes |
+| --- | ---: | ---: |
+| Live Secrets / namespace | 5,000 | 32 MiB |
+| Raw history / live UID | 1,000 | 160 MiB |
+| History cleanup or pruning / live UID | 1,000 | 8 MiB projected metadata |
+| Workloads / kind | 2,000 | 32 MiB |
+| Unrestricted namespaces | 5,000 | 8 MiB |
+
+Byte accounting measures SDK-decoded JSON pages before filtering/deduplication;
+metadata-only cleanup measures projections and page metadata without visiting
+Secret values. Raw object/page counts apply in every mode. The SDK buffers each
+upstream page first; these are application accumulation/work bounds, not streaming
+response-size or global concurrency limits. Each multi-inventory operation applies
+the bounds independently; restart reads three kinds concurrently.
+
+Opaque continuation tokens must be printable ASCII and at most 8 KiB. Bad/repeated
+tokens, inconsistent list revisions/conflicting duplicates, missing items, or budget
+exhaustion produce a controlled 503 incomplete-inventory error, never partial success.
+Exact projected duplicates appear once. Failed/expired pages never trigger an
+automatic continuation restart. History wraps upstream list failures as 503;
+restart preserves per-kind failures; other lists preserve safe numeric statuses
+(including 410). Retry a fresh request after repair, or use operator-reviewed
+cleanup for an over-budget backlog. See [Namespaces](/api/namespaces/) for the
+allowlist's zero-discovery-call contract and [Secrets](/api/secrets/) for selectors.
 
 ## Endpoint map
 

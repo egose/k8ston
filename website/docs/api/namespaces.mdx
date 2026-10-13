@@ -20,14 +20,23 @@ Returns the namespaces the app may operate in, plus the effective scope:
 Behavior (`lib/namespaces.ts`):
 
 - `namespace` scope: exactly `[<pod-own-namespace>]` — by design.
-- `cluster` scope: all namespaces the ServiceAccount can list, filtered by
-  `KRYPTON_NAMESPACES` when set (empty = all).
-- Graceful fallback: if the SA cannot list namespaces, the allowlist is
-  returned (or the pod's own namespace) instead of failing.
+- `cluster` scope with `KRYPTON_NAMESPACES`: returns the configured names,
+  deduplicated and sorted, with **zero Kubernetes namespace-list requests**.
+  Existence and Kubernetes permission are checked by the actual resource operations.
+- `cluster` scope with an empty allowlist: completes paginated namespace discovery
+  using the effective Kubernetes identity. All pages preserve per-user options.
+  The [collection budgets](/api/overview/#request-and-collection-budgets) apply.
+- Failed/incomplete discovery is an error. **Upgrade:** the old own-namespace
+  fallback on cluster-list errors has been removed to avoid a misleading subset.
+  Configure an explicit allowlist when namespace-list RBAC is not granted.
 
 Every `:ns` route below re-validates the namespace with
 `assertNamespaceAllowed()` — a namespace outside the list is `403`:
 
 ```json
-{ "error": "Namespace \"other\" is not accessible (scope=namespace). Allowed: krypton" }
+{ "error": "Namespace is outside the configured application scope" }
 ```
+
+Allowlist checks also use no network. Responses, including errors, use
+`Cache-Control: no-store`. Namespace names such as `constructor` are looked up as
+own policy properties; intentionally absent/empty rules retain open access.

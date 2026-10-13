@@ -3,6 +3,10 @@
 # Declare variables to be passed into your templates.
 
 global:
+  # Merged into the container env below `env`; per key, local `env` wins over
+  # `global.env`. Entries for chart-managed keys (KRYPTON_SCOPE,
+  # KRYPTON_NAMESPACES, KRYPTON_RESTART_ENABLED, KRYPTON_ACCESS_CONFIGMAP) must
+  # match the derived effective config or rendering fails with guidance.
   env: {}
   podAnnotations: {}
   imagePullSecrets: []
@@ -42,6 +46,14 @@ serviceAccountName:
 args: []
 
 envSecretName: ''
+# Non-secret env vars (local `env` wins over `global.env` per key). The chart
+# derives KRYPTON_SCOPE (from rbac.scope), KRYPTON_NAMESPACES (from
+# rbac.extraNamespaces, curated mode only), KRYPTON_RESTART_ENABLED (from
+# restartEnabled), and KRYPTON_ACCESS_CONFIGMAP (from accessConfig.name when
+# enabled); an explicit entry for one of these managed keys must equal the
+# derived effective value or rendering fails with guidance. Omit them to use
+# the derived defaults. Do not also set managed keys in the envSecretName
+# Secret: explicit env entries always shadow envFrom values.
 env: {}
 
 # Inject POD_NAMESPACE from the downward API (metadata.namespace). Krypton
@@ -50,6 +62,9 @@ env: {}
 podNamespaceEnv: true
 
 # Additional raw env entries appended after `env` (e.g. valueFrom sources).
+# Must not set chart-managed keys (KRYPTON_SCOPE, KRYPTON_NAMESPACES,
+# KRYPTON_RESTART_ENABLED, KRYPTON_ACCESS_CONFIGMAP): extraEnv renders after
+# `env` and would shadow the derived effective values, so rendering fails.
 extraEnv: []
 # - name: POD_IP
 #   valueFrom:
@@ -57,29 +72,49 @@ extraEnv: []
 #       fieldPath: status.podIP
 
 # "Restart apps" feature: rolling restart of Deployments/StatefulSets/
-# DaemonSets consuming a secret. Sets KRYPTON_RESTART_ENABLED in the
-# container (unless already present in `env`/`global.env`) AND gates the
-# `apps` RBAC rule below. Default false (least privilege): the UI button is
-# hidden and the API returns 403. Set true when restarts are not handled
-# externally (e.g. Reloader/Stakater or GitOps rollouts).
+# DaemonSets consuming a secret. This single effective value drives BOTH the
+# KRYPTON_RESTART_ENABLED runtime env flag AND the `apps` RBAC rule below, so
+# the two can never silently disagree. An explicit KRYPTON_RESTART_ENABLED
+# entry in `env`/`global.env` must parse to the same value (runtime truthy
+# strings: 1/true/yes/on, e.g. `yes` agrees with `true`) or rendering fails.
+# With rbac.create=false, grant the apps permissions out-of-band to match.
+# Default false (least privilege): the UI button is hidden and the API returns
+# 403. Set true when restarts are not handled externally (e.g.
+# Reloader/Stakater or GitOps rollouts).
 restartEnabled: false
 
 # Kubernetes RBAC for the app ServiceAccount (see app/k8s/role.yaml and
-# app/k8s/clusterrole.yaml). Must match KRYPTON_SCOPE in `env`: `namespace`
-# manages secrets in its own namespace(s) only, `cluster` is a centralized
-# multi-namespace dashboard (optionally narrowed with KRYPTON_NAMESPACES).
+# app/k8s/clusterrole.yaml). The chart derives the default KRYPTON_SCOPE from
+# `scope` (and a curated KRYPTON_NAMESPACES allowlist from `extraNamespaces`);
+# an explicit KRYPTON_SCOPE/KRYPTON_NAMESPACES entry in `env`/`global.env` must
+# match the derived value or rendering fails. `namespace` manages secrets in
+# its own namespace only, `cluster` is a centralized multi-namespace dashboard
+# (optionally narrowed with KRYPTON_NAMESPACES in `env`). With create=false,
+# RBAC is managed out-of-band: set KRYPTON_SCOPE/KRYPTON_NAMESPACES in `env`
+# yourself to match your external grants (`scope`/`extraNamespaces` are then
+# ignored).
 rbac:
   create: true
   scope: namespace
-  # Extra namespaces to bind the namespaced Role into (a Role + RoleBinding
-  # pair is rendered per entry, subject stays this release's ServiceAccount).
-  # Only used when scope is `namespace`.
+  # Extra namespaces for curated multi-namespace access: a Role + RoleBinding
+  # pair is rendered per entry (subject stays this release's ServiceAccount)
+  # and the chart derives effective KRYPTON_SCOPE=cluster with
+  # KRYPTON_NAMESPACES="<release-namespace>,<extras...>" — served by these
+  # namespaced Roles only, no ClusterRole is rendered. Only used when scope is
+  # `namespace` (rendering fails otherwise); entries must be non-empty,
+  # comma-free namespace names. Previously these entries granted Roles the
+  # namespace runtime scope could not use; remove them to stay single-namespace.
   extraNamespaces: []
   # - team-a
 
-# Namespace-level ownership fallback ConfigMap (key `access.json`, see
+# Namespace-level ownership fallback ConfigMap (see
 # app/k8s/configmap-access.yaml). Per-secret annotations override these rules.
-# The name must match KRYPTON_ACCESS_CONFIGMAP in `env`.
+# When enabled, the chart renders the ConfigMap AND derives
+# KRYPTON_ACCESS_CONFIGMAP from `name` so the runtime policy reader
+# (app/lib/authz.ts) finds it; an explicit KRYPTON_ACCESS_CONFIGMAP entry must
+# match `name` or rendering fails. `key` must stay `access.json` (hardcoded by
+# the runtime reader). When disabled, set KRYPTON_ACCESS_CONFIGMAP in `env` to
+# point at an externally managed ConfigMap.
 accessConfig:
   enabled: false
   name: krypton-access

@@ -17,9 +17,14 @@ import {
   DialogTitle,
 } from '@egose/shadcn-theme/components/ui/dialog';
 import { Alert } from '@egose/shadcn-theme/components/ui/alert';
-import { api } from '@/lib/api-client';
+import { api, ApiError } from '@/lib/api-client';
+import { reloadSecretWithHistory, removeSecretQueries, secretQueryOptions } from '@/lib/secret-queries';
+import type { DeleteSecretInput } from '@/lib/validation';
 import { RevealValue } from './reveal-value';
 import { VersionHistory } from './version-history';
+import { SecretMutationError } from './secret-mutation-error';
+import { ConsumerRestartFeedback } from './consumer-restart-feedback';
+import { IMMUTABLE_EDIT_GUIDANCE, unsupportedSecretTypeReason } from '@/lib/secret-rules';
 
 interface Props {
   namespace: string;
@@ -29,12 +34,10 @@ interface Props {
 export function SecretDetail({ namespace, name }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [keepHistory, setKeepHistory] = useState(false);
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['secret', namespace, name],
-    queryFn: () => api.getSecret(namespace, name),
-  });
+  const { data, isLoading, error } = useQuery(secretQueryOptions(namespace, name));
 
   // Feature flag (KRYPTON_RESTART_ENABLED): shows the restart button + hint.
   // Defaults to false while loading — matches the server default.
@@ -42,31 +45,45 @@ export function SecretDetail({ namespace, name }: Props) {
   const restartEnabled = publicConfig?.restartEnabled ?? false;
 
   const del = useMutation({
-    mutationFn: () => api.deleteSecret(namespace, name),
-    onSuccess: () => {
-      toast.success(`Secret "${name}" deleted`);
-      // Drop the cached dashboard list so the deleted row disappears immediately.
-      queryClient.invalidateQueries({ queryKey: ['secrets', namespace] });
+    mutationFn: (input: DeleteSecretInput) => api.deleteSecret(namespace, name, input),
+    onSuccess: async (result) => {
+      setConfirmDelete(null);
+      if (result.status === 'pending') {
+        toast.info('Deletion requested; the secret is still present. Reload to check finalizers and progress.');
+        void queryClient.invalidateQueries({ queryKey: ['secret', namespace, name] });
+        void queryClient.invalidateQueries({ queryKey: ['versions', namespace, name] });
+        void queryClient.invalidateQueries({ queryKey: ['secrets', namespace] });
+        return;
+      }
+      await removeSecretQueries(queryClient, namespace, name);
+      toast.success(`Secret "${name}" deletion confirmed`);
+      void queryClient.invalidateQueries({ queryKey: ['secrets', namespace] });
       router.push(`/?ns=${encodeURIComponent(namespace)}`);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
+  async function reloadLatest() {
+    await reloadSecretWithHistory(queryClient, namespace, name);
+    del.reset();
+    setConfirmDelete(null);
+  }
+
+  const reload = useMutation({ mutationFn: reloadLatest, onError: (err: Error) => toast.error(err.message) });
+
   const restart = useMutation({
     mutationFn: () => api.restartConsumers(namespace, name),
     onSuccess: (res) => {
-      const total = res.deployments.length + res.statefulSets.length + res.daemonSets.length;
-      toast.success(
-        total === 0
-          ? 'No apps using this secret were found — nothing restarted'
-          : `Restarted ${total} app${total === 1 ? '' : 's'}: ${[...res.deployments, ...res.statefulSets, ...res.daemonSets].join(', ')}`,
-      );
+      if (res.status === 'requested') toast.success(res.message);
+      else if (res.status === 'partial') toast.warning(res.message);
+      else if (res.status === 'failed') toast.error(res.message);
+      else toast.info(res.message);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading secret…</p>;
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="flex flex-col gap-3">
         <Alert variant="danger">
@@ -82,6 +99,14 @@ export function SecretDetail({ namespace, name }: Props) {
   }
 
   const secret = data.secret;
+  const readOnlyReason = unsupportedSecretTypeReason(secret.type);
+  const deletionPending =
+    !!secret.deletionTimestamp ||
+    (del.data?.status === 'pending' && secret.resourceVersion === del.variables?.resourceVersion);
+  const deletionReason = deletionPending
+    ? 'Deletion is pending. The secret still exists; finalizers may need operator attention. Reload to check progress.'
+    : undefined;
+  const deleteConflict = del.error instanceof ApiError && del.error.status === 409;
 
   return (
     <div className="flex flex-col gap-4">
@@ -90,7 +115,13 @@ export function SecretDetail({ namespace, name }: Props) {
           <IconArrowLeft size={14} /> Back
         </Button>
         <div className="flex-1" />
-        <Button variant="secondary" appearance="outline" size="sm" onClick={() => refetch()}>
+        <Button
+          variant="secondary"
+          appearance="outline"
+          size="sm"
+          loading={reload.isPending}
+          onClick={() => reload.mutate()}
+        >
           <IconRefresh size={14} /> Reload
         </Button>
         {restartEnabled && (
@@ -99,8 +130,9 @@ export function SecretDetail({ namespace, name }: Props) {
             appearance="outline"
             size="sm"
             loading={restart.isPending}
+            disabled={deletionPending || restart.isPending}
             onClick={() => restart.mutate()}
-            title="Restart apps using this secret so they pick up the new values"
+            title="Request pod-template rollouts for workloads referencing this secret"
           >
             <IconRocket size={14} /> Restart apps
           </Button>
@@ -109,14 +141,43 @@ export function SecretDetail({ namespace, name }: Props) {
           variant="primary"
           appearance="outline"
           size="sm"
+          disabled={readOnlyReason !== null || deletionPending}
           onClick={() => router.push(`/secrets/${namespace}/${name}/edit`)}
         >
           <IconPencil size={14} /> Edit
         </Button>
-        <Button variant="danger" appearance="outline" size="sm" onClick={() => setConfirmDelete(true)}>
+        <Button
+          variant="danger"
+          appearance="outline"
+          size="sm"
+          onClick={() => setConfirmDelete(secret.resourceVersion)}
+        >
           <IconTrash size={14} /> Delete
         </Button>
       </div>
+
+      {error && (
+        <Alert variant="danger">
+          <div>Reload failed: {error.message}. The displayed data may be stale.</div>
+        </Alert>
+      )}
+      {deletionReason && (
+        <Alert variant="warning">
+          <div>{deletionReason}</div>
+        </Alert>
+      )}
+      {del.error && confirmDelete === null && <SecretMutationError error={del.error} onReload={reloadLatest} />}
+      {restart.isPending && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Requesting consumer rollouts…
+        </p>
+      )}
+      {restart.error && (
+        <Alert variant="danger">
+          <div>{restart.error.message}</div>
+        </Alert>
+      )}
+      {restart.data && <ConsumerRestartFeedback result={restart.data} />}
 
       <Card>
         <CardHeader>
@@ -136,6 +197,11 @@ export function SecretDetail({ namespace, name }: Props) {
             {!secret.managedByKrypton && (
               <Badge variant="warning" size="sm">
                 created outside Krypton
+              </Badge>
+            )}
+            {secret.immutable && (
+              <Badge variant="secondary" size="sm">
+                Immutable
               </Badge>
             )}
           </CardTitle>
@@ -159,6 +225,12 @@ export function SecretDetail({ namespace, name }: Props) {
         </CardContent>
       </Card>
 
+      {(readOnlyReason || secret.immutable) && (
+        <Alert variant="info">
+          <div>{readOnlyReason ?? IMMUTABLE_EDIT_GUIDANCE}</div>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>
@@ -169,12 +241,28 @@ export function SecretDetail({ namespace, name }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
+          {secret.binaryKeys.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Binary values are shown as base64 to preserve their bytes. You can edit metadata or restore history; use
+              Kubernetes tooling to change binary data.
+            </p>
+          )}
           {secret.keys.length === 0 && <p className="text-sm text-muted-foreground">This secret has no keys.</p>}
           {secret.keys.map((k) => (
             <div key={k} className="flex items-center gap-2">
               <code className="w-48 shrink-0 truncate font-mono text-xs font-medium">{k}</code>
               <div className="flex-1">
-                <RevealValue value={secret.data[k] ?? ''} keyName={k} />
+                <RevealValue
+                  value={
+                    Object.hasOwn(secret.binaryData, k)
+                      ? secret.binaryData[k]
+                      : Object.hasOwn(secret.data, k)
+                        ? secret.data[k]
+                        : ''
+                  }
+                  binary={secret.binaryKeys.includes(k)}
+                  keyName={k}
+                />
               </div>
             </div>
           ))}
@@ -184,8 +272,8 @@ export function SecretDetail({ namespace, name }: Props) {
       {restartEnabled && (
         <Alert variant="info">
           <div className="text-xs">
-            Some apps pick up changes automatically, others need a restart. If your app still shows old values after
-            editing, use <strong>Restart apps</strong> above.
+            If your app still shows old values after editing, <strong>Restart apps</strong> requests rollouts for
+            matching workloads. Check rollout progress, readiness, and credential uptake separately.
           </div>
         </Alert>
       )}
@@ -194,23 +282,52 @@ export function SecretDetail({ namespace, name }: Props) {
         namespace={namespace}
         name={name}
         currentKeys={secret.keys}
-        onRestored={() => queryClient.invalidateQueries({ queryKey: ['secret', namespace, name] })}
+        resourceVersion={secret.resourceVersion}
+        restoreDisabledReason={
+          deletionReason ?? readOnlyReason ?? (secret.immutable ? IMMUTABLE_EDIT_GUIDANCE : undefined)
+        }
       />
 
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <Dialog open={confirmDelete !== null} onOpenChange={(open) => !open && !del.isPending && setConfirmDelete(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete {name}?</DialogTitle>
             <DialogDescription>
-              This permanently deletes &ldquo;{name}&rdquo; and its version history. This cannot be undone.
+              Request deletion of &ldquo;{name}&rdquo;. UID-bound history is cleaned up first unless you keep it.
+              Cleanup is not atomic: partial changes can remain after a failure, and finalizers can delay live deletion.
             </DialogDescription>
           </DialogHeader>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={keepHistory}
+              disabled={del.isPending}
+              onChange={(event) => setKeepHistory(event.target.checked)}
+            />
+            Keep history for operator recovery
+          </label>
+          {keepHistory && (
+            <p className="text-xs text-muted-foreground">
+              Kept copies require operator access and will not attach to a same-name replacement.
+            </p>
+          )}
+          {del.error && <SecretMutationError error={del.error} onReload={reloadLatest} />}
           <DialogFooter>
-            <Button variant="secondary" appearance="outline" onClick={() => setConfirmDelete(false)}>
+            <Button
+              variant="secondary"
+              appearance="outline"
+              disabled={del.isPending}
+              onClick={() => setConfirmDelete(null)}
+            >
               Cancel
             </Button>
-            <Button variant="danger" loading={del.isPending} onClick={() => del.mutate()}>
-              Delete permanently
+            <Button
+              variant="danger"
+              loading={del.isPending}
+              disabled={deleteConflict || !confirmDelete}
+              onClick={() => confirmDelete && del.mutate({ resourceVersion: confirmDelete, keepHistory })}
+            >
+              Request deletion
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -6,8 +6,8 @@ sidebar_position: 2
 # Architecture
 
 Krypton is a stateless Next.js App Router service. All persistent state lives in
-the Kubernetes API; the app holds no database connection, no disk cache beyond a
-60-second in-memory ConfigMap read-through, and no secret values in logs.
+the Kubernetes API; the app holds no database connection or disk cache. Namespace
+policy uses a 60-second in-memory ConfigMap read-through cache.
 
 ## Request flow
 
@@ -15,18 +15,41 @@ the Kubernetes API; the app holds no database connection, no disk cache beyond a
 Browser ──cookie (HS256 session JWT)──▶ Next.js route handler
                                               │ 1. requireUser() → SessionUser
                                               │ 2. assertNamespaceAllowed()
-                                              │ 3. read live Secret via CoreV1Api
-                                              │ 4. assertManagedVisible() (404 if unmanaged + managed-only)
-                                              │ 5. canAccessSecret() (annotations → ConfigMap → open)
+                                              │ 3. loadAuthorizedLiveSecret()
+                                              │    ├─ read current Secret via CoreV1Api
+                                              │    ├─ live visibility (404 for history; managed-only gate)
+                                              │    └─ canAccessSecret() (admin → ACL → policy → confirmed open)
                                               ▼
                                         Kubernetes API (ServiceAccount token in-cluster,
                                                        ~/.kube/config locally)
 ```
 
-Every secrets route follows the same five-step shape: authenticate the session,
-check the namespace scope, read the live object, apply the managed-only gate,
-then evaluate hybrid authorization. Denials and errors are audit-logged with key
-**names** only — values never reach the logs.
+Named-secret GET/PUT/DELETE/history/restore/restart handlers authenticate the
+session and check namespace scope before using the shared loader in
+`lib/secret-access.ts`. It rejects history objects in both managed-only modes,
+then evaluates current live authorization before any history access or mutation.
+Lists use the same live-visibility predicate; creation uses namespace policy alone.
+Restart also requires its deployment feature flag. Visibility/ACL denials and
+successful mutations use metadata-only audit events.
+
+The loader composes `authz.ts`, `secrets.ts`, and HTTP errors; the policy and secret
+storage modules do not import the loader. This keeps route enforcement shared
+without a dependency cycle through storage and authorization.
+
+## Namespace policy cache (`lib/authz.ts`)
+
+- Admins and explicit live-secret ACLs are decided before namespace fallback.
+- Only a ConfigMap read returning 404 means absence. Valid empty/omitted rules
+  remain intentionally open. Missing payload, invalid JSON/schema, and read
+  failures become a controlled `503 Namespace access policy is unavailable`.
+- Successful policy reads and confirmed absence are cached per process for 60s
+  from completion. Concurrent misses share one pending read. Expired entries are
+  discarded before refresh; errors neither revive stale policy nor populate the
+  cache, and the next request retries.
+- Non-admin collection requests also need namespace policy for the `canCreate`
+  hint, so an outage returns 503 for the whole list rather than partial results.
+- Failure logs contain only a category and optional numeric HTTP status, never
+  ConfigMap payloads, SDK error objects, or transport headers.
 
 ## Kubernetes client (`lib/k8s.ts`)
 
@@ -34,45 +57,100 @@ then evaluate hybrid authorization. Denials and errors are audit-logged with key
   (`/var/run/secrets/kubernetes.io/serviceaccount/token`) via `loadFromCluster()`.
   No credentials to manage; RBAC comes from the bound `Role`/`ClusterRole`.
 - **Local dev**: falls back to `loadFromDefault()` (`~/.kube/config`).
-- **Optional impersonation**: when `KRYPTON_IMPERSONATION=true` and the API server
-  trusts the same OIDC issuer, `Impersonate-User`/`Impersonate-Group` headers
-  forward the human identity so _their_ RBAC is evaluated instead of the
-  ServiceAccount's. Default is `false` (hybrid mode).
-- **Error normalization**: `toK8sError()` unwraps client-node `ApiException`
-  bodies into clean `Kubernetes API (status): message` responses, with a 403
-  hint pointing at missing app RBAC permissions.
+- **Optional impersonation**: `KRYPTON_IMPERSONATION=true` sends the session email
+  and every group for human-authorized requests, including workload lists/patches.
+  A per-request SDK `httpApi` transport uses raw repeated group headers and retains
+  the SDK's TLS/auth configuration. The SA needs impersonation permission for the
+  corresponding human RBAC subjects. The access-policy ConfigMap remains a service
+  read with the shared cache above. Default is `false` (hybrid mode); explicit
+  `AUTH_DISABLED=true` bypasses human impersonation.
+- **Error normalization**: the shared numeric-only status classifier produces
+  fixed `Kubernetes API (status): guidance` responses. It never unwraps raw Status
+  messages, bodies, or headers. A 403 can be human RBAC/SA impersonation permission
+  denial or hybrid ServiceAccount RBAC; guidance refers to the effective identity.
+- **Collections**: `lib/k8s-list.ts` completes serial 100-object pages with finite
+  aggregate limits. Live reads exclude history server-side without replacing
+  annotation-based managed visibility or ACLs. UID-bound history and each workload
+  kind share the reader and preserve full per-user request options. Missing/invalid
+  pages, bad/repeated tokens, or exhaustion fail instead of returning partial results.
+  Metadata cleanup sizes/fingerprints projections without visiting Secret values.
+  The SDK buffers each upstream response first; [budgets](/api/overview/#request-and-collection-budgets)
+  bound application work/accumulation, not streaming transport responses.
+- **HTTP**: `lib/http.ts` bounds streamed JSON to 16 MiB, sanitizes validation/error
+  envelopes, and explicitly marks API JSON/auth redirects `Cache-Control: no-store`.
 
 ## Scopes (`lib/namespaces.ts`)
 
 | Scope                    | Sees                                     | RBAC              |
 | ------------------------ | ---------------------------------------- | ----------------- |
 | `namespace` (default)    | Only the pod's own namespace             | `Role` + binding  |
-| `cluster`                | All namespaces, optionally allowlisted   | `ClusterRole`     |
+| `cluster`, allowlisted   | Configured names, checked locally        | Resource permissions in those namespaces |
+| `cluster`, unrestricted  | Complete bounded namespace inventory     | Cluster namespace-list + resource permissions |
 
-`KRYPTON_NAMESPACES="team-a,team-b"` narrows cluster scope. If the ServiceAccount
-cannot list namespaces, `/api/namespaces` degrades gracefully to the allowlist
-(or the pod's own namespace) instead of failing.
+`KRYPTON_NAMESPACES="team-a,team-b"` resolves without namespace-list calls. Names are
+deduplicated/sorted; actual resource calls still enforce existence and RBAC.
+Unrestricted discovery errors surface explicitly instead of falling back to an
+own-namespace subset. Policy lookups use own properties, including `constructor`.
 
-## Versioning model (`lib/secrets.ts`)
+## Versioning model (`lib/snapshot-store.ts`)
 
-- Every live secret carries `krypton.io/version` (app counter, starts at 1) plus
-  the native `metadata.resourceVersion`.
-- Writes send the loaded `resourceVersion` back; a mismatch is a `409` with a
-  reload prompt (optimistic concurrency, K8s-native).
-- Before every overwrite, the current state is persisted as an immutable snapshot
-  Secret named `<name>-vN`, labeled `krypton.io/history-of=<name>` /
-  `krypton.io/kind=history`, annotated with version, timestamp, and actor.
-- Snapshots are pruned to `KRYPTON_HISTORY_LIMIT` (default 20, newest kept).
-- Restore snapshots the current state first, so rollbacks are reversible.
+- The focused store owns raw/metadata records, identity checks, retry verification,
+  and cleanup. `secrets.ts` converts raw records to decoded response DTOs only at
+  the authorized route boundary; restore copies raw data and cleanup reads metadata.
+- `krypton.io/version` starts at 1. Adoption treats missing/old-zero counters as
+  logical v1: archive v1, write v2, then archive v2, write v3. PUT/restore supply their loaded
+  resourceVersion; update/restore replacements retain the live UID/RV for native CAS.
+- New snapshots are immutable Opaque Secrets named `krypton-h-<UID hash>-vN`
+  (at most 60 characters). Bounded `source-uid` and `source-resource-version` hash
+  labels support valid indexing for long live names and opaque revisions. Full UID,
+  source resourceVersion, original name/type, format, version, actor/time, and source
+  description/ACL annotations are checked; live controller/lifecycle metadata is not copied.
+- A snapshot-create 409 is a retry only when the occupied object has the same full
+  source identity and actual immutable byte/key content. Replica retries share that
+  archive, then race through Kubernetes CAS. Different-source collisions block writing.
+- `KRYPTON_HISTORY_LIMIT` is 1–100, default 20. Pruning uses serial UID/RV-conditional
+  deletes, confirms absence, and reports failed/pending cleanup before permitting
+  replacement. Snapshots and pruning can persist after a failed live write; these
+  pre-write captures are not a transaction or an external-change watcher.
+- History is exposed only through an authorized live secret's version/restore
+  endpoints. Snapshot names cannot be used as live route targets, and copied
+  snapshot ACLs do not determine current access. List/restore/prune/delete require
+  the live UID; retained predecessors never attach to a recreated name. Legacy and
+  malformed history is quarantined with no automatic name-based migration.
+- `lib/secret-mutations.ts` checks caller revisions and orchestrates live deletion.
+  DELETE requires the expected resourceVersion, cleans bound history first, and
+  rechecks the authorized live UID/RV before each cleanup mutation and before its
+  native UID/RV-conditional delete. Cleanup failures leave the live object available
+  for retry. A final read distinguishes confirmed absence (200) from pending live
+  finalizers (202); uncertain outcomes are errors.
+- These are not cross-object transactions: earlier cleanup can survive conflicts,
+  and a concurrent writer can add a snapshot after the last inventory. Retained,
+  predecessor, legacy/quarantined, and late copies can require operator cleanup.
+  See the [history guide](/guides/versioning-history/).
+- `lib/secret-queries.ts` provides explicit client recovery that bypasses query
+  staleTime and HTTP caching. Restore/delete conflicts await fresh live/history
+  data; failed reloads retain the error. Confirmed deletion cancels reads and removes
+  detail/history caches; pending deletion refreshes them without navigation.
 
 ## Consumer restarts
 
-Pods with **volume-mounted** secrets sync automatically (kubelet delay); pods
-using **environment variables** need a rollout. _Restart apps_ scans
-Deployments, StatefulSets, and DaemonSets for references to the secret
-(`env`, `envFrom`, `volumes`, projected sources with a string-scan fallback)
-and patches the pod template with a `krypton.io/restarted-at` annotation to
-trigger a rolling restart. The feature is disabled by default
+Environment-variable consumers need new containers; ordinary Secret/projected
+mounts usually sync after a kubelet delay (`subPath` and application file reloads
+need special care). `lib/consumers.ts` scans Deployment, StatefulSet, and DaemonSet
+templates for exact Secret names in `env`/`envFrom` on normal/init/ephemeral
+containers, normal/projected Secret volumes, and `imagePullSecrets`. It then
+requests rollouts with a `krypton.io/restarted-at` JSON-Patch pod-template patch,
+bound to each inspected workload UID/resourceVersion via `test` preconditions and
+allowing at most four patches in flight per request across all kinds. Lists and
+patches retain the full request-local impersonated identity.
+
+Only acknowledged patches are successful requests. Typed results distinguish
+`requested` (200), complete `no_targets` (200), `partial` (207), and `failed` (503).
+Failed kind inventories are unknown and never count as empty; other kinds may
+still be patched. Audit and UI preserve sanitized per-workload and discovery
+failures. Rollout completion, health, and credential uptake are not checked.
+See [consumer rollout limits and retries](/guides/consumer-restarts/).
+The feature is disabled by default
 (`KRYPTON_RESTART_ENABLED=false`: button hidden, API returns 403, no `apps`
 permissions needed).
 
@@ -83,7 +161,7 @@ app/                    # Next.js App Router
   app/api/namespaces/…  # secrets CRUD, versions, restore, restart-consumers
   app/api/auth/…        # OIDC login/callback/logout/me
   app/secrets/[ns]/…    # detail / edit / history views
-  lib/                  # k8s client, OIDC+session, authz, snapshots, validation
+  lib/                  # k8s client, OIDC+session, authz, snapshots, consumers, validation
   components/           # dashboard, tables, forms, masked values, history
   k8s/                  # namespace, SA, Role/ClusterRole, configs, deployment
 helm/                   # helm/main chart + helm/krypton subchart

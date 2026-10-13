@@ -5,20 +5,80 @@ sidebar_position: 7
 
 # Versioning & History
 
-Kubernetes overwrites Secrets in place. Krypton keeps the past anyway: before
-every write it snapshots the previous state into a separate Secret, so
-rollbacks are one click and every restore is reversible.
+Kubernetes overwrites Secrets in place. Before an update or restore, Krypton
+archives the previous data in an immutable Secret bound to that live object's
+UID and exact resourceVersion. Restores preserve the original bytes and current
+live access rules, with rollback available within the retained history.
 
 ## How snapshots work
 
-- Every live secret carries `krypton.io/version` (app counter, starts at 1).
-- Before an update, the current state is persisted as `<name>-vN` with labels
-  `krypton.io/history-of=<name>` / `krypton.io/kind=history` and annotations
-  for version, `snapshot-at` timestamp, `snapshot-by` actor, plus the live
-  description and access rules at snapshot time.
-- Snapshots are pruned to `KRYPTON_HISTORY_LIMIT` (default 20, newest kept).
-- Snapshot name length is capped to the 253-char K8s limit (base trimmed).
-- Deleting a secret deletes its snapshots too, unless `?keepHistory=true`.
+- Created Secrets start at `krypton.io/version=1`. An adopted Secret with no
+  counter (or the old `0` counter) is logically **v1**. Its first edit archives
+  v1 and writes v2; its next archives v2 and writes v3. Snapshot vN is the state
+  being replaced, not the new state. Invalid/exhausted counters are rejected.
+- Storage names are `krypton-h-<UID hash>-vN`, at most **60 characters** even for
+  253-character live names. Hashes are the first 32 lowercase hex characters of
+  SHA-256. The live name is stored in an annotation, never a label value.
+- Each snapshot is an **Opaque** Secret with **`immutable: true`** and a copy of
+  native base64 `data`. Live owner references, finalizers, managed fields, and
+  controller annotations are not copied, so the archive does not acquire the
+  source's controller lifecycle. Original type is retained for inspection.
+- Labels (using the configured annotation prefix) are `managed-by=krypton`,
+  `kind=history`, `source-uid=<UID hash>`, and
+  `source-resource-version=<resourceVersion hash>`. Lists select by source UID
+  and kind; returned objects must also pass full binding/format validation.
+- Annotations retain `history-format=uid-rv-v1`, full `source-uid` and
+  `source-resource-version`, readable `history-of` name, `source-type`, `version`,
+  `snapshot-at`, `snapshot-by`, and the source description/ACLs. Hashes are only
+  indexing keys; a matching hash or name never proves identity on its own.
+
+### Verified retries and external changes
+
+A version slot is reserved for one exact source UID/resourceVersion. On snapshot
+create **409**, Krypton reads the occupied object and verifies full identity,
+immutable status, actual byte content and own keys, original type, and copied
+source description/ACLs. A mutable fingerprint annotation is not sufficient.
+The first successful snapshot's actor/time remain on exact-source retries.
+Unrelated objects, different source revisions, changed bytes, active controller
+ownership, finalizers, or terminating snapshots block the live replacement.
+Successful create responses are checked too, including admission-altered content.
+
+Two replicas saving the same source can share one verified snapshot; the native
+live UID/resourceVersion replacement preconditions still admit only one write.
+There is no process-local counter or lock. ResourceVersions are treated as opaque
+strings, not sorted or parsed as version numbers.
+
+Krypton does not watch every native edit: it captures the state visible when an
+update/restore is attempted. Normal external changes after a successful Krypton
+write are captured at their new resourceVersion. If a snapshot was saved but the
+live write failed, an external change can leave the **same app counter with a
+different resourceVersion**. This returns a source-conflict 409, even for a
+metadata-only external change, rather than discarding either rollback state.
+See [recovery](#upgrade-and-operator-reviewed-recovery) below.
+
+### Retention and partial operations
+
+`KRYPTON_HISTORY_LIMIT` must be a decimal integer **1–100**, default **20** when
+unset. Empty, zero, negative, fractional, malformed (including whitespace/leading
+zeros), or out-of-range values produce 503 before history writes; `/api/config`
+also returns a configuration error. Zero is not a history-disable/unlimited mode.
+
+After saving or verifying a source snapshot, Krypton prunes the oldest eligible
+snapshots for that **live UID**, ordered by app counter. Cleanup reads only
+metadata from the native records; it never decodes values into text/DTOs. Deletes
+are serial, with each snapshot's UID and resourceVersion preconditions. A 404 is
+already absent; other failures or a still-present object (including finalizers)
+return **503** with confirmed-absent/pending/failed counts and block the live
+replacement. Exact-source retries retry pruning. A changed/missing source archive
+or a counter behind newer retained history blocks the write with 409.
+
+These are separate Kubernetes operations, not an atomic transaction. A failed
+replacement can leave a snapshot, and pruning may already have removed older
+history. A snapshot can therefore have the same version as the current live
+object: history is **pre-write captures, not a successful-commit log**. Cleanup
+failures can leave more than the configured limit until repaired. Retention is
+applied on update/restore attempts, not by a background sweeper. Legacy/quarantined
+copies and retained predecessor UIDs are outside that automatic retention policy.
 
 Inspect them directly — they are ordinary Secrets:
 
@@ -26,26 +86,171 @@ Inspect them directly — they are ordinary Secrets:
 kubectl get secret -n krypton-test -l krypton.io/kind=history
 ```
 
+In Krypton's API, history is reached through the **live secret's** `/versions`
+and `/restore` endpoints. Both authorize its current ACL before accessing any
+snapshot. Snapshot names themselves return 404 on all named-secret routes, even
+for admins and with `KRYPTON_MANAGED_ONLY=false`; historical ACLs do not grant
+current access.
+
+The history panel distinguishes loading, a successfully empty history, permission
+denial, and an unavailable response. **Retry history** refetches after a failure;
+failed refreshes do not display cached restore choices as current or imply that
+snapshots were erased.
+
+Deleting and recreating the same live name produces a new UID and a separate
+history lifetime. Kept predecessor snapshots are neither listed/restored nor
+pruned/deleted through the replacement's endpoints.
+
+## Upgrade and operator-reviewed recovery
+
+Upgrade writer replicas together; mixed older/newer writers retain the old
+name-only behavior on the older replicas. Keep the annotation prefix, format,
+and retention settings consistent across replicas. The upgrade does not rewrite
+or relabel existing Secrets; changing the annotation prefix is a separate schema
+migration, not an automatic way to transfer history.
+
+**Legacy history is quarantined.** Old `<name>-vN` snapshots do not prove a live
+UID or exact source revision and were not immutable. Objects missing the new
+binding/format (including partially retagged objects) and malformed records are
+excluded from automatic version listing, restore, pruning, and delete cleanup.
+There is no legacy bypass, including for admins. An empty version list after an
+upgrade does not mean old copies were erased. Recreating a Secret, including
+through backup restore with a new UID, does not reattach those copies.
+
+An operator with native Kubernetes access can recover reviewed data:
+
+1. Inventory history metadata in the intended namespace. Establish provenance
+   from trusted audit/backup records and the source object's lifetime. A recycled
+   name, copied ACL, or timestamp alone is insufficient proof of ownership.
+2. Review the chosen raw values and destination type/access/lifecycle requirements.
+   Recover only the approved native base64 `data` into a reviewed live Secret.
+   For an existing target, use current UID/resourceVersion preconditions and
+   preserve its ACLs, owners, finalizers, type, and immutable rules. Binary base64
+   must not be submitted to Krypton's plaintext `data` input.
+3. Keep the original archive quarantined until explicit operator cleanup. Do not
+   invent source-UID/revision annotations or relabel legacy objects to force the
+   app to accept them. Future Krypton edits create new bound snapshots of the
+   recovered live state; old app-version numbers are not automatically imported.
+
+For a **different-source slot conflict**, first reload and review the current live
+UID/RV and occupied snapshot's identity/content. Once its provenance is established,
+an operator can CAS-update only the live `version` annotation to an unused positive
+counter above that UID's retained history, then reload and retry. The next operation
+archives the current source at that new counter; existing archives stay intact.
+The same review is needed for a reset/malformed counter. Resolve failed verification
+reads, admission changes, RBAC/quota errors, or finalizers at their cause rather than
+overwriting or retagging a conflicting archive. Snapshot immutability protects data,
+not metadata or deletion by Kubernetes-authorized writers; it is not a signed backup.
+
+### Delete and keep-history semantics
+
+`DELETE` requires the loaded live `resourceVersion` as a URL-encoded query parameter.
+A stale revision conflicts before history access or writes. Eligible snapshots for
+that **live UID** are cleaned up **first**, unless `keepHistory=true`. The live
+authorization object is rechecked before each cleanup mutation; each snapshot
+delete has its own UID/RV preconditions and absence check. A final history inventory
+must be empty, and a final live recheck precedes the UID/RV-conditional live DELETE.
+Changed live objects and snapshot precondition conflicts return 409; failed/pending
+history cleanup returns 503 without attempting live deletion, so it can be retried.
+
+**200 `status: "deleted"`** confirms live absence after deletion. **202
+`status: "pending"`** means the same live UID remains, commonly due to finalizers.
+The UI stays on the Secret and reports pending status instead of permanent deletion.
+Live GET/list DTOs include optional `deletionTimestamp`; reload for current data and
+resourceVersion before retrying. A failed confirmation returns an error rather than
+guessing success. See the [DELETE request/result contract](/api/secrets/#delete-secret).
+
+Kubernetes provides no atomic transaction across live/history objects. Earlier
+cleanup is not rolled back after a later conflict or failure; a recheck does not
+lock authorization across objects. `history: "cleaned"` describes the eligible
+inventory checked before live deletion. An in-flight writer holding an earlier
+live read can add history after that check, even after deletion. If the live object
+has gone, an operator must remove such leftovers. Live-delete transport/confirmation
+failures can have an uncertain outcome; reload before retrying. There is no claim
+of atomic erasure and no background cleanup job.
+
+Kept snapshots have no live owner reference and survive for operator forensics.
+They cannot be accessed through a later same-name Secret. Legacy/quarantined
+objects and predecessor lifetimes need explicit operator cleanup with their own
+UID/RV preconditions; deleting the current live name does not erase all such copies.
+
 ## Restores are reversible
 
-Restore snapshots the **current** state first, then replaces the live object
+Restore requires both the target app `version` and the expected live
+`resourceVersion`. It snapshots the **current** state first, then replaces the live object
 with the target version's data (bumping `krypton.io/version` again). Rolling
 back never destroys the state you rolled back from — within the history limit.
+
+Data is restored from the snapshot's **original base64**, without a text
+decode/re-encode. Binary bytes, Unicode BOMs, and special keys such as `__proto__`
+survive. The current live type, UID, owner references, finalizers, immutable
+state, description, and access rules remain in place; restoring data does not
+roll back ownership or access policy.
+
+Native type/immutable checks run **before** saving the current state. Immutable
+Secrets reject data changes (422) and have disabled UI restore controls;
+byte-identical API restores are allowed. Their metadata can still be edited.
+Service-account tokens cannot be created, edited, or restored through Krypton:
+use Kubernetes TokenRequest or controller management instead of creating
+independent snapshots.
+
+### Viewing text values
+
+**Expand value** on a live or historical text entry opens Preview; **Raw** and
+**Copy** provide the original full text. Markdown images appear as descriptive
+text without loading embedded resources. Raw HTML stays inert, and safe links
+open only when activated, in a new tab without an opener or referrer.
+
+Values above **131,072 UTF-16 code units** (`String.length`) fall back to escaped
+raw text before Markdown parsing or syntax highlighting, with a short notice.
+Ordinary Markdown/JSON/YAML/XML previews and plain PEM viewing remain available
+within that shared limit. The fallback does not truncate the value or alter
+history, Raw, or Copy. See [Local value previews](/about/security-model/#local-value-previews).
+
+### Binary viewing and data-contract upgrade
+
+Live detail and history now separate lossless plaintext `data` from original
+base64 `binaryData`; `binaryKeys` names non-text entries and `keys` covers both.
+Binary values are masked and can be viewed/copied as base64. To edit a
+binary-containing Secret, update metadata in Krypton or use Kubernetes tooling
+to change bytes. API metadata edits **omit `data`**, preserving the entire raw map.
+Do not round-trip a DTO by submitting only its text subset or treating base64 as
+plaintext. Re-fetch client caches after upgrading. The upgrade itself does not
+rewrite stored data or repair bytes already lost by older lossy edits; recover
+those from an intact snapshot or external backup.
 
 ```bash
 curl --cookie "krypton_session=$ALICE" \
   localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/versions
 curl --cookie "krypton_session=$ALICE" -X POST \
-  -H 'Content-Type: application/json' -d '{"version":1}' \
+  -H 'Content-Type: application/json' -d '{"version":1,"resourceVersion":"123456"}' \
   localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore
 ```
 
 ## Optimistic concurrency (409s)
 
-The UI sends back the `metadata.resourceVersion` it loaded; if the live object
-moved on, the write is rejected with `409` and a reload prompt instead of
-silently clobbering a colleague's change. A second 409 path covers a true race
-between the read and the replace at the Kubernetes API.
+For **PUT, restore, and DELETE**, clients send the live `metadata.resourceVersion`
+they loaded; stale operations return 409 before history side effects. Native
+UID/resourceVersion CAS protects the eventual restore replacement or delete if
+another writer changes the object after the read. History effects from an in-flight
+operation can remain after that later conflict.
+
+On the **edit form**, the draft's fields and original resourceVersion stay pinned
+together, including across background refreshes, reconnects, and retained client
+navigation. A newer query result does not silently authorize an old draft to
+overwrite it. **Reload latest** explicitly refetches the live Secret: success resets
+all fields, pending bulk text, value visibility, and the revision together. Review
+the loaded state and re-apply your changes before saving. Failure preserves the
+draft and original revision and offers another reload attempt. Successful saves
+update the retained form baseline to the returned Secret. Drafts remain in memory,
+not browser storage, and may be lost on a full reload or when the retained page is
+evicted.
+
+For restore/delete, **Reload latest** fetches fresh live and history data, then
+closes the confirmation so the new state can be reviewed. Failed reloads retain
+the error and do not retry the mutation. After upgrading, older restore/delete
+clients must send the expected revision and distinguish pending from confirmed
+deletion. A pending Secret cannot be restored.
 
 Try it: open the same secret's edit page in two tabs, save both — the second
 save gets the conflict prompt. See [Update secret](/api/secrets/) for the API
@@ -56,7 +261,10 @@ contract.
 K8s enforces ~1 MiB per Secret object. Krypton estimates conservatively
 (UTF-8 bytes × 1.4 for base64 inflation) and enforces the limit client-side
 (the form meter blocks) and server-side (`413 Secret is too large`). History
-snapshots count as separate objects, so deep history never breaks the live write.
+snapshots count as separate objects and consume namespace storage/quota. Snapshot
+creation or cleanup failure blocks the live replacement.
+Raw restores and metadata-only updates use Kubernetes' decoded-data size bound,
+so valid native binary data is not rejected merely for base64 inflation.
 
 ## Related pages
 

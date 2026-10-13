@@ -1,3 +1,4 @@
+{{- $_ := include "krypton.effectiveConfig" . -}}
 {{- if .Values.accessConfig.enabled -}}
 # Namespace-level ownership fallback for SSO users that have no cluster identity.
 # Per-secret annotations (krypton.io/allowed-groups / allowed-users) override these.

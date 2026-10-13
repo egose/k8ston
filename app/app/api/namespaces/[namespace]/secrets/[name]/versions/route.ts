@@ -1,10 +1,8 @@
-import { NextResponse } from 'next/server';
-import { getCoreApi, requestOptions } from '@/lib/k8s';
-import { HttpError, jsonError, requireUser } from '@/lib/http';
+import { jsonError, jsonResponse, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
-import { assertManagedVisible, canAccessSecret } from '@/lib/authz';
-import { listVersions } from '@/lib/secrets';
-import { auditLog } from '@/lib/validation';
+import { loadAuthorizedLiveSecret } from '@/lib/secret-access';
+import { toSecretVersion } from '@/lib/secrets';
+import { listSnapshots } from '@/lib/snapshot-store';
 
 type Ctx = RouteContext<'/api/namespaces/[namespace]/secrets/[name]/versions'>;
 
@@ -14,15 +12,9 @@ export async function GET(_req: Request, ctx: Ctx) {
     const { namespace, name } = await ctx.params;
     await assertNamespaceAllowed(namespace, user);
 
-    const core = getCoreApi();
-    const live = await core.readNamespacedSecret({ namespace, name }, requestOptions(user));
-    assertManagedVisible('secret.history', user, namespace, name, live);
-    if (!(await canAccessSecret(user, namespace, live))) {
-      auditLog({ action: 'secret.history', user: user.email, namespace, name, result: 'deny' });
-      throw new HttpError(403, 'You are not allowed to view this secret');
-    }
-    const versions = await listVersions(namespace, name, user);
-    return NextResponse.json({ namespace, name, versions });
+    const live = await loadAuthorizedLiveSecret('secret.history', user, namespace, name);
+    const versions = (await listSnapshots(namespace, live, user)).map(toSecretVersion);
+    return jsonResponse({ namespace, name, versions });
   } catch (err) {
     return jsonError(err);
   }

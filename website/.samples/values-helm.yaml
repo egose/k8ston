@@ -10,7 +10,7 @@ krypton:
   # kubectl create secret generic krypton-oidc -n krypton \
   #   --from-literal=OIDC_CLIENT_SECRET='...' \
   #   --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
-  envSecretName: krypton-oidc # pragma: allowlist secret
+  envSecretName: krypton-oidc
   env:
     KRYPTON_SCOPE: namespace
     KRYPTON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on
@@ -19,7 +19,8 @@ krypton:
     OIDC_CLIENT_ID: krypton
     OIDC_SCOPES: openid profile email groups
     NEXT_PUBLIC_APP_URL: https://krypton.example.com
-  # Must match KRYPTON_SCOPE above: namespace (default) or cluster.
+  # Derives the default KRYPTON_SCOPE (explicit entries must match):
+  # namespace (default) or cluster. Curated extras add a derived allowlist.
   rbac:
     create: true
     scope: namespace

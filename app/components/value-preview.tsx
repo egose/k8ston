@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  Children,
-  isValidElement,
-  useMemo,
-  type AnchorHTMLAttributes,
-  type HTMLAttributes,
-  type ReactNode,
-} from 'react';
+import { Children, isValidElement, useMemo, type HTMLAttributes, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTheme } from 'next-themes';
@@ -65,6 +58,19 @@ function CodePreview({ value, lang }: { value: string; lang: ShikiLang }) {
 export function ValuePreview({ value, contentType }: Props) {
   if (value === '') return <p className="text-xs text-muted-foreground">(empty)</p>;
 
+  // Check the whole document before mounting a Markdown parser or highlighter.
+  // Per-fence limits alone still parse the full Markdown tree and every fence.
+  if (value.length > HIGHLIGHT_BUDGET) {
+    return (
+      <>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Large value: showing raw text without rich preview. Raw and Copy keep the full value.
+        </p>
+        <PlainPre value={value} />
+      </>
+    );
+  }
+
   if (contentType === 'markdown') return <MarkdownPreview value={value} />;
 
   const lang = SHIKI_LANG[contentType];
@@ -115,7 +121,8 @@ function FencedCodeBlock({
 
 function MarkdownPreview({ value }: { value: string }) {
   // No rehype-raw: raw HTML in values renders as inert text, never as DOM —
-  // secret values must not become an XSS vector. Links open in a new tab.
+  // secret values must not become an XSS vector. Keep the default URL sanitizer;
+  // safe links open only on activation, with no referrer or opener access.
   const { resolvedTheme } = useTheme();
   const dark = resolvedTheme !== 'light';
   return (
@@ -128,8 +135,17 @@ function MarkdownPreview({ value }: { value: string }) {
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{
-          a: (props: AnchorHTMLAttributes<HTMLAnchorElement>) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" />
+          a: ({ href, title, children }) =>
+            href ? (
+              <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            ) : (
+              <span>{children}</span>
+            ),
+          // Never create an image/network element or forward its resource props.
+          img: ({ alt, title }) => (
+            <span className="text-muted-foreground">[Image not loaded{alt || title ? `: ${alt || title}` : ''}]</span>
           ),
           pre: (props) => <FencedCodeBlock dark={dark} {...props} />,
         }}

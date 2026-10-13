@@ -5,31 +5,123 @@ sidebar_position: 5
 
 # Restart Consumers API
 
-## Restart workloads consuming a secret
+## Request rollouts for workloads consuming a Secret
 
 ```http
 POST /api/namespaces/:namespace/secrets/:name/restart-consumers
 ```
 
-Triggers a rolling restart of the Deployments, StatefulSets, and DaemonSets in
-the secret's namespace that reference it (env, envFrom, volumes, projected
-sources) by patching their pod template with a `krypton.io/restarted-at`
-annotation. Required for env-var consumers; volume mounts sync via kubelet on
-their own.
+No request body. After current live-Secret authorization, discovers Deployments,
+StatefulSets, and DaemonSets in the same namespace with **exact** Secret references:
+
+- `env[].valueFrom.secretKeyRef.name` and `envFrom[].secretRef.name` on normal,
+  init, and ephemeral containers, where present in the workload template;
+- `volumes[].secret.secretName` and
+  `volumes[].projected.sources[].secret.name`;
+- `imagePullSecrets[].name`.
+
+It patches `spec.template.metadata.annotations["krypton.io/restarted-at"]` with
+a timestamp, using an RFC 6902 JSON Patch and at most **four in-flight patches
+per request across all kinds**. Each patch first tests the inspected workload
+`UID` and `resourceVersion`, so a same-name replacement or any intervening
+edit (including reference removal) fails before any mutation instead of
+restarting the wrong revision. Only acknowledged patches appear in `requested`.
+The API does **not** wait for rollout completion, check readiness, or verify
+credential uptake. [Scanning limits and operational behavior](/guides/consumer-restarts/)
+also apply.
+
+## Result contract
+
+| HTTP | `status` | Meaning |
+| --- | --- | --- |
+| 200 | `requested` | At least one acknowledged patch, no patch failures, all three inventories complete. |
+| 200 | `no_targets` | All three inventories complete with zero matching workloads; no patch attempted. |
+| 207 | `partial` | At least one acknowledged patch, plus patch and/or discovery failures. |
+| 503 | `failed` | Zero acknowledged patches, with patch and/or discovery failures. |
+
+An empty successful inventory for one kind does not compensate for a failed
+inventory for another. In particular, failed discovery with zero known matches is
+**`failed`, not `no_targets`**. Discovery settles before mutation. No workloads of
+a failed/incomplete kind are patched; known matches from other kinds can proceed.
+Each kind uses complete 100-object pages with at most 100 pages, 2,000 raw objects,
+and 32 MiB of SDK-decoded JSON per inventory. All pages carry full per-user request
+options. Budget or continuation failures do not permit patches from earlier pages
+of that kind. See [collection budgets](/api/overview/#request-and-collection-budgets).
+All result and error statuses explicitly send `Cache-Control: no-store`.
+
+Example **207 mixed result**:
 
 ```json
 {
-  "deployments": ["api-server"],
-  "statefulSets": [],
-  "daemonSets": [],
-  "note": "Some apps pick up secret changes automatically, others need a restart to see the new values."
+  "status": "partial",
+  "matched": 2,
+  "requested": [{ "kind": "Deployment", "name": "api-server" }],
+  "failures": [{
+    "kind": "StatefulSet",
+    "name": "worker",
+    "code": "forbidden",
+    "message": "Access denied. Check Kubernetes permissions for the effective identity and, when enabled, ServiceAccount impersonation permissions.",
+    "httpStatus": 403
+  }],
+  "discoveryFailures": [],
+  "message": "Rollout requested for 1 of 2 matched workloads. 1 patch request failed.",
+  "note": "Only acknowledged pod-template patches are reported as requested. Rollout completion, readiness, and credential uptake are not verified."
 }
 ```
 
+The TypeScript `RestartResult` contract lives in `app/lib/consumers.ts`:
+
+- `kind` is `Deployment`, `StatefulSet`, or `DaemonSet` (case-sensitive).
+- `matched` is the number of **known** matches from successful inventories:
+  `requested.length + failures.length`. It excludes unknown inventories.
+- `requested` contains `{ kind, name }` for each acknowledged patch.
+- `failures` contains `{ kind, name, code, message, httpStatus? }` for each
+  unacknowledged patch. A transport failure does not prove that no mutation occurred.
+  A match whose listed identity is missing or malformed appears here with
+  `incomplete_list` and is never patched by name alone. Conflict (`409`) and
+  rejected-patch (`422`) failures mean the workload changed or was replaced
+  after discovery; the patch was attempted once and never blind-retried.
+- `discoveryFailures` contains `{ kind, code, message, httpStatus? }`; no workload
+  name is invented for a failed list. A malformed/inconsistent/over-budget list
+  (including bad or repeated continuation tokens) uses `incomplete_list` and is
+  not silently truncated. Valid continuation tokens are followed to completion.
+- `code` is `unauthenticated`, `forbidden`, `not_found`, `conflict`,
+  `invalid_request`, `rate_limited`, `unavailable`, `unconfirmed`, or
+  `incomplete_list`. `httpStatus` is a numeric upstream status when available,
+  or 503 for a locally detected incomplete inventory. Messages are fixed,
+  sanitized guidance, never raw error payloads.
+- `message` is a human-readable summary; `note` explains the acknowledgement limit.
+  Automation should use `status` and the arrays, not parse either string.
+- A **503 attempt** retains all these fields and also has `error` equal to
+  `message`. Preflight errors have the ordinary `{ error }` envelope instead.
+
+Review actual workload state and repair errors before retrying. After a conflict
+or rejected patch, reload the workload (check for replacement, edits, or removed
+references) and retry only if a rollout is still wanted. A retry scans all
+kinds again and may request another rollout for workloads already acknowledged.
+There is no transaction, background retry, or readiness watcher. Native
+workload UIDs and resourceVersions stay internal to the patch; results and
+audits carry only `kind`/`name` plus classified failures.
+
+## Access and audit
+
 - Returns `403 { "error": "Restarting apps is disabled on this deployment" }`
   unless `KRYPTON_RESTART_ENABLED=true` (which also needs the `apps` RBAC rule).
-- Same namespace, managed-only, and authz gates as updating the secret.
-- The restart is audit-logged with the targeted workload names.
+- Same authentication, namespace, live visibility, and current ACL gates as
+  updating the Secret. Direct history names are hidden. Gate/preparation failures
+  occur before workload mutation and return the ordinary error envelope.
+  Unexpected preparation errors use the shared sanitized 500 response.
+- In impersonation mode, **every list and patch** carries the full user/group
+  identity. A workload 403 can be human RBAC or impersonation permission denial;
+  in hybrid mode it can be ServiceAccount RBAC. List/patch failures are classified
+  in the result, not treated as application-session expiry.
+- `secret.restart` audits include `status`, known `matched` count, acknowledged
+  workload identities, and sanitized patch/discovery failures. `partial` and
+  `failed` use audit `result: error`; `requested` and explicit `no_targets` use
+  `allow`. Secret values, template contents, and raw upstream errors are excluded.
 
-See [Consumer Restarts](/guides/consumer-restarts/) for the scanning rules and
-the sandbox walkthrough.
+**Upgrade:** replace consumption of the old `deployments`/`statefulSets`/
+`daemonSets` arrays with this result. Preserve 207/503 bodies and check `status`;
+a resolved HTTP request is not a completed rollout. The bundled client retains
+typed failed-attempt reports for the detail UI, while preflight errors still raise
+`ApiError`. See [Consumer Restarts](/guides/consumer-restarts/) for the walkthrough.

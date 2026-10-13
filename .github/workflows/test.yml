@@ -20,6 +20,9 @@ jobs:
     - name: Setup NPM packages
       uses: ./.github/actions/setup-npm
 
+    - name: Run backend unit tests
+      run: pnpm test:unit
+
     - name: Run lint
       run: |
         pnpm lint

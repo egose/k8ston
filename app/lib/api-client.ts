@@ -1,7 +1,9 @@
 'use client';
 
-import type { SecretDetail, SecretSummary, SecretVersion, RestartResult } from './secrets';
+import type { SecretDetail, SecretSummary, SecretVersion, DeleteSecretResult } from './secrets';
+import type { RestartResult } from './consumers';
 import type { SessionUser } from './auth';
+import type { DeleteSecretInput, RestoreSecretInput } from './validation';
 
 export interface PublicConfig {
   scope: 'namespace' | 'cluster';
@@ -22,13 +24,21 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  readFailureResult?: (status: number, body: unknown) => T | undefined,
+): Promise<T> {
   const res = await fetch(path, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
+    // An operation can finish with a typed failure report. Keep the one shared
+    // error-body reader, while allowing that endpoint to retain its result.
+    const result = readFailureResult?.(res.status, body);
+    if (result !== undefined) return result;
     // Bounce to SSO only for *app-session* 401s — a 401 from the Kubernetes
     // API itself (bad SA/kubeconfig) must surface as an error, not a login loop.
     const sessionExpired = res.status === 401 && (body.error === 'Authentication required' || path === '/api/auth/me');
@@ -54,8 +64,11 @@ export const api = {
     request<{ namespace: string; secrets: SecretSummary[]; canCreate: boolean }>(
       `/api/namespaces/${encodeURIComponent(ns)}/secrets`,
     ),
-  getSecret: (ns: string, name: string) =>
-    request<{ secret: SecretDetail }>(`/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}`),
+  getSecret: (ns: string, name: string, signal?: AbortSignal) =>
+    request<{ secret: SecretDetail }>(`/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}`, {
+      signal,
+      cache: 'no-store',
+    }),
   createSecret: (
     ns: string,
     input: {
@@ -75,7 +88,7 @@ export const api = {
     ns: string,
     name: string,
     input: {
-      data: Record<string, string>;
+      data?: Record<string, string>;
       description?: string;
       allowedGroups?: string[];
       allowedUsers?: string[];
@@ -86,22 +99,36 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(input),
     }),
-  deleteSecret: (ns: string, name: string) =>
-    request<{ deleted: string }>(`/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}`, {
-      method: 'DELETE',
-    }),
-  listVersions: (ns: string, name: string) =>
+  deleteSecret: (ns: string, name: string, input: DeleteSecretInput) => {
+    const query = new URLSearchParams({ resourceVersion: input.resourceVersion });
+    if (input.keepHistory) query.set('keepHistory', 'true');
+    return request<DeleteSecretResult>(
+      `/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}?${query}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+  listVersions: (ns: string, name: string, signal?: AbortSignal) =>
     request<{ namespace: string; name: string; versions: SecretVersion[] }>(
       `/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}/versions`,
+      { signal, cache: 'no-store' },
     ),
-  restoreVersion: (ns: string, name: string, version: number) =>
+  restoreVersion: (ns: string, name: string, input: RestoreSecretInput) =>
     request<{ secret: SecretDetail }>(
       `/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}/restore`,
-      { method: 'POST', body: JSON.stringify({ version }) },
+      { method: 'POST', body: JSON.stringify(input) },
     ),
   restartConsumers: (ns: string, name: string) =>
     request<RestartResult>(
       `/api/namespaces/${encodeURIComponent(ns)}/secrets/${encodeURIComponent(name)}/restart-consumers`,
       { method: 'POST' },
+      (status, body) => {
+        // Only completed failed attempts use this envelope. Session, feature-flag,
+        // authorization, and preparation errors still throw the normal ApiError.
+        if (status === 503 && body && typeof body === 'object' && 'status' in body && body.status === 'failed') {
+          return body as RestartResult;
+        }
+      },
     ),
 };

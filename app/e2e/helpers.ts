@@ -1,4 +1,6 @@
 import { expect, type Page, type TestInfo } from '@playwright/test';
+import type { SecretDetail, SecretSummary, SecretVersion } from '../lib/secrets';
+import type { RestartResult } from '../lib/consumers';
 
 // ---------------------------------------------------------------------------
 // Fixture data (shapes must match lib/api-client.ts + lib/secrets.ts)
@@ -18,18 +20,7 @@ const publicConfig = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-interface SummaryOverrides {
-  name?: string;
-  type?: string;
-  keys?: string[];
-  keyCount?: number;
-  description?: string;
-  version?: number;
-  allowedGroups?: string[];
-  managedByKrypton?: boolean;
-}
-
-const summary = (over: SummaryOverrides = {}) => ({
+export const summary = (over: Partial<SecretSummary> = {}): SecretSummary => ({
   namespace: 'demo',
   name: 'app-config',
   type: 'Opaque',
@@ -42,22 +33,37 @@ const summary = (over: SummaryOverrides = {}) => ({
   allowedGroups: ['dev-team'],
   allowedUsers: [],
   managedByKrypton: true,
+  immutable: false,
+  binaryKeys: [],
   ...over,
 });
 
-const detail = {
+export const detail: SecretDetail = {
   ...summary(),
-  data: { DB_HOST: 'db.internal', DB_PASSWORD: 's3cret-value', API_KEY: 'abc-123-def-456' }, // pragma: allowlist secret
+  data: { DB_HOST: 'db.internal', DB_PASSWORD: 's3cret-value', API_KEY: 'abc-123-def-456' },
+  binaryData: {},
 };
 
-const versions = [
+export const restartResult: RestartResult = {
+  status: 'requested',
+  matched: 1,
+  requested: [{ kind: 'Deployment', name: 'api-server' }],
+  failures: [],
+  discoveryFailures: [],
+  message: 'Rollout requested for 1 workload.',
+  note: 'Only acknowledged pod-template patches are reported as requested. Rollout completion, readiness, and credential uptake are not verified.',
+};
+
+const versions: SecretVersion[] = [
   {
     version: 2,
     snapshotName: 'app-config-v2',
     snapshotAt: '2026-10-01T12:00:00Z',
     snapshotBy: 'alice@company.com',
     keys: ['DB_HOST', 'DB_PASSWORD', 'API_KEY'],
-    data: { DB_HOST: 'db.internal', DB_PASSWORD: 'older-secret', API_KEY: 'abc-123-def-456' }, // pragma: allowlist secret
+    data: { DB_HOST: 'db.internal', DB_PASSWORD: 'older-secret', API_KEY: 'abc-123-def-456' },
+    binaryKeys: [],
+    binaryData: {},
   },
   {
     version: 1,
@@ -65,7 +71,9 @@ const versions = [
     snapshotAt: '2026-09-15T09:30:00Z',
     snapshotBy: 'bob@company.com',
     keys: ['DB_HOST', 'DB_PASSWORD'],
-    data: { DB_HOST: 'db.internal', DB_PASSWORD: 'first-secret' }, // pragma: allowlist secret
+    data: { DB_HOST: 'db.internal', DB_PASSWORD: 'first-secret' },
+    binaryKeys: [],
+    binaryData: {},
   },
 ];
 
@@ -122,6 +130,27 @@ export async function mockApi(
     r.fulfill({ json: { namespace: 'demo', name: 'app-config', versions } }),
   );
   await page.route('**/api/namespaces/demo/secrets/app-config', (r) => r.fulfill({ json: { secret: detail } }));
+  await page.route('**/api/namespaces/demo/secrets/app-config/restart-consumers', (r) =>
+    r.fulfill({ json: restartResult }),
+  );
+}
+
+/** Expire the 15s query freshness window without sleeping, then use real online events. */
+export async function reconnectQueries(page: Page) {
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.setFixedTime(now + 16_000);
+  await page.context().setOffline(true);
+  await page.waitForFunction(() => !navigator.onLine);
+  await page.context().setOffline(false);
+  await page.waitForFunction(() => navigator.onLine);
+}
+
+export function responseGate() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
 }
 
 // ---------------------------------------------------------------------------

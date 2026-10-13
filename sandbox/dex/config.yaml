@@ -22,7 +22,7 @@ enablePasswordDB: true
 
 staticClients:
 - id: krypton
-  secret: krypton-sandbox-secret # pragma: allowlist secret
+  secret: krypton-sandbox-secret
   name: Krypton Sandbox
   redirectURIs:
   - http://localhost:3000/api/auth/callback
@@ -31,22 +31,22 @@ staticClients:
 # ConfigMap authorization (see ../kind/fixtures + ../README.md matrix).
 staticPasswords:
 - email: alice@company.com
-  hash: $2b$10$0i3QG6ZweYPTObej8BcDO.36g9dmw1hKEU7EYkSSxIU/MQEijCH1i   # pragma: allowlist secret
+  hash: $2b$10$0i3QG6ZweYPTObej8BcDO.36g9dmw1hKEU7EYkSSxIU/MQEijCH1i
   username: alice
   userID: alice-sandbox
   groups: [dev-team]
 - email: bob@company.com
-  hash: $2b$10$RTVpDyVdkOp/50tg6yal3utNhU9B2X7sLUue7ID.8usqtXbZEZqRK   # pragma: allowlist secret
+  hash: $2b$10$RTVpDyVdkOp/50tg6yal3utNhU9B2X7sLUue7ID.8usqtXbZEZqRK
   username: bob
   userID: bob-sandbox
   groups: [other-team]
 - email: carol@company.com
-  hash: $2b$10$YRgGP7.LOFQhlHrNoIzzBOETbC97fm87mKMZlNcsE5qde1PpOQ2mW   # pragma: allowlist secret
+  hash: $2b$10$YRgGP7.LOFQhlHrNoIzzBOETbC97fm87mKMZlNcsE5qde1PpOQ2mW
   username: carol
   userID: carol-sandbox
   groups: [frontend-team]
 - email: admin@company.com
-  hash: $2b$10$jZOOEr/867.c5zAHkd1bnO/K9xwR/WrovkC1tO.5UBFGfrpVWNxue   # pragma: allowlist secret
+  hash: $2b$10$jZOOEr/867.c5zAHkd1bnO/K9xwR/WrovkC1tO.5UBFGfrpVWNxue
   username: admin
   userID: admin-sandbox
   groups: [krypton-admin]

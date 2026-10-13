@@ -1,12 +1,21 @@
 import type { V1Secret } from '@kubernetes/client-node';
 import { ANNOTATIONS, LABELS, MANAGED_BY_VALUE, config } from './config';
-import { getAppsApi, getCoreApi, patchOptions, requestOptions, toK8sError } from './k8s';
 import type { SessionUser } from './auth';
-import { estimateSecretSize } from './validation';
+import { annotationAclSchema, estimateSecretSize, secretDataSchema } from './validation';
 import { K8S_SECRET_SIZE_LIMIT } from './config';
+import {
+  BINARY_EDIT_GUIDANCE,
+  IMMUTABLE_EDIT_GUIDANCE,
+  isSecretText,
+  secretKeyError,
+  secretTypeDataError,
+  unsupportedSecretTypeReason,
+} from './secret-rules';
+import { currentSecretVersion, nextSecretVersion, type RawSnapshotRecord } from './snapshot-store';
+import { HttpError } from './errors';
 
 // ---------------------------------------------------------------------------
-// DTOs (values are plain strings at the API boundary; base64 stays in K8s)
+// DTOs (text and binary are disjoint; summaries never contain values)
 // ---------------------------------------------------------------------------
 
 export interface SecretSummary {
@@ -19,42 +28,76 @@ export interface SecretSummary {
   version: number;
   resourceVersion: string;
   creationTimestamp?: string;
+  /** Present while Kubernetes deletion is waiting (for example on finalizers). */
+  deletionTimestamp?: string;
   allowedGroups: string[];
   allowedUsers: string[];
   managedByKrypton: boolean;
+  immutable: boolean;
+  /** Names only; never include values in list/create responses. */
+  binaryKeys: string[];
 }
 
-export interface SecretDetail extends SecretSummary {
-  /** decoded key → value (NEVER log this) */
+export interface SecretValues {
+  /** Losslessly decoded text only (NEVER log this). */
   data: Record<string, string>;
+  /** Unsupported text values, represented as exact Kubernetes base64 (NEVER log this). */
+  binaryData: Record<string, string>;
 }
 
-export interface SecretVersion {
+export interface SecretDetail extends SecretSummary, SecretValues {}
+
+/** `cleaned` describes the checked UID-bound inventory, not an atomic erase. */
+export type DeleteSecretResult = {
+  name: string;
+  uid: string;
+  history: 'cleaned' | 'retained';
+} & (
+  | { status: 'deleted'; deleted: string }
+  | { status: 'pending'; resourceVersion: string; deletionTimestamp?: string }
+);
+
+export interface SecretVersion extends SecretValues {
   version: number;
   snapshotName: string;
   snapshotAt?: string;
   snapshotBy?: string;
   keys: string[];
-  /** decoded values; only populated for authorized readers */
-  data: Record<string, string>;
+  binaryKeys: string[];
 }
 
-export function decodeData(secret: V1Secret): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(secret.data ?? {})) {
-    try {
-      out[k] = Buffer.from(v, 'base64').toString('utf8');
-    } catch {
-      out[k] = '';
-    }
+function decodeText(base64: string): string | null {
+  try {
+    // ignoreBOM means preserve a leading U+FEFF rather than silently removing it.
+    const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.from(base64, 'base64'));
+    return isSecretText(text) ? text : null;
+  } catch {
+    return null;
   }
-  return out;
+}
+
+export function decodeData(secret: V1Secret): SecretValues {
+  const text: Array<[string, string]> = [];
+  const binary: Array<[string, string]> = [];
+  for (const [k, v] of Object.entries(secret.data ?? {})) {
+    const decoded = decodeText(v);
+    if (decoded === null) binary.push([k, v]);
+    else text.push([k, decoded]);
+  }
+  return { data: Object.fromEntries(text), binaryData: Object.fromEntries(binary) };
+}
+
+function binaryKeys(secret: V1Secret): string[] {
+  return Object.entries(secret.data ?? {})
+    .filter(([, value]) => decodeText(value) === null)
+    .map(([key]) => key)
+    .sort();
 }
 
 export function encodeData(data: Record<string, string>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(data)) out[k] = Buffer.from(v ?? '', 'utf8').toString('base64');
-  return out;
+  return Object.fromEntries(
+    Object.entries(secretDataSchema.parse(data)).map(([k, v]) => [k, Buffer.from(v, 'utf8').toString('base64')]),
+  );
 }
 
 function csv(value: string | undefined): string[] {
@@ -74,6 +117,11 @@ export function isManagedByKrypton(secret: V1Secret): boolean {
   return secret.metadata?.annotations?.[ANNOTATIONS.managedBy] === MANAGED_BY_VALUE;
 }
 
+/** Shared list/direct visibility: snapshots are never live objects, even for admins. */
+export function isVisibleLiveSecret(secret: V1Secret): boolean {
+  return !isHistorySnapshot(secret) && (!config.managedOnly || isManagedByKrypton(secret));
+}
+
 export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
   const ann = secret.metadata?.annotations ?? {};
   return {
@@ -83,138 +131,127 @@ export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
     keys: Object.keys(secret.data ?? {}).sort(),
     keyCount: Object.keys(secret.data ?? {}).length,
     description: ann[ANNOTATIONS.description] ?? '',
-    version: Number.parseInt(ann[ANNOTATIONS.version] ?? '0', 10) || 0,
+    version: currentSecretVersion(secret),
     resourceVersion: secret.metadata?.resourceVersion ?? '',
     creationTimestamp: secret.metadata?.creationTimestamp as unknown as string | undefined,
+    deletionTimestamp: secret.metadata?.deletionTimestamp as unknown as string | undefined,
     allowedGroups: csv(ann[ANNOTATIONS.allowedGroups]),
     allowedUsers: csv(ann[ANNOTATIONS.allowedUsers]),
     managedByKrypton: isManagedByKrypton(secret),
+    immutable: secret.immutable === true,
+    binaryKeys: binaryKeys(secret),
   };
 }
 
 export function toDetail(namespace: string, secret: V1Secret): SecretDetail {
-  return { ...toSummary(namespace, secret), data: decodeData(secret) };
+  return { ...toSummary(namespace, secret), ...decodeData(secret) };
+}
+
+/** Decode only at the authorized response boundary, never for restore/cleanup. */
+export function toSecretVersion({ metadata, secret }: RawSnapshotRecord): SecretVersion {
+  const values = decodeData(secret);
+  return {
+    version: metadata.version,
+    snapshotName: metadata.name,
+    snapshotAt: metadata.snapshotAt,
+    snapshotBy: metadata.snapshotBy,
+    keys: Object.keys(secret.data ?? {}).sort(),
+    binaryKeys: Object.keys(values.binaryData).sort(),
+    ...values,
+  };
 }
 
 export function assertSizeOk(data: Record<string, string>): void {
   const size = estimateSecretSize(data);
   if (size > K8S_SECRET_SIZE_LIMIT) {
-    const err = new Error(`Secret is too large (~${size} bytes, maximum 1 MB)`);
-    (err as Error & { status?: number }).status = 413;
-    throw err;
+    throw new HttpError(413, `Secret is too large (~${size} bytes, maximum 1 MB)`);
   }
 }
 
-// ---------------------------------------------------------------------------
-// History snapshots: one K8s Secret per version, selected via label
-// ---------------------------------------------------------------------------
-
-function snapshotName(base: string, version: number): string {
-  const suffix = `-v${version}`;
-  const maxBase = 253 - suffix.length;
-  const trimmed = base.length > maxBase ? base.slice(0, maxBase) : base;
-  return `${trimmed}${suffix}`;
-}
-
-function nextVersion(secret: V1Secret): number {
-  const current = Number.parseInt(secret.metadata?.annotations?.[ANNOTATIONS.version] ?? '0', 10);
-  return (Number.isFinite(current) ? current : 0) + 1;
-}
-
-/** Persist current state as an immutable snapshot before overwriting. */
-export async function createSnapshot(namespace: string, live: V1Secret, user: SessionUser): Promise<void> {
-  const core = getCoreApi();
-  const name = live.metadata?.name ?? '';
-  const version = Number.parseInt(live.metadata?.annotations?.[ANNOTATIONS.version] ?? '0', 10) || 1;
-  const liveAnn = live.metadata?.annotations ?? {};
-  const now = new Date().toISOString();
-
-  const snapshot: V1Secret = {
-    metadata: {
-      name: snapshotName(name, version),
-      namespace,
-      labels: {
-        [LABELS.managedBy]: MANAGED_BY_VALUE,
-        [LABELS.kind]: 'history',
-        [LABELS.historyOf]: name,
-      },
-      annotations: {
-        [ANNOTATIONS.historyOf]: name,
-        [ANNOTATIONS.version]: String(version),
-        [ANNOTATIONS.snapshotAt]: now,
-        [ANNOTATIONS.snapshotBy]: user.email,
-        [ANNOTATIONS.description]: liveAnn[ANNOTATIONS.description] ?? '',
-        [ANNOTATIONS.allowedGroups]: liveAnn[ANNOTATIONS.allowedGroups] ?? '',
-        [ANNOTATIONS.allowedUsers]: liveAnn[ANNOTATIONS.allowedUsers] ?? '',
-      },
-    },
-    type: live.type ?? 'Opaque',
-    data: live.data ?? {},
-  };
-
-  try {
-    await core.createNamespacedSecret({ namespace, body: snapshot }, requestOptions(user));
-  } catch (err: unknown) {
-    // Snapshot already exists (retry path) — not fatal.
-    if (toK8sError(err).status === 409) return;
-    throw err;
-  }
-  await pruneSnapshots(namespace, name, user);
-}
-
-async function pruneSnapshots(namespace: string, name: string, user: SessionUser): Promise<void> {
-  if (config.historyLimit <= 0) return;
-  const versions = await listVersions(namespace, name, user);
-  const excess = versions.slice(config.historyLimit);
-  if (excess.length === 0) return;
-  const core = getCoreApi();
-  await Promise.allSettled(
-    excess.map((v) => core.deleteNamespacedSecret({ namespace, name: v.snapshotName }, requestOptions(user))),
-  );
-}
-
-export async function listVersions(namespace: string, name: string, user: SessionUser): Promise<SecretVersion[]> {
-  const core = getCoreApi();
-  const res = await core.listNamespacedSecret(
-    { namespace, labelSelector: `${LABELS.historyOf}=${name},${LABELS.kind}=history` },
-    requestOptions(user),
-  );
-  const items = (res.items ?? []).filter((s) => !isHistorySnapshot(s) || true);
-  return items
-    .map((s) => {
-      const ann = s.metadata?.annotations ?? {};
-      return {
-        version: Number.parseInt(ann[ANNOTATIONS.version] ?? '0', 10) || 0,
-        snapshotName: s.metadata?.name ?? '',
-        snapshotAt: ann[ANNOTATIONS.snapshotAt],
-        snapshotBy: ann[ANNOTATIONS.snapshotBy],
-        keys: Object.keys(s.data ?? {}).sort(),
-        data: decodeData(s),
-      } satisfies SecretVersion;
-    })
-    .sort((a, b) => b.version - a.version);
-}
-
-/** Build the patched live object for create/update/restore. */
-export function buildLiveSecret(args: {
+interface LiveSecretArgs {
   live?: V1Secret;
   name: string;
   namespace: string;
   type?: string;
-  data: Record<string, string>;
   description?: string;
   allowedGroups?: string[];
   allowedUsers?: string[];
   user: SessionUser;
-}): V1Secret {
-  const { live, name, namespace, type, data, description, allowedGroups, allowedUsers, user } = args;
-  const version = live ? nextVersion(live) : 1;
+}
+
+export function assertSecretMutationSupported(type: string): void {
+  const reason = unsupportedSecretTypeReason(type);
+  if (reason) throw new HttpError(422, reason);
+}
+
+/** Plaintext create/update only. Omitting data on update preserves the raw map. */
+export function buildLiveSecret(args: LiveSecretArgs & { data?: Record<string, string> }): V1Secret {
+  assertSecretMutationSupported(args.live?.type ?? args.type ?? 'Opaque');
+  if (args.live && args.data !== undefined && binaryKeys(args.live).length > 0) {
+    throw new HttpError(422, BINARY_EDIT_GUIDANCE);
+  }
+  if (args.data !== undefined) assertSizeOk(args.data);
+  const encodedData = args.data !== undefined ? encodeData(args.data) : args.live?.data;
+  return buildEncodedLiveSecret(args, encodedData);
+}
+
+/** Restore takes a native snapshot, never plaintext or a decoded DTO. */
+export function buildRawRestoreSecret(
+  args: Omit<LiveSecretArgs, 'live' | 'type'> & {
+    live: V1Secret;
+    snapshot: V1Secret;
+  },
+): V1Secret {
+  return buildEncodedLiveSecret(args, args.snapshot.data);
+}
+
+function sameDataBytes(a: V1Secret['data'], b: V1Secret['data']): boolean {
+  const left = a ?? {};
+  const right = b ?? {};
+  return (
+    Object.keys(left).length === Object.keys(right).length &&
+    Object.entries(left).every(
+      ([key, value]) =>
+        Object.hasOwn(right, key) && Buffer.from(value, 'base64').equals(Buffer.from(right[key], 'base64')),
+    )
+  );
+}
+
+/** All validation happens while building, before callers persist a snapshot. */
+function buildEncodedLiveSecret(args: LiveSecretArgs, encodedData: V1Secret['data']): V1Secret {
+  const { live, name, namespace, type, description, allowedGroups, allowedUsers, user } = args;
+  // Keep the invariant for callers that bypass route schemas, including raw restore.
+  // Undefined preserves native annotations; [] intentionally encodes an empty rule.
+  const groupAnnotation = allowedGroups === undefined ? undefined : annotationAclSchema.parse(allowedGroups).join(', ');
+  const userAnnotation = allowedUsers === undefined ? undefined : annotationAclSchema.parse(allowedUsers).join(', ');
+  const effectiveType = live?.type ?? type ?? 'Opaque';
+  assertSecretMutationSupported(effectiveType);
+  if (live?.immutable && !sameDataBytes(live.data, encodedData)) {
+    throw new HttpError(422, IMMUTABLE_EDIT_GUIDANCE);
+  }
+  for (const key of Object.keys(encodedData ?? {})) {
+    const error = secretKeyError(key);
+    if (error) throw new HttpError(400, error);
+  }
+  const bytes = Object.fromEntries(
+    Object.entries(encodedData ?? {}).map(([key, value]) => [key, Buffer.from(value, 'base64')]),
+  );
+  const typeError = secretTypeDataError(effectiveType, bytes);
+  if (typeError) throw new HttpError(422, typeError);
+  // Raw snapshots can hold valid native data larger than our conservative text
+  // form estimate. Apply Kubernetes' decoded-data bound without UTF-8 conversion.
+  if (Object.values(bytes).reduce((size, value) => size + value.length, 0) > K8S_SECRET_SIZE_LIMIT) {
+    throw new HttpError(413, 'Secret is too large (maximum 1 MB)');
+  }
+  const version = live ? nextSecretVersion(live) : 1;
   const prevAnn = live?.metadata?.annotations ?? {};
   return {
     metadata: {
+      // A replacement must retain UID, ownerReferences, finalizers, timestamps,
+      // and other native lifecycle metadata from the live object, not history.
+      ...live?.metadata,
       name,
       namespace,
-      ...(live?.metadata?.resourceVersion ? { resourceVersion: live.metadata.resourceVersion } : {}),
       // Stamp managed-by as a label too (kubectl -l parity); preserve any
       // existing labels since replaceNamespacedSecret overwrites the object.
       labels: {
@@ -227,125 +264,12 @@ export function buildLiveSecret(args: {
         [ANNOTATIONS.version]: String(version),
         [ANNOTATIONS.lastModifiedBy]: user.email,
         [ANNOTATIONS.description]: description ?? prevAnn[ANNOTATIONS.description] ?? '',
-        [ANNOTATIONS.allowedGroups]:
-          allowedGroups !== undefined ? allowedGroups.join(', ') : (prevAnn[ANNOTATIONS.allowedGroups] ?? ''),
-        [ANNOTATIONS.allowedUsers]:
-          allowedUsers !== undefined ? allowedUsers.join(', ') : (prevAnn[ANNOTATIONS.allowedUsers] ?? ''),
+        [ANNOTATIONS.allowedGroups]: groupAnnotation ?? prevAnn[ANNOTATIONS.allowedGroups] ?? '',
+        [ANNOTATIONS.allowedUsers]: userAnnotation ?? prevAnn[ANNOTATIONS.allowedUsers] ?? '',
       },
     },
-    type: type ?? live?.type ?? 'Opaque',
-    data: encodeData(data),
+    ...(live?.immutable !== undefined ? { immutable: live.immutable } : {}),
+    type: effectiveType,
+    data: live?.immutable ? live.data : encodedData === undefined ? undefined : { ...encodedData },
   };
-}
-
-// ---------------------------------------------------------------------------
-// Consumer restart: env-var consumers need a rollout; volume mounts sync alone
-// ---------------------------------------------------------------------------
-
-export interface RestartResult {
-  deployments: string[];
-  statefulSets: string[];
-  daemonSets: string[];
-  note: string;
-}
-
-function podTemplateUsesSecret(template: unknown, secretName: string): boolean {
-  // Walk the pod spec JSON for any reference to the secret name.
-  try {
-    const haystack = JSON.stringify(template ?? {});
-    // Match `"secretName":"<name>"` and `"name":"<name>"` inside secret refs.
-    return (
-      haystack.includes(`"secretName":"${secretName}"`) || haystack.includes(`"secretKeyRef":{"key":`) // conservative: key refs validated below
-    );
-  } catch {
-    return false;
-  }
-}
-
-function templateReferencesSecret(template: unknown, secretName: string): boolean {
-  if (!template || typeof template !== 'object') return false;
-  const spec = (template as { spec?: Record<string, unknown> })?.spec;
-  if (!spec || typeof spec !== 'object') return false;
-
-  const containers: unknown[] = [
-    ...((spec.containers as unknown[]) ?? []),
-    ...((spec.initContainers as unknown[]) ?? []),
-    ...((spec.ephemeralContainers as unknown[]) ?? []),
-  ];
-  for (const c of containers) {
-    if (!c || typeof c !== 'object') continue;
-    const rec = c as Record<string, unknown>;
-    for (const from of (rec.envFrom as Array<Record<string, unknown>> | undefined) ?? []) {
-      if (from?.secretRef && (from.secretRef as Record<string, unknown>).name === secretName) return true;
-    }
-    for (const e of (rec.env as Array<Record<string, unknown>> | undefined) ?? []) {
-      const ref = (e?.valueFrom as Record<string, unknown> | undefined)?.secretKeyRef as
-        | Record<string, unknown>
-        | undefined;
-      if (ref?.name === secretName) return true;
-    }
-  }
-  for (const v of (spec.volumes as Array<Record<string, unknown>> | undefined) ?? []) {
-    if ((v?.secret as Record<string, unknown> | undefined)?.secretName === secretName) return true;
-  }
-  // Fallback string scan for projected sources etc.
-  return podTemplateUsesSecret(spec, secretName) && JSON.stringify(spec).includes(secretName);
-}
-
-export async function restartConsumers(
-  namespace: string,
-  secretName: string,
-  user: SessionUser,
-): Promise<RestartResult> {
-  const apps = getAppsApi();
-  const now = new Date().toISOString();
-  const patch = {
-    metadata: {},
-    spec: { template: { metadata: { annotations: { 'krypton.io/restarted-at': now } } } },
-  };
-  const opts = patchOptions(user);
-
-  const result: RestartResult = {
-    deployments: [],
-    statefulSets: [],
-    daemonSets: [],
-    note: 'Some apps pick up secret changes automatically, others need a restart to see the new values.',
-  };
-
-  const [deps, stss, dss] = await Promise.all([
-    apps.listNamespacedDeployment({ namespace }),
-    apps.listNamespacedStatefulSet({ namespace }),
-    apps.listNamespacedDaemonSet({ namespace }),
-  ]);
-
-  const targets: Array<{ kind: 'deploy' | 'sts' | 'ds'; name: string }> = [];
-  for (const d of deps.items ?? []) {
-    if (templateReferencesSecret(d.spec?.template, secretName) && d.metadata?.name)
-      targets.push({ kind: 'deploy', name: d.metadata.name });
-  }
-  for (const s of stss.items ?? []) {
-    if (templateReferencesSecret(s.spec?.template, secretName) && s.metadata?.name)
-      targets.push({ kind: 'sts', name: s.metadata.name });
-  }
-  for (const d of dss.items ?? []) {
-    if (templateReferencesSecret(d.spec?.template, secretName) && d.metadata?.name)
-      targets.push({ kind: 'ds', name: d.metadata.name });
-  }
-
-  await Promise.allSettled(
-    targets.map((t) => {
-      if (t.kind === 'deploy') {
-        result.deployments.push(t.name);
-        return apps.patchNamespacedDeployment({ namespace, name: t.name, body: patch }, opts);
-      }
-      if (t.kind === 'sts') {
-        result.statefulSets.push(t.name);
-        return apps.patchNamespacedStatefulSet({ namespace, name: t.name, body: patch }, opts);
-      }
-      result.daemonSets.push(t.name);
-      return apps.patchNamespacedDaemonSet({ namespace, name: t.name, body: patch }, opts);
-    }),
-  );
-
-  return result;
 }

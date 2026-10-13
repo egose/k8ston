@@ -1,25 +1,20 @@
 import { connection, NextResponse } from 'next/server';
 import { config } from '@/lib/config';
-import {
-  createSessionToken,
-  describeAuthError,
-  DEV_USER,
-  getAuthorizationUrl,
-  isOidcConfigured,
-  setSessionCookie,
-} from '@/lib/auth';
+import { describeAuthError, getAuthorizationUrl, isOidcConfigured } from '@/lib/auth';
+import { jsonResponse, noStore } from '@/lib/http';
 
-/** Start SSO login — or short-circuit to a dev session when AUTH_DISABLED. */
+/** Start SSO login — or short-circuit to the local bypass when AUTH_DISABLED. */
 export async function GET() {
   // OIDC discovery must never run at build time (see /api/config): env at
   // build time (e.g. sandbox http issuer) differs from deploy time.
   await connection();
   if (config.authDisabled) {
-    await setSessionCookie(await createSessionToken(DEV_USER));
-    return NextResponse.redirect(new URL('/', config.appUrl));
+    // getSessionUser supplies the mock user at request time; no signing key
+    // or reusable development session token is needed for explicit bypass.
+    return noStore(NextResponse.redirect(new URL('/', config.appUrl)));
   }
   if (!isOidcConfigured()) {
-    return NextResponse.json(
+    return jsonResponse(
       {
         error:
           'Sign-in is not configured. Contact your administrator. (Operator: set OIDC_ISSUER/OIDC_CLIENT_ID, or AUTH_DISABLED=true for local dev.)',
@@ -29,11 +24,9 @@ export async function GET() {
   }
   try {
     const url = await getAuthorizationUrl();
-    return NextResponse.redirect(url);
+    return noStore(NextResponse.redirect(url));
   } catch (err) {
-    // Discovery/network failure talking to the IdP: log the actionable
-    // detail (cause code, hostname, hint) and answer 502 instead of the
-    // default Next.js 500 stack trace.
+    // Only classified diagnostics, never upstream payloads or headers.
     const details = describeAuthError(err);
     console.error(
       JSON.stringify({
@@ -41,18 +34,12 @@ export async function GET() {
         app: 'krypton',
         action: 'auth.login',
         result: 'error',
-        detail: details.message,
-        issuer: config.oidc.issuer,
-        ...(details.code ? { code: details.code } : {}),
-        ...(details.hostname ? { hostname: details.hostname } : {}),
-        ...(details.hint ? { hint: details.hint } : {}),
+        ...details,
       }),
     );
-    return NextResponse.json(
+    return jsonResponse(
       {
-        error:
-          'Sign-in is temporarily unavailable: the app cannot reach the identity provider. Please try again later or contact your administrator.',
-        issuer: config.oidc.issuer,
+        error: 'Sign-in is temporarily unavailable. Please try again later or contact your administrator.',
         ...(details.code ? { code: details.code } : {}),
         ...(details.hint ? { hint: details.hint } : {}),
       },

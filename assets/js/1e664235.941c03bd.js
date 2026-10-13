@@ -23,7 +23,7 @@ var lib = __webpack_require__(3191);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+theme-classic@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10.0_@sw_d80ed93973d8fdb1b9e1067267ab632b/node_modules/@docusaurus/theme-classic/lib/theme/CodeBlock/index.js + 27 modules
 var CodeBlock = __webpack_require__(4401);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/raw-loader@4.0.2_webpack@5.111.1_@swc+core@1.16.18_@swc+html@1.16.18_clean-css@5.3.3_cs_0a2048681882c260752bdc7655a466eb/node_modules/raw-loader/dist/cjs.js!./.samples/values-helm.yaml
-/* export default */ const values_helm = ("# Minimal Helm values for Krypton (chart: helm/main, subchart: helm/krypton).\n# Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes\n# Secret referenced by envSecretName — never in values files.\nglobal:\n  env: {}\n\nkrypton:\n  enabled: true\n  replicaCount: 2\n  # kubectl create secret generic krypton-oidc -n krypton \\\n  #   --from-literal=OIDC_CLIENT_SECRET='...' \\\n  #   --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n  envSecretName: krypton-oidc # pragma: allowlist secret\n  env:\n    KRYPTON_SCOPE: namespace\n    KRYPTON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on\n    KRYPTON_ADMIN_GROUPS: krypton-admin\n    OIDC_ISSUER: https://keycloak.example.com/realms/company\n    OIDC_CLIENT_ID: krypton\n    OIDC_SCOPES: openid profile email groups\n    NEXT_PUBLIC_APP_URL: https://krypton.example.com\n  # Must match KRYPTON_SCOPE above: namespace (default) or cluster.\n  rbac:\n    create: true\n    scope: namespace\n  # \"Restart apps\" (API + UI + apps RBAC rule). Default false.\n  restartEnabled: false\n  # Namespace fallback rules (krypton-access / access.json).\n  accessConfig:\n    enabled: false\n\nnetworkPolicy:\n  enabled: true\n  # MUST be true on OpenShift (routes arrive from openshift-ingress).\n  allowOpenShiftIngress: false\n");
+/* export default */ const values_helm = ("# Minimal Helm values for Krypton (chart: helm/main, subchart: helm/krypton).\n# Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes\n# Secret referenced by envSecretName — never in values files.\nglobal:\n  env: {}\n\nkrypton:\n  enabled: true\n  replicaCount: 2\n  # kubectl create secret generic krypton-oidc -n krypton \\\n  #   --from-literal=OIDC_CLIENT_SECRET='...' \\\n  #   --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n  envSecretName: krypton-oidc\n  env:\n    KRYPTON_SCOPE: namespace\n    KRYPTON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on\n    KRYPTON_ADMIN_GROUPS: krypton-admin\n    OIDC_ISSUER: https://keycloak.example.com/realms/company\n    OIDC_CLIENT_ID: krypton\n    OIDC_SCOPES: openid profile email groups\n    NEXT_PUBLIC_APP_URL: https://krypton.example.com\n  # Derives the default KRYPTON_SCOPE (explicit entries must match):\n  # namespace (default) or cluster. Curated extras add a derived allowlist.\n  rbac:\n    create: true\n    scope: namespace\n  # \"Restart apps\" (API + UI + apps RBAC rule). Default false.\n  restartEnabled: false\n  # Namespace fallback rules (krypton-access / access.json).\n  accessConfig:\n    enabled: false\n\nnetworkPolicy:\n  enabled: true\n  # MUST be true on OpenShift (routes arrive from openshift-ingress).\n  allowOpenShiftIngress: false\n");
 ;// CONCATENATED MODULE: ./docs/guides/deploy-helm.mdx
 
 
@@ -169,17 +169,19 @@ function _createMdxContent(props) {
               children: "namespace"
             }), " (default) or ", (0,jsx_runtime.jsx)(_components.code, {
               children: "cluster"
-            }), " — must match ", (0,jsx_runtime.jsx)(_components.code, {
+            }), " — the chart derives ", (0,jsx_runtime.jsx)(_components.code, {
               children: "KRYPTON_SCOPE"
-            })]
+            }), " from it (explicit entries must match)"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
               children: "krypton.rbac.extraNamespaces"
             })
-          }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "Extra namespaces to bind the namespaced Role into (namespace scope)"
+          }), (0,jsx_runtime.jsxs)(_components.td, {
+            children: ["Curated extra namespaces (namespace scope): Roles plus a derived ", (0,jsx_runtime.jsx)(_components.code, {
+              children: "KRYPTON_NAMESPACES"
+            }), " allowlist, no ClusterRole"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -187,7 +189,7 @@ function _createMdxContent(props) {
               children: "krypton.restartEnabled"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
-            children: ["Wires ", (0,jsx_runtime.jsx)(_components.code, {
+            children: ["Single effective value wiring ", (0,jsx_runtime.jsx)(_components.code, {
               children: "KRYPTON_RESTART_ENABLED"
             }), " ", (0,jsx_runtime.jsx)(_components.strong, {
               children: "and"
@@ -201,11 +203,13 @@ function _createMdxContent(props) {
               children: "krypton.accessConfig.enabled"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
-            children: ["Renders the ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton-access"
-            }), " / ", (0,jsx_runtime.jsx)(_components.code, {
+            children: ["Renders the access ConfigMap ", (0,jsx_runtime.jsx)(_components.strong, {
+              children: "and"
+            }), " derives ", (0,jsx_runtime.jsx)(_components.code, {
+              children: "KRYPTON_ACCESS_CONFIGMAP"
+            }), " from its name (", (0,jsx_runtime.jsx)(_components.code, {
               children: "access.json"
-            }), " ConfigMap"]
+            }), " key)"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -261,31 +265,69 @@ function _createMdxContent(props) {
       id: "rbac-scope",
       children: "RBAC scope"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: [(0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.rbac.scope"
-      }), " renders either a namespace ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "Role"
-      }), " or a ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "ClusterRole"
-      }), " for the\napp ServiceAccount. It must match ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_SCOPE"
-      }), " in ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["One effective configuration (", (0,jsx_runtime.jsx)(_components.code, {
+        children: "krypton.effectiveConfig"
+      }), " in the subchart) derives\nthe chart-managed runtime env from the RBAC/feature values, so the rendered\nDeployment env, Role/ClusterRole scope, subjects, and ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "apps"
+      }), " permissions always\nagree. Local ", (0,jsx_runtime.jsx)(_components.code, {
         children: "krypton.env"
-      }), ":"]
+      }), " wins over ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "global.env"
+      }), " per key. Omit the managed keys\n(", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_SCOPE"
+      }), ", ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_NAMESPACES"
+      }), ", ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_RESTART_ENABLED"
+      }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_ACCESS_CONFIGMAP"
+      }), ") to use the derived defaults; an explicit entry must\nequal the derived effective value, otherwise rendering fails with actionable\nguidance instead of deploying disagreeing runtime/RBAC behavior."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "namespace"
-        }), ": own namespace only (least privilege, the default). Repeat coverage\nwith ", (0,jsx_runtime.jsx)(_components.code, {
+        }), ": own namespace only (least privilege, the default). The chart\nderives ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "KRYPTON_SCOPE=namespace"
+        }), " and renders a Role + RoleBinding."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.code, {
+          children: "namespace"
+        }), " + ", (0,jsx_runtime.jsx)(_components.code, {
           children: "krypton.rbac.extraNamespaces: [team-a]"
-        }), " (a Role + RoleBinding pair per\nentry, subject stays this release's ServiceAccount) instead of going cluster-wide."]
+        }), ": curated\nmulti-namespace access. The chart renders a Role + RoleBinding pair per entry\n(subject stays this release's ServiceAccount) and derives\n", (0,jsx_runtime.jsx)(_components.code, {
+          children: "KRYPTON_SCOPE=cluster"
+        }), " with the bounded allowlist\n", (0,jsx_runtime.jsx)(_components.code, {
+          children: "KRYPTON_NAMESPACES=<release-namespace>,team-a"
+        }), " — served by these namespaced\nRoles only, no ClusterRole is rendered. Previously the extra Roles were\nunusable because the namespace runtime scope only exposed the pod namespace."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "cluster"
-        }), ": centralized dashboard; narrow with\n", (0,jsx_runtime.jsx)(_components.code, {
+        }), ": centralized dashboard (", (0,jsx_runtime.jsx)(_components.code, {
+          children: "KRYPTON_SCOPE=cluster"
+        }), "); narrow with\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "KRYPTON_NAMESPACES=\"team-a,team-b\""
         }), " in ", (0,jsx_runtime.jsx)(_components.code, {
           children: "krypton.env"
+        }), ". ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "extraNamespaces"
+        }), " is\nrejected with cluster scope."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.code, {
+          children: "rbac.create: false"
+        }), ": RBAC is managed out-of-band. Set ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "KRYPTON_SCOPE"
+        }), " /\n", (0,jsx_runtime.jsx)(_components.code, {
+          children: "KRYPTON_NAMESPACES"
+        }), " in ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "krypton.env"
+        }), " yourself to match your external grants\n(", (0,jsx_runtime.jsx)(_components.code, {
+          children: "rbac.scope"
+        }), "/", (0,jsx_runtime.jsx)(_components.code, {
+          children: "extraNamespaces"
+        }), " are then ignored), and grant the ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "apps"
+        }), "\npermissions yourself to match ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "krypton.restartEnabled"
         }), "."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
@@ -293,16 +335,36 @@ function _createMdxContent(props) {
       children: "Restart + access config in one place"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Unlike the raw manifests (where the flag and the RBAC rule are separate manual\nsteps), the chart wires them together: ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.restartEnabled: true"
-      }), " sets the env\nflag ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "krypton.restartEnabled"
+      }), " is the single\neffective value driving ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "both"
+      }), " the ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_RESTART_ENABLED"
+      }), " runtime flag\n", (0,jsx_runtime.jsx)(_components.strong, {
         children: "and"
-      }), " renders the ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " the ", (0,jsx_runtime.jsx)(_components.code, {
         children: "apps"
-      }), " rule. Similarly, ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " RBAC rule (an explicit env entry must parse to the same\nvalue — runtime truthy strings are ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "1/true/yes/on"
+      }), " — or rendering fails).\nSimilarly, ", (0,jsx_runtime.jsx)(_components.code, {
         children: "krypton.accessConfig.enabled"
-      }), "\nrenders the namespace fallback ConfigMap instead of applying\n", (0,jsx_runtime.jsx)(_components.code, {
+      }), " renders the namespace fallback\nConfigMap instead of applying ", (0,jsx_runtime.jsx)(_components.code, {
         children: "app/k8s/configmap-access.yaml"
-      }), " by hand."]
+      }), " by hand, ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "and"
+      }), "\nderives ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_ACCESS_CONFIGMAP"
+      }), " from ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "accessConfig.name"
+      }), " so the runtime\npolicy reader finds it. The key must stay ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "access.json"
+      }), " (hardcoded by the\nreader); with ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "accessConfig.enabled: false"
+      }), ", point ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_ACCESS_CONFIGMAP"
+      }), "\nat an externally managed ConfigMap. ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "extraEnv"
+      }), " entries must not set managed\nkeys (they render last and would shadow the derived values)."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "networkpolicy-notes",
       children: "NetworkPolicy notes"
@@ -437,11 +499,13 @@ function _createMdxContent(props) {
         children: "Helm"
       }), " workflow lints both charts and templates them on every ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm/**"
-      }), "\nchange, including a full-flag matrix for the subchart (cluster scope,\nrestart, ingress + route + HTTPRoute, access config, autoscaling, PDB,\nexternal ServiceAccount) and both umbrella example values files. Run the same\nlocally with ", (0,jsx_runtime.jsx)(_components.code, {
+      }), "\nchange, including a full-flag matrix for the subchart (cluster scope,\nrestart, ingress + route + HTTPRoute, access config, autoscaling, PDB,\nexternal ServiceAccount) and both umbrella example values files. It also runs\nthe rendered-object regressions in ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "helm/krypton/tests/render-regressions.sh"
+      }), "\n(default, cluster, curated namespaces, local/global conflicts, false\noverrides, external RBAC, custom access config, and every contradiction\nerror). Run the same locally with ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm lint"
       }), " / ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm template"
-      }), " before opening a PR."]
+      }), " and the\nregression script before opening a PR."]
     })]
   });
 }

@@ -40,6 +40,10 @@ const toc = [{
   "id": "how-login-works",
   "level": 2
 }, {
+  "value": "Signing key and upgrade behavior",
+  "id": "signing-key-and-upgrade-behavior",
+  "level": 2
+}, {
   "value": "Claim mapping",
   "id": "claim-mapping",
   "level": 2
@@ -100,7 +104,7 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "GET /api/auth/callback"
-        }), " exchanges the code, reads claims, and mints a\nstateless session JWT in an ", (0,jsx_runtime.jsx)(_components.code, {
+        }), " requires all three transaction cookies, consumes\nthem even on failure, and validates state, nonce, and PKCE during the code\nexchange. It reads ID-token claims and mints a\nstateless session JWT in an ", (0,jsx_runtime.jsx)(_components.code, {
           children: "HttpOnly"
         }), ", ", (0,jsx_runtime.jsx)(_components.code, {
           children: "Secure"
@@ -135,6 +139,37 @@ function _createMdxContent(props) {
         href: "/api/auth/",
         children: "Auth API"
       }), " for exact shapes."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["An incomplete or failed transaction requires a new login. The IdP enforces\nsingle-use authorization codes; Krypton keeps no server-side transaction store.\nWhen UserInfo is available, its ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "sub"
+      }), " must match the validated ID-token ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "sub"
+      }), "\nbefore any claims are merged. A subject mismatch rejects login. Providers with\nno UserInfo endpoint, or unavailable optional UserInfo, can still authenticate\nusing their ID-token claims alone."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
+      id: "signing-key-and-upgrade-behavior",
+      children: "Signing key and upgrade behavior"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["With auth enabled, ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "SESSION_SECRET"
+      }), " must be an explicit random key of at least\n32 characters (generate one with ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "openssl rand -hex 32"
+      }), "). Missing, empty, short,\nwhitespace-only, and the former public development fallback keys fail closed:\nlogin cannot create a session and cookies cannot authenticate. Validation errors\nname the setting, never its value. Use the same key on every replica."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["On upgrade, replace the old development fallback in copied examples or deployment\nconfiguration before enabling auth. Changing the key invalidates existing\nsessions; users sign in again. Key validation happens when auth is used, allowing\nbuilds without runtime secrets and explicit ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "AUTH_DISABLED=true"
+      }), " local bypass\nwithout a JWT."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Only HS256 session JWTs with issuer ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "krypton"
+      }), ", nonempty string ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "sub"
+      }), " and ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "email"
+      }), ",\nnumeric ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "iat"
+      }), "/", (0,jsx_runtime.jsx)(_components.code, {
+        children: "exp"
+      }), ", and an unexpired lifetime are accepted. Future-issued sessions\nand malformed name/group claims are rejected. Omitted names and groups keep the\nemail/empty-list defaults."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "claim-mapping",
       children: "Claim mapping"
@@ -218,6 +253,16 @@ function _createMdxContent(props) {
       }), " is the authorization\ninput for ", (0,jsx_runtime.jsx)(_components.code, {
         children: "allowed-groups"
       }), ", namespace rules, and admin groups."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Groups use the first nonempty string-array claim from the configured\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "OIDC_GROUPS_CLAIM"
+      }), " path, ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "groups"
+      }), ", ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "roles"
+      }), ", then nested ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "realm_access.roles"
+      }), "\n(Keycloak). Dotted configured paths are supported; empty or unusable candidates\nfall through to the next one. Non-string group entries are ignored when mapping\nprovider claims."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "issuer-rules",
       children: "Issuer rules"
@@ -237,7 +282,7 @@ function _createMdxContent(props) {
           children: "<NEXT_PUBLIC_APP_URL>/api/auth/callback"
         }), "\n(override with ", (0,jsx_runtime.jsx)(_components.code, {
           children: "OIDC_REDIRECT_URI"
-        }), "); register the same value at your IdP."]
+        }), "); register the same value at your IdP.\nBehind a TLS-terminating proxy, the code exchange uses that registered public\nURI rather than the internal request host, preserving the callback parameters.\nUse a redirect URI without its own query string or fragment."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: "OIDC configuration is cached per process — restart the app after Dex/IdP\nrestarts or issuer changes."
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
@@ -258,7 +303,9 @@ function _createMdxContent(props) {
           children: "AUTH_DISABLED=true"
         }), " returns a mock admin (", (0,jsx_runtime.jsx)(_components.code, {
           children: "dev@krypton.local"
-        }), ") for every\nrequest. Local development only — assert ", (0,jsx_runtime.jsx)(_components.code, {
+        }), ") for every\nrequest; login redirects to ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "/"
+        }), " without minting a session token or requiring\na signing key. Local development only — assert ", (0,jsx_runtime.jsx)(_components.code, {
           children: "authDisabled: false"
         }), " via\n", (0,jsx_runtime.jsx)(_components.a, {
           href: "/api/config/",

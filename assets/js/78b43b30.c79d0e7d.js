@@ -378,9 +378,7 @@ function _createMdxContent(props) {
           children: "Versioning"
         }), ": edit ", (0,jsx_runtime.jsx)(_components.code, {
           children: "database-credentials"
-        }), " twice → ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "<name>-v1/-v2"
-        }), " snapshots\nappear (", (0,jsx_runtime.jsx)(_components.code, {
+        }), " twice → UID-bound v1/v2 snapshots\nappear (", (0,jsx_runtime.jsx)(_components.code, {
           children: "kubectl get secret -n krypton-test -l krypton.io/kind=history"
         }), ");\nrestore v1 in the UI (restores snapshot first, so rollback is reversible)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
@@ -398,9 +396,9 @@ function _createMdxContent(props) {
           children: "database-credentials"
         }), ", hit ", (0,jsx_runtime.jsx)(_components.em, {
           children: "Restart apps"
-        }), ",\nthen ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kubectl rollout history deploy/api-server -n krypton-test"
-        }), " shows a new\nrevision with the fresh env value (the sandbox sets\n", (0,jsx_runtime.jsx)(_components.code, {
+        }), ",\nthen inspect ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "kubectl rollout status deploy/api-server -n krypton-test"
+        }), " and\nrollout history. The UI confirms the request only; verify application credential\nuptake separately without printing values (the sandbox sets\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "KRYPTON_RESTART_ENABLED=true"
         }), "; the default is ", (0,jsx_runtime.jsx)(_components.code, {
           children: "false"
@@ -467,9 +465,9 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Note: with ", (0,jsx_runtime.jsx)(_components.code, {
         children: "KRYPTON_SCOPE=cluster"
-      }), " but only the namespace Role applied, the\napp degrades gracefully — ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "/api/namespaces"
-      }), " falls back to the pod's own\nnamespace instead of failing, since the SA cannot list namespaces."]
+      }), " but only the namespace Role applied, the\napp requires an explicit ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_NAMESPACES=krypton"
+      }), " allowlist to avoid namespace\ndiscovery. Allowlist resolution makes no namespace-list calls. An empty allowlist\nrequires namespace-list RBAC and now returns an error if discovery fails instead\nof silently falling back to the pod namespace."]
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
       children: "Cheap static checks that need no cluster at all:"
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {

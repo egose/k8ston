@@ -217,7 +217,9 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The ClusterRole adds ", (0,jsx_runtime.jsx)(_components.code, {
         children: "namespaces"
-      }), " (get, list, watch) on top of the namespace\npermissions. If the ServiceAccount cannot list namespaces, the app degrades\ngracefully to the allowlist (or its own namespace) instead of failing."]
+      }), " (get, list, watch) on top of the namespace\npermissions. A configured ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_NAMESPACES"
+      }), " allowlist resolves/checks locally\nwithout namespace-list calls, so curated deployments can instead grant resource\npermissions in just those namespaces. Without an allowlist, failed/incomplete\nnamespace discovery returns an error; it no longer falls back to the pod namespace."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "enabling-restart-apps",
       children: "Enabling \"Restart apps\""

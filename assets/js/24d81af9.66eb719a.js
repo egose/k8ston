@@ -122,9 +122,10 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "History"
-        }), ": K8s overwrites secrets in place, so Krypton snapshots the previous\nstate into a separate Secret (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "<name>-vN"
-        }), ") before every write — rollbacks are\none click, and restores are reversible because the current state is snapshotted first."]
+        }), ": K8s overwrites secrets in place, so Krypton snapshots the previous\nstate into an immutable, UID/resourceVersion-bound Secret before updates and\nrestores. Rollbacks preserve raw bytes and current access rules within the\n", (0,jsx_runtime.jsx)(_components.a, {
+          href: "/guides/versioning-history/",
+          children: "retained history"
+        }), "."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "what-krypton-is-not",
@@ -206,10 +207,8 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: "Consumer rollout"
-          }), (0,jsx_runtime.jsxs)(_components.td, {
-            children: ["Optional ", (0,jsx_runtime.jsx)(_components.em, {
-              children: "Restart apps"
-            }), " for env-var consumers (opt-in, default off)"]
+          }), (0,jsx_runtime.jsx)(_components.td, {
+            children: "Opt-in bounded rollout requests for explicit Secret consumers; reports partial failures"
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {

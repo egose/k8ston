@@ -40,6 +40,18 @@ const toc = [{
   "id": "reference",
   "level": 2
 }, {
+  "value": "Namespace discovery and API budgets",
+  "id": "namespace-discovery-and-api-budgets",
+  "level": 2
+}, {
+  "value": "History retention and upgrade",
+  "id": "history-retention-and-upgrade",
+  "level": 2
+}, {
+  "value": "Session key requirement",
+  "id": "session-key-requirement",
+  "level": 2
+}, {
   "value": "Flags that deserve a second thought",
   "id": "flags-that-deserve-a-second-thought",
   "level": 2
@@ -52,7 +64,6 @@ function _createMdxContent(props) {
   const _components = {
     a: "a",
     code: "code",
-    em: "em",
     h1: "h1",
     h2: "h2",
     header: "header",
@@ -150,7 +161,7 @@ function _createMdxContent(props) {
               children: "20"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "Snapshots kept per secret"
+            children: "Eligible snapshots per live UID, integer 1–100"
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -262,9 +273,9 @@ function _createMdxContent(props) {
               children: "SESSION_SECRET"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "—"
+            children: "— (required with auth)"
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "≥32-char HMAC key for session JWTs"
+            children: "≥32-char random HMAC key; no development fallback"
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -357,6 +368,52 @@ function _createMdxContent(props) {
         })]
       })]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
+      id: "namespace-discovery-and-api-budgets",
+      children: "Namespace discovery and API budgets"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["In cluster scope, nonempty ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_NAMESPACES"
+      }), " is resolved and checked locally:\nnames are sorted/deduplicated and require no Kubernetes namespace-list requests.\nActual operations still enforce existence and resource RBAC. With an empty allowlist,\nthe app requires a complete paginated namespace inventory; failed discovery now\nreturns an error instead of silently falling back to its own namespace."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Fixed ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/api/overview/#request-and-collection-budgets",
+        children: "API budgets"
+      }), " cover the 16 MiB\nstreaming JSON envelope, 256-entry/256-byte ACL arrays, and per-inventory page,\nobject, and byte limits. They are application constants, not new environment\nsettings. Data-size validation and deployment ingress request limits also apply."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
+      id: "history-retention-and-upgrade",
+      children: "History retention and upgrade"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: [(0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_HISTORY_LIMIT"
+      }), " accepts decimal integers ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "1–100"
+      }), "; only an unset value\ndefaults to ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "20"
+      }), ". Empty, zero, negative, fractional, malformed (including\nwhitespace/leading zeros), and out-of-range values return 503 before history\nwrites and from ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "/api/config"
+      }), ". Zero does not disable pruning or select unlimited\nretention. Pruning failures are reported and block live replacement; a failed\noperation can leave a snapshot and a temporary retention backlog."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["This bound applies to eligible snapshots of one live UID. Legacy/unbound objects\nand retained predecessor lifetimes need separate operator recovery/cleanup. Upgrade\nwriter replicas together and keep prefix/retention settings consistent; no automatic\nname-based migration exists. See ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/versioning-history/",
+        children: "Versioning & History"
+      }), "."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
+      id: "session-key-requirement",
+      children: "Session key requirement"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Authentication fails closed if ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "SESSION_SECRET"
+      }), " is missing, empty, shorter than\n32 characters after trimming surrounding whitespace, or equal to the former\npublic development fallback. Supply a fresh random value before enabling auth\n(for example, ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "openssl rand -hex 32"
+      }), "); use the same key on all replicas. The key\nitself is not trimmed or logged."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Upgrading installations that used the old fallback requires replacing that key.\nKey changes invalidate existing sessions. Builds need no runtime signing key,\nand explicit ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "AUTH_DISABLED=true"
+      }), " still works without one. See\n", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/authentication/#signing-key-and-upgrade-behavior",
+        children: "Authentication"
+      }), " for\nsession validation and OIDC transaction behavior."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "flags-that-deserve-a-second-thought",
       children: "Flags that deserve a second thought"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
@@ -385,15 +442,12 @@ function _createMdxContent(props) {
           })
         }), " — default ", (0,jsx_runtime.jsx)(_components.code, {
           children: "false"
-        }), " (hybrid mode: the app\nServiceAccount executes, Krypton enforces authz itself). Set ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "true"
-        }), " only when\nthe API server trusts the same OIDC issuer, so ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "Impersonate-User"
-        }), "/", (0,jsx_runtime.jsx)(_components.code, {
-          children: "Group"
-        }), "\nheaders evaluate the ", (0,jsx_runtime.jsx)(_components.em, {
-          children: "human's"
-        }), " RBAC instead."]
+        }), " (hybrid mode: the app\nServiceAccount executes, Krypton enforces authz itself). When enabled, session\nemail/groups must match cluster RBAC and the SA needs permission to impersonate\nthe user and every group. All human operations, including workload lists, send\nthe complete identity; access-policy reads remain service-scoped.\n", (0,jsx_runtime.jsx)(_components.code, {
+          children: "AUTH_DISABLED=true"
+        }), " explicitly bypasses human impersonation. See\n", (0,jsx_runtime.jsx)(_components.a, {
+          href: "/guides/authorization/#optional-k8s-native-impersonation",
+          children: "identity transport and upgrade requirements"
+        }), "."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: (0,jsx_runtime.jsx)(_components.code, {

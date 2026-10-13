@@ -62,6 +62,7 @@ function _createMdxContent(props) {
     li: "li",
     p: "p",
     pre: "pre",
+    strong: "strong",
     ul: "ul",
     ...(0,lib/* .useMDXComponents */.R)(),
     ...props.components
@@ -76,7 +77,9 @@ function _createMdxContent(props) {
       children: ["Generic OIDC (discovery + PKCE) with stateless HS256 session JWTs. See\n", (0,jsx_runtime.jsx)(_components.a, {
         href: "/guides/authentication/",
         children: "Authentication"
-      }), " for the design."]
+      }), " for the design.\nAll JSON responses/errors and redirects explicitly send ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "Cache-Control: no-store"
+      }), "."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "start-login",
       children: "Start login"
@@ -89,9 +92,9 @@ function _createMdxContent(props) {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["With ", (0,jsx_runtime.jsx)(_components.code, {
           children: "AUTH_DISABLED=true"
-        }), ", short-circuits to a dev session and redirects to ", (0,jsx_runtime.jsx)(_components.code, {
+        }), ", redirects to ", (0,jsx_runtime.jsx)(_components.code, {
           children: "/"
-        }), "."]
+        }), "; requests use the mock local user\nwithout minting a session JWT or requiring a signing key."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Without OIDC configured, answers ", (0,jsx_runtime.jsx)(_components.code, {
           children: "501"
@@ -103,9 +106,13 @@ function _createMdxContent(props) {
           children: "AUTH_DISABLED=true"
         }), " for local dev)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Otherwise redirects to the IdP authorization endpoint. When the IdP is\nunreachable, answers ", (0,jsx_runtime.jsx)(_components.code, {
+        children: ["Otherwise requires a valid ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "SESSION_SECRET"
+        }), " and redirects to the IdP\nauthorization endpoint. Invalid signing-key configuration or an unreachable\nIdP answers ", (0,jsx_runtime.jsx)(_components.code, {
           children: "502"
-        }), " with the issuer, cause code, and hint (logged\nserver-side with hostname detail)."]
+        }), " with fixed error text and any available ", (0,jsx_runtime.jsx)(_components.strong, {
+          children: "allowlisted"
+        }), " cause\ncode/fixed hint. Server logs classify configuration/network failures without raw\nmessages, hostnames, transport headers, token/claim values, or issuer URLs."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "oidc-callback",
@@ -133,16 +140,42 @@ function _createMdxContent(props) {
       }), ", 8h default), and redirects to ", (0,jsx_runtime.jsx)(_components.code, {
         children: "/"
       }), "."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
+      children: "All state, nonce, and PKCE cookies must be present and nonempty before any token\nexchange. Every callback attempt consumes them, including failures; start a new\nlogin to retry. State and nonce must match, the IdP checks the PKCE verifier, and\nan ID token with a subject is required. UserInfo supplements claims only when\nits subject matches that ID token; mismatch rejects login. Missing/unavailable\noptional UserInfo falls back to ID-token claims."
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["On failure (including IdP verdicts like ", (0,jsx_runtime.jsx)(_components.code, {
         children: "invalid_grant"
       }), " from a redirect-URI\nmismatch), redirects to ", (0,jsx_runtime.jsx)(_components.code, {
         children: "/login?auth=error"
-      }), " carrying the short ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " with an optional ", (0,jsx_runtime.jsx)(_components.code, {
         children: "idp_error"
-      }), "\ncode — the single-use code and ", (0,jsx_runtime.jsx)(_components.code, {
+      }), ".\nOnly known OAuth/OIDC codes (such as ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "invalid_grant"
+      }), ", ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "invalid_scope"
+      }), ", and\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "access_denied"
+      }), ") are retained; unknown, malformed, or oversized codes become\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "provider_error"
+      }), ". The code classifier accepts at most 64 characters and never\ncopies arbitrary provider codes into URLs or logs."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: [(0,jsx_runtime.jsx)(_components.strong, {
+        children: "Diagnostic upgrade:"
+      }), " raw ", (0,jsx_runtime.jsx)(_components.code, {
         children: "error_description"
-      }), " stay out of URLs and logs."]
+      }), ", code/state values, and upstream\nmessages/headers are omitted from failure redirects ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "and logs"
+      }), ". Descriptions are\nclassified as ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "descriptionCode: redirect_uri"
+      }), ", ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "provided"
+      }), ", or ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "omitted"
+      }), " (over 2 KiB).\nAt most eight error causes and 2 KiB per text diagnostic are examined. Logs retain\nallowlisted system/library codes, fixed operator hints, and a boolean\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "redirectBaseMatches"
+      }), " comparing request/configured redirect origins and paths.\nThis can be false behind a proxy; the exchange still normalizes to the configured\npublic redirect. Login 502 responses no longer include a raw ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "issuer"
+      }), " URL."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "current-user",
       children: "Current user"
@@ -161,7 +194,10 @@ function _createMdxContent(props) {
         children: "401 { \"user\": null }"
       }), " when unauthenticated — the one endpoint that\ndoes not use the ", (0,jsx_runtime.jsx)(_components.code, {
         children: "{ \"error\": … }"
-      }), " shape."]
+      }), " shape. Invalid signing-key configuration,\nexpired/forged sessions, unsupported JWT algorithms, and malformed required\nclaims are unauthenticated. See ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/authentication/#signing-key-and-upgrade-behavior",
+        children: "session validation"
+      }), "."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "logout",
       children: "Logout"

@@ -1,12 +1,12 @@
 "use strict";
-(self["webpackChunkwebsite"] = self["webpackChunkwebsite"] || []).push([["974"], {
-1116(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+(self["webpackChunkwebsite"] = self["webpackChunkwebsite"] || []).push([["236"], {
+6514(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  metadata: () => (/* reexport */ site_docs_api_restart_consumers_mdx_f0b_namespaceObject),
+  metadata: () => (/* reexport */ site_docs_api_config_mdx_c3b_namespaceObject),
   "default": () => (/* binding */ MDXContent),
   frontMatter: () => (/* binding */ frontMatter),
   contentTitle: () => (/* binding */ contentTitle),
@@ -14,20 +14,20 @@ __webpack_require__.d(__webpack_exports__, {
   assets: () => (/* binding */ assets)
 });
 
-;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-api-restart-consumers-mdx-f0b.json
-var site_docs_api_restart_consumers_mdx_f0b_namespaceObject = JSON.parse('{"id":"api/restart-consumers","title":"Restart Consumers API","description":"Restart workloads consuming a secret","source":"@site/docs/api/restart-consumers.mdx","sourceDirName":"api","slug":"/api/restart-consumers","permalink":"/api/restart-consumers","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":5,"frontMatter":{"sidebar_label":"Restart Consumers","sidebar_position":5},"sidebar":"api","previous":{"title":"Restore","permalink":"/api/restore"},"next":{"title":"Auth","permalink":"/api/auth"}}')
+;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-api-config-mdx-c3b.json
+var site_docs_api_config_mdx_c3b_namespaceObject = JSON.parse('{"id":"api/config","title":"Config API","description":"Public client configuration","source":"@site/docs/api/config.mdx","sourceDirName":"api","slug":"/api/config","permalink":"/api/config","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":7,"frontMatter":{"sidebar_label":"Config","sidebar_position":7},"sidebar":"api","previous":{"title":"Auth","permalink":"/api/auth"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
 var lib = __webpack_require__(3191);
-;// CONCATENATED MODULE: ./docs/api/restart-consumers.mdx
+;// CONCATENATED MODULE: ./docs/api/config.mdx
 
 
 const frontMatter = {
-	sidebar_label: 'Restart Consumers',
-	sidebar_position: 5
+	sidebar_label: 'Config',
+	sidebar_position: 7
 };
-const contentTitle = 'Restart Consumers API';
+const contentTitle = 'Config API';
 
 const assets = {
 
@@ -36,8 +36,8 @@ const assets = {
 
 
 const toc = [{
-  "value": "Restart workloads consuming a secret",
-  "id": "restart-workloads-consuming-a-secret",
+  "value": "Public client configuration",
+  "id": "public-client-configuration",
   "level": 2
 }];
 function _createMdxContent(props) {
@@ -47,55 +47,54 @@ function _createMdxContent(props) {
     h1: "h1",
     h2: "h2",
     header: "header",
-    li: "li",
     p: "p",
     pre: "pre",
-    ul: "ul",
+    strong: "strong",
     ...(0,lib/* .useMDXComponents */.R)(),
     ...props.components
   };
   return (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, {
     children: [(0,jsx_runtime.jsx)(_components.header, {
       children: (0,jsx_runtime.jsx)(_components.h1, {
-        id: "restart-consumers-api",
-        children: "Restart Consumers API"
+        id: "config-api",
+        children: "Config API"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
-      id: "restart-workloads-consuming-a-secret",
-      children: "Restart workloads consuming a secret"
+      id: "public-client-configuration",
+      children: "Public client configuration"
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-http",
-        children: "POST /api/namespaces/:namespace/secrets/:name/restart-consumers\n"
+        children: "GET /api/config\n"
       })
-    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Triggers a rolling restart of the Deployments, StatefulSets, and DaemonSets in\nthe secret's namespace that reference it (env, envFrom, volumes, projected\nsources) by patching their pod template with a ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.io/restarted-at"
-      }), "\nannotation. Required for env-var consumers; volume mounts sync via kubelet on\ntheir own."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
+      children: "The only unauthenticated endpoint besides the login flow. Returns the\npublic-safe subset of the effective configuration — no secrets — resolved at\nrequest time (never prerendered, since deploy-time env differs from build-time):"
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"deployments\": [\"api-server\"],\n  \"statefulSets\": [],\n  \"daemonSets\": [],\n  \"note\": \"Some apps pick up secret changes automatically, others need a restart to see the new values.\"\n}\n"
+        children: "{\n  \"scope\": \"namespace\",\n  \"etcdEncrypted\": false,\n  \"authDisabled\": false,\n  \"oidcConfigured\": true,\n  \"historyLimit\": 20,\n  \"managedOnly\": true,\n  \"restartEnabled\": false,\n  \"appNamespace\": \"krypton\"\n}\n"
       })
-    }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
-      children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Returns ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "403 { \"error\": \"Restarting apps is disabled on this deployment\" }"
-        }), "\nunless ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_RESTART_ENABLED=true"
-        }), " (which also needs the ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "apps"
-        }), " RBAC rule)."]
-      }), "\n", (0,jsx_runtime.jsx)(_components.li, {
-        children: "Same namespace, managed-only, and authz gates as updating the secret."
-      }), "\n", (0,jsx_runtime.jsx)(_components.li, {
-        children: "The restart is audit-logged with the targeted workload names."
-      }), "\n"]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["See ", (0,jsx_runtime.jsx)(_components.a, {
-        href: "/guides/consumer-restarts/",
-        children: "Consumer Restarts"
-      }), " for the scanning rules and\nthe sandbox walkthrough."]
+      children: [(0,jsx_runtime.jsx)(_components.code, {
+        children: "historyLimit"
+      }), " is an integer ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "1–100"
+      }), " (default 20 when unset). Invalid\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "KRYPTON_HISTORY_LIMIT"
+      }), " configuration returns\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "503 { \"error\": \"KRYPTON_HISTORY_LIMIT must be an integer from 1 to 100\" }"
+      }), "\ninstead of advertising an unlimited or silently substituted retention policy."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Use it in deployment checks: assert ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "authDisabled: false"
+      }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "oidcConfigured: true"
+      }), ", and (once apiserver encryption is verified)\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "etcdEncrypted: true"
+      }), ". See ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/configuration/",
+        children: "Configuration"
+      }), " for every\nvariable behind these flags."]
     })]
   });
 }

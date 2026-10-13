@@ -44,6 +44,10 @@ const toc = [{
   "id": "what-it-scans",
   "level": 2
 }, {
+  "value": "Reading the result",
+  "id": "reading-the-result",
+  "level": 2
+}, {
   "value": "Trying it in the sandbox",
   "id": "trying-it-in-the-sandbox",
   "level": 2
@@ -79,9 +83,11 @@ function _createMdxContent(props) {
       children: "Editing a Secret does not automatically update the pods that consume it:"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: [(0,jsx_runtime.jsx)(_components.strong, {
-          children: "Volume-mounted"
-        }), " secrets sync automatically (kubelet delay, no action needed)."]
+        children: ["Ordinary Secret/projected ", (0,jsx_runtime.jsx)(_components.strong, {
+          children: "volume mounts"
+        }), " usually sync after a kubelet delay.\n", (0,jsx_runtime.jsx)(_components.code, {
+          children: "subPath"
+        }), " mounts do not receive updates; applications may need to reload files."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Environment-variable"
@@ -90,9 +96,11 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.em, {
         children: "Restart apps"
-      }), " closes that gap: it finds the workloads referencing a secret and\ntriggers a rolling restart by patching their pod template with a\n", (0,jsx_runtime.jsx)(_components.code, {
+      }), " finds explicit consumers and ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "requests a rollout"
+      }), " by patching\ntheir pod template with a ", (0,jsx_runtime.jsx)(_components.code, {
         children: "krypton.io/restarted-at"
-      }), " annotation."]
+      }), " annotation. An acknowledged\npatch does not prove a rollout completed, that pods are healthy, or that an\napplication is using the new credential."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "enabling-the-feature",
       children: "Enabling the feature"
@@ -122,37 +130,76 @@ function _createMdxContent(props) {
         children: "- apiGroups: [apps]\n  resources: [deployments, statefulsets, daemonsets]\n  verbs: [get, list, watch, patch]\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Without the flag, the UI button + hint are hidden and the API returns 403.\nWithout the rule, the API fails closed at the Kubernetes API."
+      children: "Without the flag, the UI button + hint are hidden and the API returns 403 before\nworkload discovery, even for admins. With the flag enabled, missing workload\npermissions produce classified list/patch failures, displayed in the UI. In\nimpersonation mode every list and patch carries the complete human identity; the\nServiceAccount needs impersonation grants and the human needs workload RBAC."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "what-it-scans",
       children: "What it scans"
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
       children: "In the secret's namespace, Krypton inspects Deployments, StatefulSets, and\nDaemonSets for references to the secret name across:"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
-      children: ["\n", (0,jsx_runtime.jsx)(_components.li, {
-        children: (0,jsx_runtime.jsx)(_components.code, {
+      children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "env[].valueFrom.secretKeyRef.name"
-        })
-      }), "\n", (0,jsx_runtime.jsx)(_components.li, {
-        children: (0,jsx_runtime.jsx)(_components.code, {
+        }), " and ", (0,jsx_runtime.jsx)(_components.code, {
           children: "envFrom[].secretRef.name"
-        })
+        }), " across normal,\ninit (including sidecars), and ephemeral containers, where present in the template"]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: (0,jsx_runtime.jsx)(_components.code, {
           children: "volumes[].secret.secretName"
         })
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Projected sources and friends via a conservative JSON string-scan fallback\n(", (0,jsx_runtime.jsx)(_components.code, {
-          children: "\"secretName\":\"<name>\""
-        }), " plus a name containment check)"]
+        children: [(0,jsx_runtime.jsx)(_components.code, {
+          children: "volumes[].projected.sources[].secret.name"
+        }), ", including projected-only consumers"]
+      }), "\n", (0,jsx_runtime.jsx)(_components.li, {
+        children: (0,jsx_runtime.jsx)(_components.code, {
+          children: "imagePullSecrets[].name"
+        })
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Matching workloads are patched (strategic-merge on the pod template metadata)\nand reported back grouped by kind:"
+      children: "Names must match exactly. Key selection, optional references, property order, and\nenvFrom prefixes do not change the name match. Literal env values, command\narguments, ConfigMaps, volume/container names, annotations, and name substrings\ndo not count. Several references in one workload still produce just one patch."
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["The scan is limited to those three controller templates. It does not scan direct\nPods, Jobs/CronJobs, storage-driver Secret references, ServiceAccount-inherited\npull secrets, or live-Pod-only injection/debug containers. These require native\noperator tooling. ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "no_targets"
+      }), " means no supported explicit template references\nwere found, not that every application in the namespace is current."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
+      id: "reading-the-result",
+      children: "Reading the result"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Discovery settles before patching; at most ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "four patches are in flight per\nrequest across all kinds"
+      }), ". Each kind's complete inventory is required before\npatching any of its workloads. Other successfully listed kinds can proceed if\none list fails. A failed/incomplete list is unknown, never an empty inventory.\nEvery patch carries the inspected workload UID and resourceVersion as JSON\nPatch ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "test"
+      }), " preconditions, so a replaced or edited workload fails instead of\nreceiving an unrelated rollout. Matches without a usable identity are reported\nas incomplete and never patched by name alone."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
+      children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Requested"
+        }), " (HTTP 200, success notification): all matched patches acknowledged,\ndiscovery complete. Check the rollout separately."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "No targets"
+        }), " (HTTP 200, info): all three inventories completed with no matches;\nno rollout requested."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Partial"
+        }), " (HTTP 207, warning): at least one acknowledged patch, with named patch\nfailures and/or unknown kind inventories shown below the summary."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Failed"
+        }), " (HTTP 503, error): no patches acknowledged and at least one patch/list\nfailure. This includes unknown inventories with zero known matches."]
+      }), "\n"]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["The details remain visible after the notification disappears. Only acknowledged\nworkloads appear under ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "Rollout requested"
+      }), ". For example:"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"deployments\": [\"api-server\"],\n  \"statefulSets\": [],\n  \"daemonSets\": [],\n  \"note\": \"Some apps pick up secret changes automatically, others need a restart to see the new values.\"\n}\n"
+        children: "{\n  \"status\": \"requested\",\n  \"matched\": 1,\n  \"requested\": [{ \"kind\": \"Deployment\", \"name\": \"api-server\" }],\n  \"failures\": [],\n  \"discoveryFailures\": [],\n  \"message\": \"Rollout requested for 1 workload.\",\n  \"note\": \"Only acknowledged pod-template patches are reported as requested. Rollout completion, readiness, and credential uptake are not verified.\"\n}\n"
       })
+    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
+      children: "Paused Deployments, OnDelete/partitioned strategies, image caching, and application\nbehavior can delay or prevent credential uptake even after an acknowledged patch.\nInspect rollout state, readiness, and application behavior with your normal\noperational tooling. Resolve permission/unavailability errors before retrying.\nA conflict or rejected patch means the workload was replaced or edited after\ndiscovery: inspect its current revision and references, then retry only if the\nrollout is still wanted. A transport failure may follow an applied patch;\nretrying scans all kinds again and can request another rollout for earlier\nsuccesses. Krypton adds no watcher, transaction, or background retry. The cap\nis per request, not a cluster-wide limit."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "trying-it-in-the-sandbox",
       children: "Trying it in the sandbox"
@@ -174,9 +221,11 @@ function _createMdxContent(props) {
           children: "Restart apps"
         }), "."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: [(0,jsx_runtime.jsx)(_components.code, {
-          children: "kubectl rollout history deploy/api-server -n krypton-test"
-        }), " shows a new\nrevision with the fresh env value."]
+        children: ["The UI reports the acknowledged rollout request. Inspect\n", (0,jsx_runtime.jsx)(_components.code, {
+          children: "kubectl rollout status deploy/api-server -n krypton-test"
+        }), " and rollout history\nfor progress/revision changes; history alone does not verify env values."]
+      }), "\n", (0,jsx_runtime.jsx)(_components.li, {
+        children: "Verify application behavior using the rotated credential without printing it."
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "api-contract",
@@ -184,10 +233,10 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
         children: "POST /api/namespaces/:namespace/secrets/:name/restart-consumers"
-      }), " — same\nnamespace, managed-only, and authz gates as every other secret route, plus the\nfeature flag. See the ", (0,jsx_runtime.jsx)(_components.a, {
+      }), " — same\nnamespace, managed-only, and authz gates as every other secret route, plus the\nfeature flag. The old per-kind success arrays have been replaced by the typed\nstatus/requested/failure result. Clients must preserve partial and failed reports.\nSee the ", (0,jsx_runtime.jsx)(_components.a, {
         href: "/api/restart-consumers/",
         children: "Restart API"
-      }), "."]
+      }), " for fields, codes, and upgrade details."]
     })]
   });
 }

@@ -49,6 +49,7 @@ function _createMdxContent(props) {
     header: "header",
     p: "p",
     pre: "pre",
+    strong: "strong",
     ...(0,lib/* .useMDXComponents */.R)(),
     ...props.components
   };
@@ -66,25 +67,58 @@ function _createMdxContent(props) {
         className: "language-http",
         children: "GET /api/namespaces/:namespace/secrets/:name/versions\n"
       })
-    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Same namespace, managed-only, and authz gates as reading the secret — history\nis only visible to readers of the live object."
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Same live-object visibility and authorization gates as reading the secret —\nhistory is only visible to readers of the ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "current live object"
+      }), ". ", (0,jsx_runtime.jsx)(_components.code, {
+        children: ":name"
+      }), " must\nbe its live name: a snapshot name returns 404 in both managed-only modes, even\nfor admins. Copied historical ACLs cannot grant access after live ACL revocation.\nOnly validated immutable snapshots bound to this live ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "UID"
+      }), " are returned. A\nsame-name replacement cannot read a predecessor's retained history. Unbound legacy\nand malformed snapshots are quarantined, including from admin access through this\nAPI; see the ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/versioning-history/#upgrade-and-operator-reviewed-recovery",
+        children: "upgrade/recovery guide"
+      }), "."]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"namespace\": \"krypton-test\",\n  \"name\": \"database-credentials\",\n  \"versions\": [\n    {\n      \"version\": 2,\n      \"snapshotName\": \"database-credentials-v2\",\n      \"snapshotAt\": \"2026-01-05T09:30:00Z\",\n      \"snapshotBy\": \"alice@company.com\",\n      \"keys\": [\"DATABASE_URL\"],\n      \"data\": { \"DATABASE_URL\": \"postgres://…\" }\n    }\n  ]\n}\n"
+        children: "{\n  \"namespace\": \"krypton-test\",\n  \"name\": \"database-credentials\",\n  \"versions\": [\n    {\n      \"version\": 2,\n      \"snapshotName\": \"krypton-h-7b6ad742c31e4d37b5c8a90486d05a10-v2\",\n      \"snapshotAt\": \"2026-01-05T09:30:00Z\",\n      \"snapshotBy\": \"alice@company.com\",\n      \"keys\": [\"DATABASE_URL\"],\n      \"data\": { \"DATABASE_URL\": \"postgres://…\" },\n      \"binaryKeys\": [],\n      \"binaryData\": {}\n    }\n  ]\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Versions sort newest-first and are pruned to ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_HISTORY_LIMIT"
-      }), "\n(default 20). Each entry is a real Kubernetes Secret\n(", (0,jsx_runtime.jsx)(_components.code, {
-        children: "<name>-vN"
+      children: ["Versions sort by app counter descending. Each entry is a real immutable Opaque\nKubernetes Secret (", (0,jsx_runtime.jsx)(_components.code, {
+        children: "krypton-h-<UID hash>-vN"
       }), ", labeled ", (0,jsx_runtime.jsx)(_components.code, {
         children: "krypton.io/kind=history"
-      }), ") with decoded ", (0,jsx_runtime.jsx)(_components.code, {
+      }), "),\nwith full source UID/resourceVersion/name/type annotations. Treat ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "snapshotName"
+      }), "\nas an opaque returned identifier, not a name to reconstruct or use on live routes.\nThe response contains decoded DTOs, not internal raw/metadata storage records.\nResponse ", (0,jsx_runtime.jsx)(_components.code, {
         children: "data"
-      }), " —\ninspectable via ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "kubectl"
-      }), " as well as the API."]
+      }), " contains lossless text only; ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "binaryData"
+      }), " holds\noriginal base64 for non-UTF-8/binary-control values, with names in ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "binaryKeys"
+      }), ".\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "keys"
+      }), " covers both maps. These use the same ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/api/secrets/",
+        children: "data contract"
+      }), " as the\nlive detail, and the UI offers masked, read-only base64 viewing/copying."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Restore uses the internal raw snapshot, not these decoded DTOs. Never construct\na plaintext PUT by dropping binary keys or pasting ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "binaryData"
+      }), " into ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "data"
+      }), "."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Retention is ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "1–100"
+      }), " eligible snapshots per UID, default ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "20"
+      }), ", applied during\nupdate/restore attempts. This endpoint does not truncate the inventory to hide a\ncleanup backlog. Failed cleanup can leave more records; failed live replacements\ncan leave pre-write snapshots, including one numbered like the current live state.\nHistory is not a complete log of successful commits or all external native edits.\nA failed Kubernetes list returns 503, not a misleading empty history. Every UID-bound\nhistory operation (including restore lookup, pruning, deletion, and final confirmation)\nuses the shared complete page reader. Raw inventories allow 1,000 objects / 160 MiB,\n100 objects per page and at most 100 pages. Metadata-only cleanup has an 8 MiB\nprojection budget and the same object/page caps, without visiting data values.\nOver-budget or malformed/repeated-token inventories fail explicitly; no partial\nhistory or guessed absence is returned. Full per-user options and UID selectors\nare preserved on every page. These are per-inventory application bounds, after SDK\nresponse decoding; see ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/api/overview/#request-and-collection-budgets",
+        children: "collection budgets"
+      }), ".\nThis value-bearing response and its errors send ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "Cache-Control: no-store"
+      }), "."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["See ", (0,jsx_runtime.jsx)(_components.a, {
         href: "/guides/versioning-history/",

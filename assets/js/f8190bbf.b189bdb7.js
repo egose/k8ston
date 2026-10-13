@@ -1,12 +1,12 @@
 "use strict";
-(self["webpackChunkwebsite"] = self["webpackChunkwebsite"] || []).push([["236"], {
-6514(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+(self["webpackChunkwebsite"] = self["webpackChunkwebsite"] || []).push([["778"], {
+8360(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  metadata: () => (/* reexport */ site_docs_api_config_mdx_c3b_namespaceObject),
+  metadata: () => (/* reexport */ site_docs_api_namespaces_mdx_f81_namespaceObject),
   "default": () => (/* binding */ MDXContent),
   frontMatter: () => (/* binding */ frontMatter),
   contentTitle: () => (/* binding */ contentTitle),
@@ -14,20 +14,20 @@ __webpack_require__.d(__webpack_exports__, {
   assets: () => (/* binding */ assets)
 });
 
-;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-api-config-mdx-c3b.json
-var site_docs_api_config_mdx_c3b_namespaceObject = JSON.parse('{"id":"api/config","title":"Config API","description":"Public client configuration","source":"@site/docs/api/config.mdx","sourceDirName":"api","slug":"/api/config","permalink":"/api/config","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":7,"frontMatter":{"sidebar_label":"Config","sidebar_position":7},"sidebar":"api","previous":{"title":"Auth","permalink":"/api/auth"}}')
+;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-api-namespaces-mdx-f81.json
+var site_docs_api_namespaces_mdx_f81_namespaceObject = JSON.parse('{"id":"api/namespaces","title":"Namespaces API","description":"List allowed namespaces","source":"@site/docs/api/namespaces.mdx","sourceDirName":"api","slug":"/api/namespaces","permalink":"/api/namespaces","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":1,"frontMatter":{"sidebar_label":"Namespaces","sidebar_position":1},"sidebar":"api","previous":{"title":"Overview","permalink":"/api/overview"},"next":{"title":"Secrets","permalink":"/api/secrets"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
 var lib = __webpack_require__(3191);
-;// CONCATENATED MODULE: ./docs/api/config.mdx
+;// CONCATENATED MODULE: ./docs/api/namespaces.mdx
 
 
 const frontMatter = {
-	sidebar_label: 'Config',
-	sidebar_position: 7
+	sidebar_label: 'Namespaces',
+	sidebar_position: 1
 };
-const contentTitle = 'Config API';
+const contentTitle = 'Namespaces API';
 
 const assets = {
 
@@ -36,8 +36,8 @@ const assets = {
 
 
 const toc = [{
-  "value": "Public client configuration",
-  "id": "public-client-configuration",
+  "value": "List allowed namespaces",
+  "id": "list-allowed-namespaces",
   "level": 2
 }];
 function _createMdxContent(props) {
@@ -47,43 +47,85 @@ function _createMdxContent(props) {
     h1: "h1",
     h2: "h2",
     header: "header",
+    li: "li",
     p: "p",
     pre: "pre",
+    strong: "strong",
+    ul: "ul",
     ...(0,lib/* .useMDXComponents */.R)(),
     ...props.components
   };
   return (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, {
     children: [(0,jsx_runtime.jsx)(_components.header, {
       children: (0,jsx_runtime.jsx)(_components.h1, {
-        id: "config-api",
-        children: "Config API"
+        id: "namespaces-api",
+        children: "Namespaces API"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
-      id: "public-client-configuration",
-      children: "Public client configuration"
+      id: "list-allowed-namespaces",
+      children: "List allowed namespaces"
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-http",
-        children: "GET /api/config\n"
+        children: "GET /api/namespaces\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "The only unauthenticated endpoint besides the login flow. Returns the\npublic-safe subset of the effective configuration — no secrets — resolved at\nrequest time (never prerendered, since deploy-time env differs from build-time):"
+      children: "Returns the namespaces the app may operate in, plus the effective scope:"
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"scope\": \"namespace\",\n  \"etcdEncrypted\": false,\n  \"authDisabled\": false,\n  \"oidcConfigured\": true,\n  \"historyLimit\": 20,\n  \"managedOnly\": true,\n  \"restartEnabled\": false,\n  \"appNamespace\": \"krypton\"\n}\n"
+        children: "{ \"scope\": \"cluster\", \"namespaces\": [\"frontend-ns\", \"krypton-test\"] }\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Use it in deployment checks: assert ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "authDisabled: false"
-      }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "oidcConfigured: true"
-      }), ", and (once apiserver encryption is verified)\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "etcdEncrypted: true"
-      }), ". See ", (0,jsx_runtime.jsx)(_components.a, {
-        href: "/guides/configuration/",
-        children: "Configuration"
-      }), " for every\nvariable behind these flags."]
+      children: ["Behavior (", (0,jsx_runtime.jsx)(_components.code, {
+        children: "lib/namespaces.ts"
+      }), "):"]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
+      children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.code, {
+          children: "namespace"
+        }), " scope: exactly ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "[<pod-own-namespace>]"
+        }), " — by design."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.code, {
+          children: "cluster"
+        }), " scope with ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "KRYPTON_NAMESPACES"
+        }), ": returns the configured names,\ndeduplicated and sorted, with ", (0,jsx_runtime.jsx)(_components.strong, {
+          children: "zero Kubernetes namespace-list requests"
+        }), ".\nExistence and Kubernetes permission are checked by the actual resource operations."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.code, {
+          children: "cluster"
+        }), " scope with an empty allowlist: completes paginated namespace discovery\nusing the effective Kubernetes identity. All pages preserve per-user options.\nThe ", (0,jsx_runtime.jsx)(_components.a, {
+          href: "/api/overview/#request-and-collection-budgets",
+          children: "collection budgets"
+        }), " apply."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: ["Failed/incomplete discovery is an error. ", (0,jsx_runtime.jsx)(_components.strong, {
+          children: "Upgrade:"
+        }), " the old own-namespace\nfallback on cluster-list errors has been removed to avoid a misleading subset.\nConfigure an explicit allowlist when namespace-list RBAC is not granted."]
+      }), "\n"]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Every ", (0,jsx_runtime.jsx)(_components.code, {
+        children: ":ns"
+      }), " route below re-validates the namespace with\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "assertNamespaceAllowed()"
+      }), " — a namespace outside the list is ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "403"
+      }), ":"]
+    }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
+      children: (0,jsx_runtime.jsx)(_components.code, {
+        className: "language-json",
+        children: "{ \"error\": \"Namespace is outside the configured application scope\" }\n"
+      })
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Allowlist checks also use no network. Responses, including errors, use\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "Cache-Control: no-store"
+      }), ". Namespace names such as ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "constructor"
+      }), " are looked up as\nown policy properties; intentionally absent/empty rules retain open access."]
     })]
   });
 }

@@ -40,6 +40,10 @@ const toc = [{
   "id": "the-etcd-truth",
   "level": 2
 }, {
+  "value": "Local value previews",
+  "id": "local-value-previews",
+  "level": 2
+}, {
   "value": "Authentication guarantees",
   "id": "authentication-guarantees",
   "level": 2
@@ -139,6 +143,21 @@ function _createMdxContent(props) {
         }), "\nonly after you have verified the API server encrypts Secret resources at rest."]
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
+      id: "local-value-previews",
+      children: "Local value previews"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Live and historical text previews render in the browser. Markdown images are\nreplaced with accessible descriptive text, so opening a preview does not fetch\nembedded resource URLs. Raw HTML, including image/iframe/script markup, remains\ninert text. Unsafe link schemes such as ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "javascript:"
+      }), " are not activatable links.\nSafe Markdown links, including GFM bare-URL autolinks, require a user action\nand open a new tab with ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "noopener noreferrer"
+      }), "; that explicit navigation\ncontacts the destination."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Before Markdown parsing or syntax highlighting, the complete value is checked\nagainst the shared ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "131,072 UTF-16-code-unit"
+      }), " budget (", (0,jsx_runtime.jsx)(_components.code, {
+        children: "String.length"
+      }), "). Above\nthat inclusive limit, Preview shows escaped, untruncated raw text and a small\nnotice. This bounds rich-preview input while retaining the full raw display.\nPreview/editor modules remain lazy-loaded, and Raw/Copy preserve the source text.\nBinary values continue to use the separate base64 viewer."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "authentication-guarantees",
       children: "Authentication guarantees"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
@@ -205,6 +224,8 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: "With no rules anywhere, the secret is visible to all authenticated users\n(open by default, restricted once rules are added)."
       }), "\n"]
+    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
+      children: "Absence must be confirmed: a ConfigMap 404 or valid empty rules are open;\nmalformed/missing policy data and failed reads return 503 when namespace policy\nis required. An expired cache is never reused after refresh failure. Admins and\nexplicit live-secret ACLs keep their precedence."
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Until any admin is configured, ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "every authenticated user is treated as admin"
@@ -221,25 +242,33 @@ function _createMdxContent(props) {
         children: "without"
       }), "\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "krypton.io/managed-by: krypton"
-      }), " are hidden entirely — excluded from lists, 404\non direct access (read, edit, delete, history, restore, restart) — so K8s-level\nsecrets created outside Krypton can't be touched by accident."]
+      }), " are hidden entirely — excluded from lists, 404\non direct access (read, edit, delete, history, restore, restart) — so K8s-level\nsecrets created outside Krypton can't be touched by accident.\nHistory objects are hidden from direct routes in ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "both"
+      }), " visibility modes,\nincluding for admins. Version/restore endpoints authorize the current live\nobject first; a snapshot's copied ACL cannot bypass a live ACL revocation.\nHistory must also be bound to that live object's UID. Retained predecessors and\nunbound legacy snapshots cannot be accessed through a recreated name; legacy\nrecovery requires ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/versioning-history/#upgrade-and-operator-reviewed-recovery",
+        children: "operator review"
+      }), "."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "concurrency-and-integrity",
       children: "Concurrency and integrity"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Writes require the current ", (0,jsx_runtime.jsx)(_components.code, {
+        children: ["PUT, restore, and DELETE require the caller's expected live\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "metadata.resourceVersion"
-        }), "; stale edits get ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "409"
-        }), "\ninstead of silently clobbering a colleague's change."]
-      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Every overwrite snapshots first; every restore snapshots first. There is no\nwrite path that destroys the previous state without keeping a copy (within\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_HISTORY_LIMIT"
-        }), ")."]
+        }), "; stale requests get 409 before history side effects.\nNative live UID/resourceVersion CAS protects restore/delete against in-flight\nchanges, including ACL changes and same-name replacements."]
+      }), "\n", (0,jsx_runtime.jsx)(_components.li, {
+        children: "Update/restore archive the raw current state in an immutable Opaque snapshot\nbound to its UID/resourceVersion before replacement. Existing snapshot names\nare accepted only after exact-source and actual immutable-content verification.\nRestore preserves current live access/lifecycle metadata. Retention is 1–100\neligible snapshots per UID; failed/pending pruning blocks replacement."
+      }), "\n", (0,jsx_runtime.jsx)(_components.li, {
+        children: "Snapshot/pruning/live writes are separate operations. A failed live replacement\ncan leave pre-write history and completed pruning. DELETE cleans eligible history\nfirst, with live-revision rechecks and per-snapshot UID/RV deletes; cleanup failures\nleave the live authorization object available. Pending live finalizers produce 202,\nnot a confirmed-deleted claim. Rechecks do not lock authorization across objects,\nand late history writes after the final inventory can leave copies requiring\noperator cleanup. Retained/quarantined/predecessor copies and external backups\nare outside this cleanup; it is not atomic erasure. Kubernetes writers can alter\nmetadata or delete immutable objects; history is not a tamper-proof backup."
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Secret names must be DNS subdomains (validated by ", (0,jsx_runtime.jsx)(_components.code, {
           children: "k8sName"
         }), "); descriptions are\ncapped at 1024 chars; payloads are zod-validated before touching the API."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: ["Streamed JSON is bounded to 16 MiB before parsing; ACL storage arrays are bounded\nto 256 entries of 256 UTF-8 bytes each. Secret data limits still apply separately.\nShared ", (0,jsx_runtime.jsx)(_components.a, {
+          href: "/api/overview/#request-and-collection-budgets",
+          children: "collection budgets"
+        }), " reject\nincomplete/over-budget inventories. API responses and auth redirects send no-store;\nvalidation/upstream/OIDC errors use classified guidance without raw values/headers."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "least-privilege-rbac",
@@ -262,17 +291,18 @@ function _createMdxContent(props) {
           children: "KRYPTON_RESTART_ENABLED=true"
         }), ". It ships commented\nout; enabling the flag without the rule fails closed at the API."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Cluster scope additionally needs ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "namespaces"
-        }), " (get, list, watch);\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: ["Unrestricted cluster scope needs namespace-list permission. A configured\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "KRYPTON_NAMESPACES"
-        }), " narrows the blast radius."]
+        }), " allowlist resolves/checks locally with no namespace-list calls;\nactual operations still need the corresponding resource RBAC in those namespaces."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Optional impersonation (", (0,jsx_runtime.jsx)(_components.code, {
           children: "KRYPTON_IMPERSONATION=true"
-        }), ") requires the API server\nto trust the same OIDC issuer and grants the ", (0,jsx_runtime.jsx)(_components.code, {
+        }), ") requires the SA's\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "impersonate"
-        }), " verb — only enable\nit when you understand both sides."]
+        }), " permission for the session user and every group, with matching\nhuman RBAC subjects. Namespace/secret/history operations and workload lists\nand patches use that complete identity. The access-policy ConfigMap is read\nas the SA and cached independently of human RBAC. See the\n", (0,jsx_runtime.jsx)(_components.a, {
+          href: "/guides/authorization/#optional-k8s-native-impersonation",
+          children: "impersonation contract"
+        }), "."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "operational-checklist",

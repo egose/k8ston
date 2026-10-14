@@ -4,29 +4,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: krypton
-  namespace: krypton
+  name: k8ston
+  namespace: k8ston
   labels:
-    app.kubernetes.io/name: krypton
+    app.kubernetes.io/name: k8ston
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: krypton
+      app.kubernetes.io/name: k8ston
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: krypton
+        app.kubernetes.io/name: k8ston
     spec:
-      serviceAccountName: krypton
+      serviceAccountName: k8ston
       # SA token auto-mounted for API auth; secret volumes would use tmpfs (RAM).
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:
-      - name: krypton
-        image: ghcr.io/egose/krypton:latest
+      - name: k8ston
+        image: ghcr.io/egose/k8ston:latest
         imagePullPolicy: IfNotPresent
         ports:
         - name: http
@@ -38,9 +38,9 @@ spec:
               fieldPath: metadata.namespace
         envFrom:
         - configMapRef:
-            name: krypton-config
+            name: k8ston-config
         - secretRef:
-            name: krypton-oidc
+            name: k8ston-oidc
         livenessProbe:
           httpGet:
             path: /api/config
@@ -69,13 +69,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: krypton
-  namespace: krypton
+  name: k8ston
+  namespace: k8ston
   labels:
-    app.kubernetes.io/name: krypton
+    app.kubernetes.io/name: k8ston
 spec:
   selector:
-    app.kubernetes.io/name: krypton
+    app.kubernetes.io/name: k8ston
   ports:
   - name: http
     port: 80

@@ -13,11 +13,11 @@ import { errorStatus } from './errors';
  * - authorization: per-Secret annotations + one namespace-level ConfigMap
  *
  * Annotations on a Secret:
- *   krypton.io/allowed-groups: "dev-team, database-admins"
- *   krypton.io/allowed-users:  "alice@company.com, bob@company.com"
- *   krypton.io/team: "team1" (single team; missing/blank = unassigned)
+ *   k8ston.io/allowed-groups: "dev-team, database-admins"
+ *   k8ston.io/allowed-users:  "alice@company.com, bob@company.com"
+ *   k8ston.io/team: "team1" (single team; missing/blank = unassigned)
  *
- * Namespace fallback lives in ConfigMap <app-namespace>/krypton-access,
+ * Namespace fallback lives in ConfigMap <app-namespace>/k8ston-access,
  * key "access.json":
  *   { "<namespace>": { "groups": [...], "users": [...],
  *     "teams": [{ "name": "team1", "groups": [...], "users": [...] }] } }
@@ -37,7 +37,7 @@ export function isAdmin(user: SessionUser): boolean {
   if (config.adminUsers.includes(user.email.toLowerCase())) return true;
   if (user.groups.some((g) => config.adminGroups.includes(g))) return true;
   // bootstrap: no admins configured at all → every authenticated user is admin
-  // until the operator sets KRYPTON_ADMIN_GROUPS/USERS. Documented in README.
+  // until the operator sets K8STON_ADMIN_GROUPS/USERS. Documented in README.
   if (config.adminGroups.length === 0 && config.adminUsers.length === 0) return true;
   return false;
 }
@@ -71,7 +71,7 @@ function policyUnavailable(
 ): HttpError {
   // SDK errors can embed response headers, credentials, and policy contents.
   // Log only our classification and a validated numeric HTTP status.
-  console.warn('[krypton] namespace access policy unavailable', { reason, ...(status ? { status } : {}) });
+  console.warn('[k8ston] namespace access policy unavailable', { reason, ...(status ? { status } : {}) });
   return new HttpError(503, 'Namespace access policy is unavailable');
 }
 

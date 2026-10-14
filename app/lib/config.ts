@@ -1,7 +1,7 @@
 import { HttpError } from './errors';
 
 /**
- * Krypton — centralized configuration from environment.
+ * K8ston — centralized configuration from environment.
  *
  * No database: all state lives in Kubernetes Secret objects (and one
  * optional ConfigMap for namespace-level access rules).
@@ -20,46 +20,46 @@ function bool(value: string | undefined, fallback = false): boolean {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 }
 
-export type KryptonScope = 'namespace' | 'cluster';
+export type K8stonScope = 'namespace' | 'cluster';
 
 export const HISTORY_LIMIT_MAX = 100;
 
 export const config = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000',
   /** namespace the app itself runs in (injected via downward API in k8s/) */
-  appNamespace: process.env.POD_NAMESPACE ?? process.env.KRYPTON_NAMESPACE ?? 'krypton',
-  scope: ((process.env.KRYPTON_SCOPE ?? 'namespace').toLowerCase() === 'cluster'
+  appNamespace: process.env.POD_NAMESPACE ?? process.env.K8STON_NAMESPACE ?? 'k8ston',
+  scope: ((process.env.K8STON_SCOPE ?? 'namespace').toLowerCase() === 'cluster'
     ? 'cluster'
-    : 'namespace') as KryptonScope,
+    : 'namespace') as K8stonScope,
   /** allowlist for cluster scope; empty = all namespaces readable by the SA */
-  allowedNamespaces: csv(process.env.KRYPTON_NAMESPACES),
+  allowedNamespaces: csv(process.env.K8STON_NAMESPACES),
 
-  annotationPrefix: process.env.KRYPTON_ANNOTATION_PREFIX ?? 'krypton.io',
-  accessConfigMap: process.env.KRYPTON_ACCESS_CONFIGMAP ?? 'krypton-access',
+  annotationPrefix: process.env.K8STON_ANNOTATION_PREFIX ?? 'k8ston.io',
+  accessConfigMap: process.env.K8STON_ACCESS_CONFIGMAP ?? 'k8ston-access',
 
-  adminGroups: csv(process.env.KRYPTON_ADMIN_GROUPS),
-  adminUsers: csv(process.env.KRYPTON_ADMIN_USERS).map((s) => s.toLowerCase()),
+  adminGroups: csv(process.env.K8STON_ADMIN_GROUPS),
+  adminUsers: csv(process.env.K8STON_ADMIN_USERS).map((s) => s.toLowerCase()),
 
   /** Positive, bounded retention per live UID. Validate before any history write. */
   get historyLimit() {
-    const value = process.env.KRYPTON_HISTORY_LIMIT ?? '20';
+    const value = process.env.K8STON_HISTORY_LIMIT ?? '20';
     const limit = Number(value);
     if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(limit) || limit > HISTORY_LIMIT_MAX) {
-      throw new HttpError(503, `KRYPTON_HISTORY_LIMIT must be an integer from 1 to ${HISTORY_LIMIT_MAX}`);
+      throw new HttpError(503, `K8STON_HISTORY_LIMIT must be an integer from 1 to ${HISTORY_LIMIT_MAX}`);
     }
     return limit;
   },
 
   /**
-   * When true (default), secrets WITHOUT the krypton.io/managed-by=krypton
+   * When true (default), secrets WITHOUT the k8ston.io/managed-by=k8ston
    * annotation are hidden entirely (excluded from lists, 404 on direct
-   * access) so K8s-level secrets created outside Krypton can't be edited or
+   * access) so K8s-level secrets created outside K8ston can't be edited or
    * deleted by accident. Set false to restore the legacy adopt-on-edit flow.
    */
-  managedOnly: bool(process.env.KRYPTON_MANAGED_ONLY, true),
+  managedOnly: bool(process.env.K8STON_MANAGED_ONLY, true),
 
   /** set true when etcd encryption-at-rest (e.g. aescbc) is enabled; else show warning */
-  etcdEncrypted: bool(process.env.KRYPTON_ETCD_ENCRYPTED, false),
+  etcdEncrypted: bool(process.env.K8STON_ETCD_ENCRYPTED, false),
 
   /**
    * Forward the session email and all groups so K8s RBAC authorizes the human.
@@ -67,7 +67,7 @@ export const config = {
    * Application access-policy reads still use the SA and its shared cache.
    * Default false = hybrid mode (SSO auth + annotation/ConfigMap authz).
    */
-  impersonation: bool(process.env.KRYPTON_IMPERSONATION, false),
+  impersonation: bool(process.env.K8STON_IMPERSONATION, false),
 
   /**
    * When true, the "Restart apps" feature is enabled: the UI shows the
@@ -76,7 +76,7 @@ export const config = {
    * returns 403, and the ServiceAccount needs no `apps` permissions (drop
    * the deployments/statefulsets/daemonsets rule from the Role/ClusterRole).
    */
-  restartEnabled: bool(process.env.KRYPTON_RESTART_ENABLED, false),
+  restartEnabled: bool(process.env.K8STON_RESTART_ENABLED, false),
 
   authDisabled: bool(process.env.AUTH_DISABLED, false),
   /** Validated lazily by auth.ts: builds and explicit auth bypass need no key. */
@@ -172,7 +172,7 @@ export const LABELS = {
   },
 } as const;
 
-export const MANAGED_BY_VALUE = 'krypton';
+export const MANAGED_BY_VALUE = 'k8ston';
 
 /** K8s enforces ~1MiB per Secret object (data + metadata). */
 export const K8S_SECRET_SIZE_LIMIT = 1024 * 1024;

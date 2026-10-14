@@ -16,11 +16,11 @@ const user = {
 describe.each([true, false])('live SDK pagination (managedOnly=%s)', (managedOnly) => {
   it('excludes history server-side, keeps annotation-based semantics/ACLs and own-key codecs on every page', async () => {
     Object.assign(process.env, {
-      KRYPTON_SCOPE: 'cluster',
-      KRYPTON_NAMESPACES: namespace,
-      KRYPTON_IMPERSONATION: 'true',
-      KRYPTON_MANAGED_ONLY: String(managedOnly),
-      KRYPTON_ANNOTATION_PREFIX: 'synthetic.example',
+      K8STON_SCOPE: 'cluster',
+      K8STON_NAMESPACES: namespace,
+      K8STON_IMPERSONATION: 'true',
+      K8STON_MANAGED_ONLY: String(managedOnly),
+      K8STON_ANNOTATION_PREFIX: 'synthetic.example',
     });
     const mock = await mockKubernetes();
     const make = (
@@ -31,10 +31,10 @@ describe.each([true, false])('live SDK pagination (managedOnly=%s)', (managedOnl
       metadata: { namespace, name, uid: `uid-${name}`, resourceVersion: '17', annotations, labels },
       data: rawData,
     });
-    const managed = { 'synthetic.example/managed-by': 'krypton' };
+    const managed = { 'synthetic.example/managed-by': 'k8ston' };
     const objects = [
       make('annotation-only', managed),
-      make('label-only', {}, { 'synthetic.example/managed-by': 'krypton' }),
+      make('label-only', {}, { 'synthetic.example/managed-by': 'k8ston' }),
       make('explicit-allowed', { ...managed, 'synthetic.example/allowed-users': user.email }),
       make('explicit-denied', { ...managed, 'synthetic.example/allowed-users': 'other@example.test' }),
       make('unmanaged'),
@@ -107,7 +107,7 @@ describe.each([true, false])('live SDK pagination (managedOnly=%s)', (managedOnl
 });
 
 it('preserves two identities, native history maps and JSON-patch preconditions across real SDK pages/failures', async () => {
-  process.env.KRYPTON_IMPERSONATION = 'true';
+  process.env.K8STON_IMPERSONATION = 'true';
   const mock = await mockKubernetes();
   const live = nativeSecret();
   const snapshots = [boundSnapshot(live, 1), boundSnapshot(live, 2)];
@@ -159,7 +159,7 @@ it('preserves two identities, native history maps and JSON-patch preconditions a
   expect(historyLists).toHaveLength(2);
   for (const request of historyLists)
     expect(new URL(request.url, 'http://loopback.test').searchParams.get('labelSelector')).toBe(
-      `krypton.io/source-uid=${historyHash(live.metadata!.uid!)},krypton.io/kind=history`,
+      `k8ston.io/source-uid=${historyHash(live.metadata!.uid!)},k8ston.io/kind=history`,
     );
   for (const request of server.requests) {
     const identity = headerValues(request, 'Impersonate-User')[0] === user.email ? user : other;
@@ -176,7 +176,7 @@ it('preserves two identities, native history maps and JSON-patch preconditions a
           path: '/spec/template/metadata',
           value: {
             annotations: {
-              'krypton.io/restarted-at': expect.any(String),
+              'k8ston.io/restarted-at': expect.any(String),
             },
           },
         },

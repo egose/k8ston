@@ -79,7 +79,7 @@ function identityHash(value: string): string {
 }
 
 function snapshotName(uid: string, version: number): string {
-  return `krypton-h-${identityHash(uid)}-v${version}`;
+  return `k8ston-h-${identityHash(uid)}-v${version}`;
 }
 
 function snapshotMetadata(secret: V1Secret, source: LiveIdentity): SnapshotMetadata | null {

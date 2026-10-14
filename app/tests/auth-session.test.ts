@@ -9,7 +9,7 @@ const key = (secret: string) => new TextEncoder().encode(secret);
 const now = () => Math.floor(Date.now() / 1000);
 
 async function signClaims(overrides: Record<string, unknown> = {}, secret = TEST_SESSION_SECRET, alg = 'HS256') {
-  return new jose.SignJWT({ ...user, iss: 'krypton', iat: now(), exp: now() + 3600, ...overrides })
+  return new jose.SignJWT({ ...user, iss: 'k8ston', iat: now(), exp: now() + 3600, ...overrides })
     .setProtectedHeader({ alg })
     .sign(key(secret));
 }
@@ -39,7 +39,7 @@ describe('session signing configuration', () => {
     expect((failure as Error).message).toMatch(/SESSION_SECRET.*32/);
     if (secret) expect(JSON.stringify(auth.describeAuthError(failure))).not.toContain(secret);
 
-    (await cookies()).set('krypton_session', forged);
+    (await cookies()).set('k8ston_session', forged);
     const { GET } = await import('@/app/api/auth/me/route');
     const response = await GET();
     expect(response.status).toBe(401);
@@ -58,7 +58,7 @@ describe('session signing configuration', () => {
     expect(await verifySessionToken(token)).toEqual(user);
     const { payload, protectedHeader } = await jose.jwtVerify(token, key('a'.repeat(32)));
     expect(protectedHeader.alg).toBe('HS256');
-    expect(payload).toMatchObject({ iss: 'krypton', iat: now(), exp: now() + 28800 });
+    expect(payload).toMatchObject({ iss: 'k8ston', iat: now(), exp: now() + 28800 });
   });
 
   it('allows build-time imports and public configuration without a signing key', async () => {
@@ -81,7 +81,7 @@ describe('session signing configuration', () => {
     const response = await GET();
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(`${TEST_APP_URL}/`);
-    expect((await cookies()).get('krypton_session')).toBeUndefined();
+    expect((await cookies()).get('k8ston_session')).toBeUndefined();
     expect(fetch).not.toHaveBeenCalled();
   });
 });
@@ -110,7 +110,7 @@ describe('session JWT validation', () => {
       'base64url',
     );
     for (const token of [
-      new jose.UnsecuredJWT({ ...user, iss: 'krypton', exp: now() + 3600 }).encode(),
+      new jose.UnsecuredJWT({ ...user, iss: 'k8ston', exp: now() + 3600 }).encode(),
       'not-a-jwt',
       await signClaims({}, 'another-synthetic-signing-secret-012345'),
       `${header}.${tampered}.${signature}`,

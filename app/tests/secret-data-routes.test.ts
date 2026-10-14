@@ -27,7 +27,7 @@ async function setup(live = nativeSecret(), target = snapshot()) {
   mock.core.listNamespacedSecret.mockImplementation(async () => ({ items: [...snapshots] }));
   mock.core.createNamespacedSecret.mockImplementation(async ({ body }) => {
     const saved = persistedSnapshot(body);
-    if (body.metadata?.labels?.['krypton.io/kind'] === 'history') snapshots.push(saved);
+    if (body.metadata?.labels?.['k8ston.io/kind'] === 'history') snapshots.push(saved);
     return saved;
   });
   mock.core.replaceNamespacedSecret.mockImplementation(async ({ body }) => ({
@@ -122,7 +122,7 @@ describe('data-integrity routes', () => {
       ownerReferences: live.metadata!.ownerReferences,
       finalizers: live.metadata!.finalizers,
       resourceVersion: '17',
-      annotations: { 'krypton.io/description': 'live description', 'krypton.io/version': '3' },
+      annotations: { 'k8ston.io/description': 'live description', 'k8ston.io/version': '3' },
     });
     expect(replacement.immutable).toBe(false);
     const result = await response.json();
@@ -148,7 +148,7 @@ describe('data-integrity routes', () => {
       uid: live.metadata!.uid,
       ownerReferences: live.metadata!.ownerReferences,
       finalizers: live.metadata!.finalizers,
-      annotations: { 'krypton.io/description': 'metadata updated', 'krypton.io/allowed-groups': 'operators' },
+      annotations: { 'k8ston.io/description': 'metadata updated', 'k8ston.io/allowed-groups': 'operators' },
     });
     expect(core.createNamespacedSecret).toHaveBeenCalledTimes(1);
   });

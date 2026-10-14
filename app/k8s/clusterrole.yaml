@@ -1,14 +1,14 @@
 ---
-# Cluster-wide permissions (KRYPTON_SCOPE=cluster) for a centralized
+# Cluster-wide permissions (K8STON_SCOPE=cluster) for a centralized
 # dashboard managing secrets across namespaces. Apply INSTEAD of (or in
 # addition to) role.yaml when you want multi-namespace management.
-# Narrow with KRYPTON_NAMESPACES="team-a,team-b" to allowlist namespaces.
+# Narrow with K8STON_NAMESPACES="team-a,team-b" to allowlist namespaces.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: krypton
+  name: k8ston
   labels:
-    app.kubernetes.io/name: krypton
+    app.kubernetes.io/name: k8ston
 rules:
 - apiGroups: ['']
   resources: [secrets]
@@ -20,7 +20,7 @@ rules:
   resources: [namespaces]
   verbs: [get, list, watch]
 # Consumer restart (rollout via pod-template annotation patch) is disabled
-# by default (KRYPTON_RESTART_ENABLED=false). To enable it, set the flag to
+# by default (K8STON_RESTART_ENABLED=false). To enable it, set the flag to
 # 'true' in configmap-app.yaml AND uncomment the rule below:
 # - apiGroups: [apps]
 #   resources: [deployments, statefulsets, daemonsets]
@@ -29,14 +29,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: krypton
+  name: k8ston
   labels:
-    app.kubernetes.io/name: krypton
+    app.kubernetes.io/name: k8ston
 subjects:
 - kind: ServiceAccount
-  name: krypton
-  namespace: krypton
+  name: k8ston
+  namespace: k8ston
 roleRef:
   kind: ClusterRole
-  name: krypton
+  name: k8ston
   apiGroup: rbac.authorization.k8s.io

@@ -1,39 +1,39 @@
 # Production example for `helm/main` on Kubernetes/OpenShift:
-# Namespace-scoped Krypton with OIDC SSO behind an OpenShift Route.
+# Namespace-scoped K8ston with OIDC SSO behind an OpenShift Route.
 # Usage (see helm/main/Makefile):
 #   cp values-k8s-prod.example.yaml values-<namespace>.secret.yaml  # then fill host/CIDRs
 #   make upgrade NAMESPACE=<app-namespace> IMAGE_TAG=<tag>  # or helm directly:
-#   helm upgrade --install krypton helm/main -n <app-namespace> \
+#   helm upgrade --install k8ston helm/main -n <app-namespace> \
 #     -f helm/main/values.yaml -f helm/main/values-<namespace>.secret.yaml \
-#     --set krypton.image.tag=<tag>
+#     --set k8ston.image.tag=<tag>
 # The OIDC/session secrets live in a kubectl-applied Secret
 # (app/k8s/secret-oidc.yaml), never in this file. This file only carries
 # env-specific non-secret overrides; it is gitignored (*.secret.yaml).
 global:
   env: {}
 
-krypton:
+k8ston:
   enabled: true
-  envSecretName: krypton-oidc
-  # Krypton is stateless (Kubernetes Secrets are the datastore), so more than
+  envSecretName: k8ston-oidc
+  # K8ston is stateless (Kubernetes Secrets are the datastore), so more than
   # one replica is always safe.
   replicaCount: 2
   image:
-    repository: ghcr.io/egose/krypton
+    repository: ghcr.io/egose/k8ston
     pullPolicy: IfNotPresent
   env:
-    KRYPTON_SCOPE: namespace
-    KRYPTON_ETCD_ENCRYPTED: 'true' # only once apiserver encryption (aescbc) is on
-    KRYPTON_IMPERSONATION: 'false'
-    KRYPTON_MANAGED_ONLY: 'true' # hide K8s secrets not created by Krypton
-    KRYPTON_ADMIN_GROUPS: krypton-admin
-    KRYPTON_ACCESS_CONFIGMAP: krypton-access
+    K8STON_SCOPE: namespace
+    K8STON_ETCD_ENCRYPTED: 'true' # only once apiserver encryption (aescbc) is on
+    K8STON_IMPERSONATION: 'false'
+    K8STON_MANAGED_ONLY: 'true' # hide K8s secrets not created by K8ston
+    K8STON_ADMIN_GROUPS: k8ston-admin
+    K8STON_ACCESS_CONFIGMAP: k8ston-access
     OIDC_ISSUER: https://keycloak.example.com/realms/company
-    OIDC_CLIENT_ID: krypton
+    OIDC_CLIENT_ID: k8ston
     OIDC_SCOPES: openid profile email roles
     OIDC_GROUPS_CLAIM: roles
     OIDC_USERNAME_CLAIM: email
-    NEXT_PUBLIC_APP_URL: https://krypton.apps.example.com
+    NEXT_PUBLIC_APP_URL: https://k8ston.apps.example.com
   resources:
     requests:
       cpu: 100m
@@ -47,19 +47,19 @@ krypton:
     whenUnsatisfiable: ScheduleAnyway
     labelSelector:
       matchLabels:
-        app.kubernetes.io/name: krypton
+        app.kubernetes.io/name: k8ston
   route:
     enabled: true
-    host: krypton.apps.example.com
+    host: k8ston.apps.example.com
   # For a centralized multi-namespace dashboard instead, set rbac.scope to
-  # `cluster` below (KRYPTON_SCOPE above may then be dropped — the chart
+  # `cluster` below (K8STON_SCOPE above may then be dropped — the chart
   # derives it — or set to `cluster`), and optionally narrow with
-  # KRYPTON_NAMESPACES="team-a,team-b".
+  # K8STON_NAMESPACES="team-a,team-b".
   rbac:
     create: true
     scope: namespace
   # Namespace groups/users see ALL secrets; team members see only their team's
-  # secrets (krypton.io/team annotation; unassigned uses namespace rules only).
+  # secrets (k8ston.io/team annotation; unassigned uses namespace rules only).
   accessConfig:
     enabled: true
     data:
@@ -82,6 +82,6 @@ krypton:
 # rules restricted to the CIDRs below plus extraEgress API server CIDRs.
 networkPolicy:
   allowOpenShiftIngress: true
-  krypton:
+  k8ston:
     idpEgressIpBlocks:
     - cidr: 203.0.113.10/32

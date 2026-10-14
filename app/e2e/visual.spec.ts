@@ -46,7 +46,7 @@ test('secret detail renders actions, values and history', async ({ page }, testI
   await shot(page, testInfo, 'detail-restore-dialog', false);
 });
 
-test('secret detail hides restart UI when KRYPTON_RESTART_ENABLED=false', async ({ page }, testInfo) => {
+test('secret detail hides restart UI when K8STON_RESTART_ENABLED=false', async ({ page }, testInfo) => {
   await mockApi(page, { loggedIn: true, restartEnabled: false });
   await page.goto('/secrets/demo/app-config', { waitUntil: 'networkidle' });
   await expect(page.getByText('Version history')).toBeVisible();

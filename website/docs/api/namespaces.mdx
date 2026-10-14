@@ -14,13 +14,13 @@ GET /api/namespaces
 Returns the namespaces the app may operate in, plus the effective scope:
 
 ```json
-{ "scope": "cluster", "namespaces": ["frontend-ns", "krypton-test"] }
+{ "scope": "cluster", "namespaces": ["frontend-ns", "k8ston-test"] }
 ```
 
 Behavior (`lib/namespaces.ts`):
 
 - `namespace` scope: exactly `[<pod-own-namespace>]` — by design.
-- `cluster` scope with `KRYPTON_NAMESPACES`: returns the configured names,
+- `cluster` scope with `K8STON_NAMESPACES`: returns the configured names,
   deduplicated and sorted, with **zero Kubernetes namespace-list requests**.
   Existence and Kubernetes permission are checked by the actual resource operations.
 - `cluster` scope with an empty allowlist: completes paginated namespace discovery

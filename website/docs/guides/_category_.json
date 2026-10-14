@@ -3,7 +3,7 @@
   "link": {
     "type": "generated-index",
     "title": "Guides",
-    "description": "Day-to-day workflows for developing, deploying, configuring, and operating Krypton.",
+    "description": "Day-to-day workflows for developing, deploying, configuring, and operating K8ston.",
     "slug": "/guides"
   }
 }

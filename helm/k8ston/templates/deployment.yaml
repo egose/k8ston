@@ -1,21 +1,21 @@
 {{- $deploymentTag := .Values.image.tag | default .Chart.AppVersion -}}
 {{- $global := .Values.global | default dict -}}
 {{- $envSecretName := .Values.envSecretName | default "" -}}
-{{- $serviceAccountName := .Values.serviceAccountName | default ($global.serviceAccountName | default (include "krypton.serviceAccountName" .)) -}}
+{{- $serviceAccountName := .Values.serviceAccountName | default ($global.serviceAccountName | default (include "k8ston.serviceAccountName" .)) -}}
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   labels:
-    {{- include "krypton.labels" . | nindent 4 }}
+    {{- include "k8ston.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "krypton.selectorLabels" . | nindent 6 }}
+      {{- include "k8ston.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- $podAnnotations := merge (.Values.podAnnotations | default dict) ($global.podAnnotations | default dict) -}}
@@ -24,7 +24,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "krypton.labels" . | nindent 8 }}
+        {{- include "k8ston.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -35,7 +35,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ $serviceAccountName }}
-      # Krypton authenticates to the Kubernetes API with its own ServiceAccount
+      # K8ston authenticates to the Kubernetes API with its own ServiceAccount
       # token, so this must stay true (see serviceAccount.automount).
       automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
       {{- with .Values.podSecurityContext }}
@@ -67,20 +67,20 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             {{- end }}
-          {{- $cfg := include "krypton.effectiveConfig" . | fromYaml -}}
-          {{- $managed := include "krypton.managedEnvKeys" . | fromYamlArray -}}
+          {{- $cfg := include "k8ston.effectiveConfig" . | fromYaml -}}
+          {{- $managed := include "k8ston.managedEnvKeys" . | fromYamlArray -}}
             {{- if $cfg.scope }}
-            - name: KRYPTON_SCOPE
+            - name: K8STON_SCOPE
               value: {{ $cfg.scope | quote }}
             {{- end }}
             {{- if $cfg.namespaces }}
-            - name: KRYPTON_NAMESPACES
+            - name: K8STON_NAMESPACES
               value: {{ $cfg.namespaces | quote }}
             {{- end }}
-            - name: KRYPTON_RESTART_ENABLED
+            - name: K8STON_RESTART_ENABLED
               value: {{ $cfg.restartEnabled | quote }}
             {{- if $cfg.accessConfigMap }}
-            - name: KRYPTON_ACCESS_CONFIGMAP
+            - name: K8STON_ACCESS_CONFIGMAP
               value: {{ $cfg.accessConfigMap | quote }}
             {{- end }}
             {{- range $k, $v := $cfg.env }}

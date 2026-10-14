@@ -5,9 +5,9 @@ sidebar_position: 0
 
 # Overview
 
-Krypton is a lightweight secret manager UI and API backed **directly by Kubernetes Secret objects**.
+K8ston is a lightweight secret manager UI and API backed **directly by Kubernetes Secret objects**.
 No database, no persistent volumes, no secret sprawl: Kubernetes is the source of
-truth, and Krypton is the translation + visualization layer on top.
+truth, and K8ston is the translation + visualization layer on top.
 
 It is built with Next.js (App Router), `@kubernetes/client-node`, generic OIDC SSO, and
 shadcn-theme components.
@@ -15,7 +15,7 @@ shadcn-theme components.
 ## How it works
 
 ```text
-Browser ──SSO login──▶ Krypton (Next.js)
+Browser ──SSO login──▶ K8ston (Next.js)
                             │  ServiceAccount token (auto-mounted in-cluster)
                             │  https://kubernetes.default.svc  — no credentials to manage
                             ▼
@@ -29,18 +29,18 @@ Browser ──SSO login──▶ Krypton (Next.js)
 - **Authz (hybrid)**: SSO proves _who you are_; per-secret annotations and one
   namespace-level ConfigMap decide _what you may see_. The app's ServiceAccount
   executes the K8s calls.
-- **History**: K8s overwrites secrets in place, so Krypton snapshots the previous
+- **History**: K8s overwrites secrets in place, so K8ston snapshots the previous
   state into an immutable, UID/resourceVersion-bound Secret before updates and
   restores. Rollbacks preserve raw bytes and current access rules within the
   [retained history](/guides/versioning-history/).
 
-## What Krypton is not
+## What K8ston is not
 
 - **Not an encryption layer.** Out of the box, Kubernetes Secrets are **base64-encoded,
-  not encrypted**, in etcd. Krypton shows a warning banner until you confirm etcd
-  encryption-at-rest is enabled (`KRYPTON_ETCD_ENCRYPTED=true`). Read the
+  not encrypted**, in etcd. K8ston shows a warning banner until you confirm etcd
+  encryption-at-rest is enabled (`K8STON_ETCD_ENCRYPTED=true`). Read the
   [Security Model](/about/security-model/) before production.
-- **Not a replacement for RBAC.** Krypton adds an SSO-friendly authorization layer
+- **Not a replacement for RBAC.** K8ston adds an SSO-friendly authorization layer
   for users without cluster identities. The ServiceAccount it runs as should still
   follow least privilege (namespace `Role` by default, `ClusterRole` only for
   multi-namespace dashboards).
@@ -51,13 +51,13 @@ Browser ──SSO login──▶ Krypton (Next.js)
 
 | Concern              | Approach                                                                |
 | -------------------- | ----------------------------------------------------------------------- |
-| Storage              | Native `Secret` objects; snapshots labeled `krypton.io/kind=history`    |
+| Storage              | Native `Secret` objects; snapshots labeled `k8ston.io/kind=history`    |
 | Login                | Generic OIDC (discovery-based), stateless HS256 session JWT             |
 | Authorization        | Admins bypass; per-secret annotations override namespace fallback       |
 | Concurrency          | Optimistic writes on `metadata.resourceVersion` (409 + reload on drift) |
 | Size guard           | 1 MiB per-object limit enforced client- and server-side (413)           |
 | Consumer rollout     | Opt-in bounded rollout requests for explicit Secret consumers; reports partial failures |
-| Deployment           | Raw manifests (`app/k8s/`) or Helm (`helm/main` + `helm/krypton` subchart) |
+| Deployment           | Raw manifests (`app/k8s/`) or Helm (`helm/main` + `helm/k8ston` subchart) |
 
 ## Where to go next
 
@@ -65,4 +65,4 @@ Browser ──SSO login──▶ Krypton (Next.js)
 - [Architecture](/about/architecture/) — request flow, scopes, and project layout.
 - [Security Model](/about/security-model/) — assumptions, guarantees, and hardening.
 - [Sandbox](/guides/sandbox/) — batteries-included kind + Dex environment.
-- [API Overview](/api/overview/) — drive Krypton from scripts and automation.
+- [API Overview](/api/overview/) — drive K8ston from scripts and automation.

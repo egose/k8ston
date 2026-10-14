@@ -14,7 +14,7 @@ privilege) or cluster-wide (centralized multi-namespace dashboard).
 kubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml
 kubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml
 # real secrets — never commit values:
-kubectl create secret generic krypton-oidc -n krypton \
+kubectl create secret generic k8ston-oidc -n k8ston \
   --from-literal=OIDC_CLIENT_SECRET='...' \
   --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
 kubectl apply -f app/k8s/deployment.yaml
@@ -24,12 +24,12 @@ What you get:
 
 | Manifest               | Purpose                                                        |
 | ---------------------- | -------------------------------------------------------------- |
-| `namespace.yaml`       | `krypton` namespace                                            |
-| `serviceaccount.yaml`  | `krypton` ServiceAccount (the identity that calls the K8s API) |
+| `namespace.yaml`       | `k8ston` namespace                                            |
+| `serviceaccount.yaml`  | `k8ston` ServiceAccount (the identity that calls the K8s API) |
 | `role.yaml`            | `secrets` full verbs + `configmaps` read, own namespace only   |
-| `configmap-app.yaml`   | Non-secret app config (`KRYPTON_*`, `OIDC_*`, `NEXT_PUBLIC_*`) |
+| `configmap-app.yaml`   | Non-secret app config (`K8STON_*`, `OIDC_*`, `NEXT_PUBLIC_*`) |
 | `configmap-access.yaml`| Namespace fallback rules (`access.json`)                       |
-| `secret-oidc.yaml`     | Template for `krypton-oidc` (create with real values instead)  |
+| `secret-oidc.yaml`     | Template for `k8ston-oidc` (create with real values instead)  |
 | `deployment.yaml`      | App deployment (non-root `65532`, read-only root FS, port 3000)|
 
 Then expose via Ingress/Route with TLS and register the OIDC redirect URI
@@ -40,16 +40,16 @@ K8s/OIDC calls, so it is safe to probe (the Helm chart probes the same endpoint)
 
 ## Cluster scope (multi-namespace dashboard)
 
-Set `KRYPTON_SCOPE=cluster` in `configmap-app.yaml`, apply `clusterrole.yaml`
+Set `K8STON_SCOPE=cluster` in `configmap-app.yaml`, apply `clusterrole.yaml`
 (instead of, or in addition to, `role.yaml`), and optionally narrow with
-`KRYPTON_NAMESPACES="team-a,team-b"`:
+`K8STON_NAMESPACES="team-a,team-b"`:
 
 ```bash
 kubectl apply -f app/k8s/clusterrole.yaml
 ```
 
 The ClusterRole adds `namespaces` (get, list, watch) on top of the namespace
-permissions. A configured `KRYPTON_NAMESPACES` allowlist resolves/checks locally
+permissions. A configured `K8STON_NAMESPACES` allowlist resolves/checks locally
 without namespace-list calls, so curated deployments can instead grant resource
 permissions in just those namespaces. Without an allowlist, failed/incomplete
 namespace discovery returns an error; it no longer falls back to the pod namespace.
@@ -58,7 +58,7 @@ namespace discovery returns an error; it no longer falls back to the pod namespa
 
 The feature is disabled by default (least privilege). To enable it, do **both**:
 
-1. Set `KRYPTON_RESTART_ENABLED: 'true'` in `configmap-app.yaml`.
+1. Set `K8STON_RESTART_ENABLED: 'true'` in `configmap-app.yaml`.
 2. Uncomment the `apps` rule (deployments/statefulsets/daemonsets: get, list,
    watch, patch) in `role.yaml` (or `clusterrole.yaml`).
 
@@ -68,20 +68,20 @@ Without the RBAC rule, the API fails closed at the Kubernetes API.
 ## Container image
 
 The `Dockerfile` (repo root, pnpm workspace context) builds
-`ghcr.io/egose/krypton:<tag>` — published on `v*.*.*` tags by the
+`ghcr.io/egose/k8ston:<tag>` — published on `v*.*.*` tags by the
 _Publish Docker image_ workflow:
 
 ```bash
-docker build -t krypton:sandbox -f Dockerfile .
+docker build -t k8ston:sandbox -f Dockerfile .
 ```
 
 The image runs the Next.js standalone server (`node app/server.js`) as UID
-`65532` on port 3000, matching `app/k8s/deployment.yaml`. Krypton is stateless
+`65532` on port 3000, matching `app/k8s/deployment.yaml`. K8ston is stateless
 (all state lives in Kubernetes Secrets), so more than one replica is always safe.
 
 ## Prefer Helm?
 
 The [Helm guide](/guides/deploy-helm/) covers the `helm/main` chart
-(`helm/krypton` subchart, NetworkPolicy, OpenShift Routes). Prefer raw manifests
+(`helm/k8ston` subchart, NetworkPolicy, OpenShift Routes). Prefer raw manifests
 when you want minimal moving parts; prefer Helm when you want templated RBAC
 scope, restart wiring, and access config in one values file.

@@ -7,7 +7,7 @@ import CodeBlock from '@theme/CodeBlock';
 
 # API Overview
 
-The API is plain REST over JSON, authenticated with the `krypton_session`
+The API is plain REST over JSON, authenticated with the `k8ston_session`
 cookie (an HS256 session JWT minted at OIDC login). Values cross the API
 boundary as **plaintext `data` for text values** and **base64 `binaryData` for
 non-text values** in authorized detail/history responses. Summary `binaryKeys`
@@ -131,5 +131,5 @@ match the app's `SESSION_SECRET`):
 
 ```bash
 ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)
-curl --cookie "krypton_session=$ALICE" localhost:3000/api/namespaces
+curl --cookie "k8ston_session=$ALICE" localhost:3000/api/namespaces
 ```

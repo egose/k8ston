@@ -12,7 +12,7 @@ const ctx = { params: Promise.resolve({ namespace, name }) };
 const writer = { sub: 'writer', email: 'writer@example.test', name: 'Writer', groups: [] };
 const outsider = { sub: 'reader', email: 'outsider@example.test', name: 'Reader', groups: [] };
 const marker = 'synthetic-private-acl-input';
-const annotations = { allowedGroups: 'krypton.io/allowed-groups', allowedUsers: 'krypton.io/allowed-users' };
+const annotations = { allowedGroups: 'k8ston.io/allowed-groups', allowedUsers: 'k8ston.io/allowed-users' };
 const fields = ['allowedGroups', 'allowedUsers'] as const;
 type Field = (typeof fields)[number];
 type Action = 'create' | 'update';
@@ -142,7 +142,7 @@ describe.each(['create', 'update'] as const)('%s annotation ACL route boundary',
     expect(store.core.replaceNamespacedSecret).toHaveBeenCalledTimes(action === 'update' ? 1 : 0);
     if (action === 'update') {
       expect(store.core.createNamespacedSecret.mock.calls[0][0].body.metadata).toMatchObject({
-        labels: { 'krypton.io/kind': 'history' },
+        labels: { 'k8ston.io/kind': 'history' },
         annotations: { [annotations.allowedUsers]: writer.email },
       });
       expect(store.core.createNamespacedSecret.mock.invocationCallOrder[0]).toBeLessThan(

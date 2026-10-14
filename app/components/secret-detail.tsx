@@ -39,7 +39,7 @@ export function SecretDetail({ namespace, name }: Props) {
 
   const { data, isLoading, error } = useQuery(secretQueryOptions(namespace, name));
 
-  // Feature flag (KRYPTON_RESTART_ENABLED): shows the restart button + hint.
+  // Feature flag (K8STON_RESTART_ENABLED): shows the restart button + hint.
   // Defaults to false while loading — matches the server default.
   const { data: publicConfig } = useQuery({ queryKey: ['public-config'], queryFn: api.config });
   const restartEnabled = publicConfig?.restartEnabled ?? false;
@@ -199,9 +199,9 @@ export function SecretDetail({ namespace, name }: Props) {
                 v{secret.version}
               </Badge>
             )}
-            {!secret.managedByKrypton && (
+            {!secret.managedByK8ston && (
               <Badge variant="warning" size="sm">
-                created outside Krypton
+                created outside K8ston
               </Badge>
             )}
             {secret.immutable && (

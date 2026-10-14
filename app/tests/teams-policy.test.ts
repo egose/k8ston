@@ -37,12 +37,12 @@ function liveWith(name: string, annotations: Record<string, string> = {}): V1Sec
       name,
       uid: 'synthetic-live-uid',
       resourceVersion: '17',
-      annotations: { 'krypton.io/managed-by': 'krypton', ...annotations },
+      annotations: { 'k8ston.io/managed-by': 'k8ston', ...annotations },
     },
     data: { credential: Buffer.from('synthetic-live-value').toString('base64') },
   };
 }
-const teamAnn = (team: string) => ({ 'krypton.io/team': team });
+const teamAnn = (team: string) => ({ 'k8ston.io/team': team });
 
 async function signIn(identity = nsMember) {
   const auth = await import('@/lib/auth');
@@ -184,15 +184,15 @@ describe('teams policy schema', () => {
     const args = { name: 'credentials', namespace, user: nsMember };
     expect(toSummary(namespace, buildLiveSecret({ ...args, data: {} })).team).toBe('');
     const assigned = buildLiveSecret({ ...args, team: 'team1', data: {} });
-    expect(assigned.metadata?.annotations?.['krypton.io/team']).toBe('team1');
+    expect(assigned.metadata?.annotations?.['k8ston.io/team']).toBe('team1');
     expect(toSummary(namespace, assigned).team).toBe('team1');
     // Undefined preserves, "" clears, invalid rejects without mutating.
     const preserved = buildLiveSecret({ ...args, live: assigned, description: 'kept' });
-    expect(preserved.metadata?.annotations?.['krypton.io/team']).toBe('team1');
+    expect(preserved.metadata?.annotations?.['k8ston.io/team']).toBe('team1');
     const cleared = buildLiveSecret({ ...args, live: assigned, team: '' });
-    expect(cleared.metadata?.annotations?.['krypton.io/team']).toBe('');
+    expect(cleared.metadata?.annotations?.['k8ston.io/team']).toBe('');
     expect(() => buildLiveSecret({ ...args, team: 'Team1', data: {} })).toThrow();
-    expect(assigned.metadata?.annotations?.['krypton.io/team']).toBe('team1');
+    expect(assigned.metadata?.annotations?.['k8ston.io/team']).toBe('team1');
   });
 });
 
@@ -237,14 +237,14 @@ describe('teams read authorization', () => {
     // Team member locked out by an explicit non-matching ACL.
     expect(
       await readStatus(
-        liveWith('credentials', { ...teamAnn('team1'), 'krypton.io/allowed-users': 'alice@example.test' }),
+        liveWith('credentials', { ...teamAnn('team1'), 'k8ston.io/allowed-users': 'alice@example.test' }),
         team1Member,
       ),
     ).toBe(403);
     // Outsider admitted by an explicit matching ACL on a team secret.
     expect(
       await readStatus(
-        liveWith('credentials', { ...teamAnn('team1'), 'krypton.io/allowed-users': outsider.email }),
+        liveWith('credentials', { ...teamAnn('team1'), 'k8ston.io/allowed-users': outsider.email }),
         outsider,
       ),
     ).toBe(200);

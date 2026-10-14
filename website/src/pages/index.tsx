@@ -97,7 +97,7 @@ function Hero(): ReactNode {
           </div>
         </div>
         <p className="!max-w-md !text-sm !leading-7 !text-zinc-400 lg:!justify-self-end">
-          Krypton is a lightweight UI and API backed directly by native Secret objects. SSO proves who you are,
+          K8ston is a lightweight UI and API backed directly by native Secret objects. SSO proves who you are,
           annotations decide what you may see, and every change is versioned — with Velero, GitOps, and RBAC still in
           charge underneath.
         </p>
@@ -294,14 +294,14 @@ function Dashboard(): ReactNode {
             <span className="!h-2.5 !w-2.5 !rounded-full !bg-[#febc2e]" />
             <span className="!h-2.5 !w-2.5 !rounded-full !bg-[#28c840]" />
             <span className="!ml-3 !flex-1 !truncate !rounded-md !bg-white/5 !px-3 !py-1 !font-mono !text-[11px] !text-zinc-500">
-              krypton.example.com/secrets/krypton-test/database-credentials
+              k8ston.example.com/secrets/k8ston-test/database-credentials
             </span>
           </div>
           <div className="!grid md:!grid-cols-[200px_1fr]">
             <div className="!hidden !border-r !border-white/10 !p-4 md:!block">
               <p className="!text-[10px] !uppercase !tracking-[0.18em] !text-zinc-600">Namespaces</p>
               <div className="!mt-3 !space-y-1 !text-[13px]">
-                <div className="!rounded-md !bg-white/5 !px-3 !py-2 !text-zinc-200">krypton-test</div>
+                <div className="!rounded-md !bg-white/5 !px-3 !py-2 !text-zinc-200">k8ston-test</div>
                 <div className="!rounded-md !px-3 !py-2 !text-zinc-500">frontend-ns</div>
                 <div className="!rounded-md !px-3 !py-2 !text-zinc-500">production</div>
               </div>
@@ -365,19 +365,19 @@ const codeSample = `# Headless authz checks (no browser)
 ALICE=$(node sandbox/scripts/mint-jwt.mjs \\
   --email alice@company.com --groups dev-team)
 
-curl --cookie "krypton_session=$ALICE" \\
-  localhost:3000/api/namespaces/krypton-test/secrets
+curl --cookie "k8ston_session=$ALICE" \\
+  localhost:3000/api/namespaces/k8ston-test/secrets
 
 # Optimistic-concurrency update (409 on drift)
-curl --cookie "krypton_session=$ALICE" -X PUT \\
+curl --cookie "k8ston_session=$ALICE" -X PUT \\
   -H 'Content-Type: application/json' \\
   -d '{"data":{"API_KEY":"<rotated>"},"resourceVersion":"'$RV'"}' \\
-  localhost:3000/api/namespaces/krypton-test/secrets/demo-secret
+  localhost:3000/api/namespaces/k8ston-test/secrets/demo-secret
 
 # Reversible restore — snapshots current state first
-curl --cookie "krypton_session=$ALICE" -X POST \\
+curl --cookie "k8ston_session=$ALICE" -X POST \\
   -d '{"version":1}' \\
-  localhost:3000/api/namespaces/krypton-test/secrets/demo-secret/restore`;
+  localhost:3000/api/namespaces/k8ston-test/secrets/demo-secret/restore`;
 
 function CodeSection(): ReactNode {
   return (
@@ -385,7 +385,7 @@ function CodeSection(): ReactNode {
       <div className="!mx-auto !grid !max-w-6xl !items-center !gap-10 !px-6 !py-16 lg:!grid-cols-[0.9fr_1.1fr] lg:!px-8 lg:!py-24">
         <div>
           <Eyebrow>Automation</Eyebrow>
-          <SectionHeading>Drive Krypton from scripts</SectionHeading>
+          <SectionHeading>Drive K8ston from scripts</SectionHeading>
           <SectionSub>
             Plain REST over JSON with session-cookie auth. Values cross the API as plain strings — base64 stays inside
             Kubernetes.
@@ -443,7 +443,7 @@ function DeployOptions(): ReactNode {
     {
       title: 'Helm + OCI',
       description: 'Umbrella chart or direct OCI install. Chart version tracks the app release.',
-      snippet: 'helm install krypton oci://ghcr.io/egose/charts/krypton',
+      snippet: 'helm install k8ston oci://ghcr.io/egose/charts/k8ston',
       to: '/guides/deploy-helm/',
       link: 'Deploy with Helm →',
     },
@@ -491,7 +491,7 @@ function OpenSource(): ReactNode {
           <div className="!mt-6 !flex !flex-wrap !gap-3">
             <Link
               className="!inline-flex !items-center !rounded-md !border !border-white/15 !bg-white/5 !px-4 !py-2 !text-sm !font-medium !text-zinc-200 !no-underline !transition hover:!bg-white/10"
-              to="https://github.com/egose/krypton"
+              to="https://github.com/egose/k8ston"
             >
               Star on GitHub
             </Link>
@@ -553,8 +553,8 @@ function FinalCta(): ReactNode {
 export default function Home(): ReactNode {
   return (
     <Layout
-      title="Krypton"
-      description="Krypton is a Kubernetes-native secret manager: SSO login, hybrid authorization, versioned history, and one-click rollbacks on top of native Secret objects."
+      title="K8ston"
+      description="K8ston is a Kubernetes-native secret manager: SSO login, hybrid authorization, versioned history, and one-click rollbacks on top of native Secret objects."
     >
       <main className="!bg-black">
         <Hero />

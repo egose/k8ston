@@ -84,7 +84,7 @@ class SecretResponseProcessor extends CoreV1ApiResponseProcessor {
   }
 }
 
-/** The four Secret read/write operations used by Krypton have own-key codecs. */
+/** The four Secret read/write operations used by K8ston have own-key codecs. */
 export class SecretMapCoreV1Api extends CoreV1Api {
   constructor(configuration: Configuration) {
     super(configuration, new SecretRequestFactory(configuration), new SecretResponseProcessor());

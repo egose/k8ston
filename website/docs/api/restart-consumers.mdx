@@ -20,7 +20,7 @@ StatefulSets, and DaemonSets in the same namespace with **exact** Secret referen
   `volumes[].projected.sources[].secret.name`;
 - `imagePullSecrets[].name`.
 
-It patches `spec.template.metadata.annotations["krypton.io/restarted-at"]` with
+It patches `spec.template.metadata.annotations["k8ston.io/restarted-at"]` with
 a timestamp, using an RFC 6902 JSON Patch and at most **four in-flight patches
 per request across all kinds**. Each patch first tests the inspected workload
 `UID` and `resourceVersion`, so a same-name replacement or any intervening
@@ -106,7 +106,7 @@ audits carry only `kind`/`name` plus classified failures.
 ## Access and audit
 
 - Returns `403 { "error": "Restarting apps is disabled on this deployment" }`
-  unless `KRYPTON_RESTART_ENABLED=true` (which also needs the `apps` RBAC rule).
+  unless `K8STON_RESTART_ENABLED=true` (which also needs the `apps` RBAC rule).
 - Same authentication, namespace, live visibility, and current ACL gates as
   updating the Secret. Direct history names are hidden. Gate/preparation failures
   occur before workload mutation and return the ordinary error envelope.

@@ -1,11 +1,11 @@
-# Default values for krypton.
+# Default values for k8ston.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 global:
   # Merged into the container env below `env`; per key, local `env` wins over
-  # `global.env`. Entries for chart-managed keys (KRYPTON_SCOPE,
-  # KRYPTON_NAMESPACES, KRYPTON_RESTART_ENABLED, KRYPTON_ACCESS_CONFIGMAP) must
+  # `global.env`. Entries for chart-managed keys (K8STON_SCOPE,
+  # K8STON_NAMESPACES, K8STON_RESTART_ENABLED, K8STON_ACCESS_CONFIGMAP) must
   # match the derived effective config or rendering fails with guidance.
   env: {}
   podAnnotations: {}
@@ -17,21 +17,21 @@ replicaCount: 1
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: ghcr.io/egose/krypton
+  repository: ghcr.io/egose/k8ston
   tag: latest
   pullPolicy: Always
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
 # This is to override the chart name.
-nameOverride: krypton
-fullnameOverride: krypton
+nameOverride: k8ston
+fullnameOverride: k8ston
 
 # This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
-  # Krypton talks to the Kubernetes API with its own ServiceAccount token, so
+  # K8ston talks to the Kubernetes API with its own ServiceAccount token, so
   # the token MUST be auto-mounted (unlike apps that set this to false).
   automount: true
   # Annotations to add to the service account
@@ -47,23 +47,23 @@ args: []
 
 envSecretName: ''
 # Non-secret env vars (local `env` wins over `global.env` per key). The chart
-# derives KRYPTON_SCOPE (from rbac.scope), KRYPTON_NAMESPACES (from
-# rbac.extraNamespaces, curated mode only), KRYPTON_RESTART_ENABLED (from
-# restartEnabled), and KRYPTON_ACCESS_CONFIGMAP (from accessConfig.name when
+# derives K8STON_SCOPE (from rbac.scope), K8STON_NAMESPACES (from
+# rbac.extraNamespaces, curated mode only), K8STON_RESTART_ENABLED (from
+# restartEnabled), and K8STON_ACCESS_CONFIGMAP (from accessConfig.name when
 # enabled); an explicit entry for one of these managed keys must equal the
 # derived effective value or rendering fails with guidance. Omit them to use
 # the derived defaults. Do not also set managed keys in the envSecretName
 # Secret: explicit env entries always shadow envFrom values.
 env: {}
 
-# Inject POD_NAMESPACE from the downward API (metadata.namespace). Krypton
-# resolves its own namespace as POD_NAMESPACE, then KRYPTON_NAMESPACE, then
-# 'krypton' (see app/lib/config.ts); namespace scope requires this.
+# Inject POD_NAMESPACE from the downward API (metadata.namespace). K8ston
+# resolves its own namespace as POD_NAMESPACE, then K8STON_NAMESPACE, then
+# 'k8ston' (see app/lib/config.ts); namespace scope requires this.
 podNamespaceEnv: true
 
 # Additional raw env entries appended after `env` (e.g. valueFrom sources).
-# Must not set chart-managed keys (KRYPTON_SCOPE, KRYPTON_NAMESPACES,
-# KRYPTON_RESTART_ENABLED, KRYPTON_ACCESS_CONFIGMAP): extraEnv renders after
+# Must not set chart-managed keys (K8STON_SCOPE, K8STON_NAMESPACES,
+# K8STON_RESTART_ENABLED, K8STON_ACCESS_CONFIGMAP): extraEnv renders after
 # `env` and would shadow the derived effective values, so rendering fails.
 extraEnv: []
 # - name: POD_IP
@@ -73,8 +73,8 @@ extraEnv: []
 
 # "Restart apps" feature: rolling restart of Deployments/StatefulSets/
 # DaemonSets consuming a secret. This single effective value drives BOTH the
-# KRYPTON_RESTART_ENABLED runtime env flag AND the `apps` RBAC rule below, so
-# the two can never silently disagree. An explicit KRYPTON_RESTART_ENABLED
+# K8STON_RESTART_ENABLED runtime env flag AND the `apps` RBAC rule below, so
+# the two can never silently disagree. An explicit K8STON_RESTART_ENABLED
 # entry in `env`/`global.env` must parse to the same value (runtime truthy
 # strings: 1/true/yes/on, e.g. `yes` agrees with `true`) or rendering fails.
 # With rbac.create=false, grant the apps permissions out-of-band to match.
@@ -84,13 +84,13 @@ extraEnv: []
 restartEnabled: false
 
 # Kubernetes RBAC for the app ServiceAccount (see app/k8s/role.yaml and
-# app/k8s/clusterrole.yaml). The chart derives the default KRYPTON_SCOPE from
-# `scope` (and a curated KRYPTON_NAMESPACES allowlist from `extraNamespaces`);
-# an explicit KRYPTON_SCOPE/KRYPTON_NAMESPACES entry in `env`/`global.env` must
+# app/k8s/clusterrole.yaml). The chart derives the default K8STON_SCOPE from
+# `scope` (and a curated K8STON_NAMESPACES allowlist from `extraNamespaces`);
+# an explicit K8STON_SCOPE/K8STON_NAMESPACES entry in `env`/`global.env` must
 # match the derived value or rendering fails. `namespace` manages secrets in
 # its own namespace only, `cluster` is a centralized multi-namespace dashboard
-# (optionally narrowed with KRYPTON_NAMESPACES in `env`). With create=false,
-# RBAC is managed out-of-band: set KRYPTON_SCOPE/KRYPTON_NAMESPACES in `env`
+# (optionally narrowed with K8STON_NAMESPACES in `env`). With create=false,
+# RBAC is managed out-of-band: set K8STON_SCOPE/K8STON_NAMESPACES in `env`
 # yourself to match your external grants (`scope`/`extraNamespaces` are then
 # ignored).
 rbac:
@@ -98,8 +98,8 @@ rbac:
   scope: namespace
   # Extra namespaces for curated multi-namespace access: a Role + RoleBinding
   # pair is rendered per entry (subject stays this release's ServiceAccount)
-  # and the chart derives effective KRYPTON_SCOPE=cluster with
-  # KRYPTON_NAMESPACES="<release-namespace>,<extras...>" — served by these
+  # and the chart derives effective K8STON_SCOPE=cluster with
+  # K8STON_NAMESPACES="<release-namespace>,<extras...>" — served by these
   # namespaced Roles only, no ClusterRole is rendered. Only used when scope is
   # `namespace` (rendering fails otherwise); entries must be non-empty,
   # comma-free namespace names. Previously these entries granted Roles the
@@ -110,17 +110,17 @@ rbac:
 # Namespace-level ownership fallback ConfigMap (see
 # app/k8s/configmap-access.yaml). Per-secret annotations override these rules.
 # When enabled, the chart renders the ConfigMap AND derives
-# KRYPTON_ACCESS_CONFIGMAP from `name` so the runtime policy reader
-# (app/lib/authz.ts) finds it; an explicit KRYPTON_ACCESS_CONFIGMAP entry must
+# K8STON_ACCESS_CONFIGMAP from `name` so the runtime policy reader
+# (app/lib/authz.ts) finds it; an explicit K8STON_ACCESS_CONFIGMAP entry must
 # match `name` or rendering fails. `key` must stay `access.json` (hardcoded by
-# the runtime reader). When disabled, set KRYPTON_ACCESS_CONFIGMAP in `env` to
+# the runtime reader). When disabled, set K8STON_ACCESS_CONFIGMAP in `env` to
 # point at an externally managed ConfigMap.
 # Namespace groups/users see ALL secrets (every team + unassigned); team
-# members see only their team's secrets. Secrets carry krypton.io/team
+# members see only their team's secrets. Secrets carry k8ston.io/team
 # (missing/blank = unassigned, namespace rules only).
 accessConfig:
   enabled: false
-  name: krypton-access
+  name: k8ston-access
   key: access.json
   data: {}
   # data:
@@ -154,7 +154,7 @@ securityContext:
     - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
-  # krypton images run as non-root user 65532 (see /Dockerfile).
+  # k8ston images run as non-root user 65532 (see /Dockerfile).
   runAsUser: 65532
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
@@ -162,7 +162,7 @@ service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  # krypton's Next.js standalone server listens on 3000 by default; the
+  # k8ston's Next.js standalone server listens on 3000 by default; the
   # deployment passes this value as the PORT env var so the two cannot drift.
   port: 3000
 

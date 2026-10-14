@@ -33,7 +33,7 @@ async function remove(keepHistory = false) {
 }
 
 beforeEach(() => {
-  process.env.KRYPTON_IMPERSONATION = 'true';
+  process.env.K8STON_IMPERSONATION = 'true';
   vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 

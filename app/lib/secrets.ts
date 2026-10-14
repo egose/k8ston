@@ -34,7 +34,7 @@ export interface SecretSummary {
   allowedUsers: string[];
   /** Single-team assignment; "" = unassigned (namespace default). */
   team: string;
-  managedByKrypton: boolean;
+  managedByK8ston: boolean;
   immutable: boolean;
   /** Names only; never include values in list/create responses. */
   binaryKeys: string[];
@@ -114,14 +114,14 @@ export function isHistorySnapshot(secret: V1Secret): boolean {
   return secret.metadata?.labels?.[LABELS.kind] === 'history';
 }
 
-/** True when the secret was created (or adopted) by Krypton. */
-export function isManagedByKrypton(secret: V1Secret): boolean {
+/** True when the secret was created (or adopted) by K8ston. */
+export function isManagedByK8ston(secret: V1Secret): boolean {
   return secret.metadata?.annotations?.[ANNOTATIONS.managedBy] === MANAGED_BY_VALUE;
 }
 
 /** Shared list/direct visibility: snapshots are never live objects, even for admins. */
 export function isVisibleLiveSecret(secret: V1Secret): boolean {
-  return !isHistorySnapshot(secret) && (!config.managedOnly || isManagedByKrypton(secret));
+  return !isHistorySnapshot(secret) && (!config.managedOnly || isManagedByK8ston(secret));
 }
 
 export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
@@ -142,7 +142,7 @@ export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
     allowedGroups: csv(ann[ANNOTATIONS.allowedGroups]),
     allowedUsers: csv(ann[ANNOTATIONS.allowedUsers]),
     team,
-    managedByKrypton: isManagedByKrypton(secret),
+    managedByK8ston: isManagedByK8ston(secret),
     immutable: secret.immutable === true,
     binaryKeys: binaryKeys(secret),
   };

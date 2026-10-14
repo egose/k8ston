@@ -8,12 +8,12 @@ const path = require('node:path');
 const { createRequire, syncBuiltinESMExports } = require('node:module');
 
 for (const name of Object.keys(process.env)) {
-  if (/^(OIDC_|SESSION_|KRYPTON_|KUBERNETES_|AUTH_DISABLED$|APP_URL$|NEXT_PUBLIC_APP_URL$|POD_NAMESPACE$|KUBECONFIG$)/.test(name)) delete process.env[name];
+  if (/^(OIDC_|SESSION_|K8STON_|KUBERNETES_|AUTH_DISABLED$|APP_URL$|NEXT_PUBLIC_APP_URL$|POD_NAMESPACE$|KUBECONFIG$)/.test(name)) delete process.env[name];
 }
 Object.assign(process.env, {
   AUTH_DISABLED: 'false', SESSION_SECRET: 'synthetic-offline-build-browser-session-secret-0123456789',
-  NEXT_PUBLIC_APP_URL: 'http://localhost:3100', KRYPTON_NAMESPACE: 'demo',
-  KRYPTON_ADMIN_GROUPS: 'synthetic-admins', NEXT_TELEMETRY_DISABLED: '1',
+  NEXT_PUBLIC_APP_URL: 'http://localhost:3100', K8STON_NAMESPACE: 'demo',
+  K8STON_ADMIN_GROUPS: 'synthetic-admins', NEXT_TELEMETRY_DISABLED: '1',
   KUBECONFIG: path.resolve(__dirname, '../.runtime/unused-kubeconfig'),
 });
 

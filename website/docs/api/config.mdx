@@ -24,13 +24,13 @@ request time (never prerendered, since deploy-time env differs from build-time):
   "historyLimit": 20,
   "managedOnly": true,
   "restartEnabled": false,
-  "appNamespace": "krypton"
+  "appNamespace": "k8ston"
 }
 ```
 
 `historyLimit` is an integer **1–100** (default 20 when unset). Invalid
-`KRYPTON_HISTORY_LIMIT` configuration returns
-`503 { "error": "KRYPTON_HISTORY_LIMIT must be an integer from 1 to 100" }`
+`K8STON_HISTORY_LIMIT` configuration returns
+`503 { "error": "K8STON_HISTORY_LIMIT must be an integer from 1 to 100" }`
 instead of advertising an unlimited or silently substituted retention policy.
 
 Use it in deployment checks: assert `authDisabled: false`,

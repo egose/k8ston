@@ -37,7 +37,7 @@ describe('OIDC classified diagnostics and bounded redirects', () => {
     expect(log).not.toMatch(/error_description|idpDescription|callbackUri|clientId/);
     expect(log).toContain('redirect_uri');
     expect(log).toContain('redirectBaseMatches');
-    expect((await cookies()).get('krypton_session')).toBeUndefined();
+    expect((await cookies()).get('k8ston_session')).toBeUndefined();
     expect(fetch).not.toHaveBeenCalled();
   });
 

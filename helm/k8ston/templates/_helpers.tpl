@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "krypton.name" -}}
+{{- define "k8ston.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "krypton.fullname" -}}
+{{- define "k8ston.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "krypton.chart" -}}
+{{- define "k8ston.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "krypton.labels" -}}
-helm.sh/chart: {{ include "krypton.chart" . }}
-{{ include "krypton.selectorLabels" . }}
+{{- define "k8ston.labels" -}}
+helm.sh/chart: {{ include "k8ston.chart" . }}
+{{ include "k8ston.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,31 +45,31 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "krypton.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "krypton.name" . }}
+{{- define "k8ston.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "k8ston.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "krypton.serviceAccountName" -}}
+{{- define "k8ston.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "krypton.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "k8ston.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
 {{/*
-Runtime env keys managed by "krypton.effectiveConfig". Renders a YAML array;
+Runtime env keys managed by "k8ston.effectiveConfig". Renders a YAML array;
 callers parse it with fromYamlArray.
 */}}
-{{- define "krypton.managedEnvKeys" -}}
-- KRYPTON_SCOPE
-- KRYPTON_NAMESPACES
-- KRYPTON_RESTART_ENABLED
-- KRYPTON_ACCESS_CONFIGMAP
+{{- define "k8ston.managedEnvKeys" -}}
+- K8STON_SCOPE
+- K8STON_NAMESPACES
+- K8STON_RESTART_ENABLED
+- K8STON_ACCESS_CONFIGMAP
 {{- end }}
 
 {{/*
@@ -78,7 +78,7 @@ absent value renders the fallback, "1"/"true"/"yes"/"on" (any case) render
 true, and everything else renders false. Expects a dict with .value and an
 optional .fallback (default false). Renders "true" or "false".
 */}}
-{{- define "krypton.parseBool" -}}
+{{- define "k8ston.parseBool" -}}
 {{- $raw := .value | toString -}}
 {{- $fallback := false -}}
 {{- if hasKey . "fallback" -}}
@@ -98,9 +98,9 @@ Single effective configuration shared by the Deployment and RBAC templates so
 rendered env, Role/ClusterRole scope, subjects, and apps permissions always
 agree. Local .Values.env wins over .Values.global.env per key.
 
-Derives chart-managed defaults (KRYPTON_SCOPE from rbac.scope, a curated
-KRYPTON_NAMESPACES allowlist from rbac.extraNamespaces, KRYPTON_RESTART_ENABLED
-from restartEnabled, KRYPTON_ACCESS_CONFIGMAP from accessConfig.name) and fails
+Derives chart-managed defaults (K8STON_SCOPE from rbac.scope, a curated
+K8STON_NAMESPACES allowlist from rbac.extraNamespaces, K8STON_RESTART_ENABLED
+from restartEnabled, K8STON_ACCESS_CONFIGMAP from accessConfig.name) and fails
 rendering with actionable guidance when an explicitly set value contradicts the
 effective chart configuration, instead of silently rendering disagreeing
 runtime/RBAC behavior.
@@ -108,33 +108,33 @@ runtime/RBAC behavior.
 Renders YAML (callers parse it with fromYaml):
   env:             merged env map (local over global); explicitly set managed
                    keys are guaranteed to match the derived effective value
-  scope:           effective KRYPTON_SCOPE, "" = do not render (externally
+  scope:           effective K8STON_SCOPE, "" = do not render (externally
                    managed RBAC without an explicit value)
-  namespaces:      effective KRYPTON_NAMESPACES, "" = do not render
+  namespaces:      effective K8STON_NAMESPACES, "" = do not render
   restartEnabled:  effective boolean driving BOTH the runtime env flag and the
                    apps RBAC rule
-  accessConfigMap: effective KRYPTON_ACCESS_CONFIGMAP, "" = do not render
+  accessConfigMap: effective K8STON_ACCESS_CONFIGMAP, "" = do not render
   rbacCreate:      effective boolean driving RBAC rendering
   rbacScope:       validated rbac.scope ("namespace" or "cluster")
 */}}
-{{- define "krypton.effectiveConfig" -}}
+{{- define "k8ston.effectiveConfig" -}}
 {{- $global := .Values.global | default dict -}}
 {{- $env := merge (deepCopy (.Values.env | default dict)) ($global.env | default dict) -}}
-{{- $managed := include "krypton.managedEnvKeys" . | fromYamlArray -}}
+{{- $managed := include "k8ston.managedEnvKeys" . | fromYamlArray -}}
 {{- /* Effective booleans (tolerate --set-string "true"/"false"). */ -}}
 {{- $rbac := .Values.rbac | default dict -}}
 {{- $rbacCreate := true -}}
 {{- if hasKey $rbac "create" -}}
-{{- $rbacCreate = eq (include "krypton.parseBool" (dict "value" (get $rbac "create") "fallback" true)) "true" -}}
+{{- $rbacCreate = eq (include "k8ston.parseBool" (dict "value" (get $rbac "create") "fallback" true)) "true" -}}
 {{- end -}}
 {{- $restartFlag := false -}}
 {{- if hasKey .Values "restartEnabled" -}}
-{{- $restartFlag = eq (include "krypton.parseBool" (dict "value" .Values.restartEnabled "fallback" false)) "true" -}}
+{{- $restartFlag = eq (include "k8ston.parseBool" (dict "value" .Values.restartEnabled "fallback" false)) "true" -}}
 {{- end -}}
 {{- $access := .Values.accessConfig | default dict -}}
 {{- $accessEnabled := false -}}
 {{- if hasKey $access "enabled" -}}
-{{- $accessEnabled = eq (include "krypton.parseBool" (dict "value" (get $access "enabled") "fallback" false)) "true" -}}
+{{- $accessEnabled = eq (include "k8ston.parseBool" (dict "value" (get $access "enabled") "fallback" false)) "true" -}}
 {{- end -}}
 {{- /* extraEnv entries render after env and would shadow the derived values. */ -}}
 {{- range $i, $entry := (.Values.extraEnv | default list) -}}
@@ -143,27 +143,27 @@ Renders YAML (callers parse it with fromYaml):
 {{- $entryName = get $entry "name" | toString -}}
 {{- end -}}
 {{- if has $entryName $managed -}}
-{{- fail (printf "krypton: extraEnv[%d].name %q is managed by the chart (derived from rbac.scope/rbac.extraNamespaces, restartEnabled, and accessConfig); remove it from extraEnv and either drop the override to use the derived default or set the same effective value in env (local env wins over global.env)" $i $entryName) -}}
+{{- fail (printf "k8ston: extraEnv[%d].name %q is managed by the chart (derived from rbac.scope/rbac.extraNamespaces, restartEnabled, and accessConfig); remove it from extraEnv and either drop the override to use the derived default or set the same effective value in env (local env wins over global.env)" $i $entryName) -}}
 {{- end -}}
 {{- end -}}
 {{- /* Explicit managed values from the merged env (local wins over global). */ -}}
 {{- $expScope := "" -}}
-{{- if hasKey $env "KRYPTON_SCOPE" -}}
-{{- $expScope = get $env "KRYPTON_SCOPE" | toString | lower -}}
+{{- if hasKey $env "K8STON_SCOPE" -}}
+{{- $expScope = get $env "K8STON_SCOPE" | toString | lower -}}
 {{- end -}}
 {{- $expNamespaces := "" -}}
-{{- if hasKey $env "KRYPTON_NAMESPACES" -}}
-{{- $expNamespaces = get $env "KRYPTON_NAMESPACES" | toString -}}
+{{- if hasKey $env "K8STON_NAMESPACES" -}}
+{{- $expNamespaces = get $env "K8STON_NAMESPACES" | toString -}}
 {{- end -}}
 {{- $hasRestart := false -}}
 {{- $expRestart := "" -}}
-{{- if hasKey $env "KRYPTON_RESTART_ENABLED" -}}
+{{- if hasKey $env "K8STON_RESTART_ENABLED" -}}
 {{- $hasRestart = true -}}
-{{- $expRestart = get $env "KRYPTON_RESTART_ENABLED" | toString -}}
+{{- $expRestart = get $env "K8STON_RESTART_ENABLED" | toString -}}
 {{- end -}}
 {{- $expAccess := "" -}}
-{{- if hasKey $env "KRYPTON_ACCESS_CONFIGMAP" -}}
-{{- $expAccess = get $env "KRYPTON_ACCESS_CONFIGMAP" | toString -}}
+{{- if hasKey $env "K8STON_ACCESS_CONFIGMAP" -}}
+{{- $expAccess = get $env "K8STON_ACCESS_CONFIGMAP" | toString -}}
 {{- end -}}
 {{- $scope := "namespace" -}}
 {{- if hasKey $rbac "scope" -}}
@@ -177,32 +177,32 @@ Renders YAML (callers parse it with fromYaml):
 {{- $effNamespaces := "" -}}
 {{- if $rbacCreate -}}
 {{- if and (ne $scope "namespace") (ne $scope "cluster") -}}
-{{- fail (printf "krypton: rbac.scope must be \"namespace\" or \"cluster\" (got %q)" (get $rbac "scope" | toString)) -}}
+{{- fail (printf "k8ston: rbac.scope must be \"namespace\" or \"cluster\" (got %q)" (get $rbac "scope" | toString)) -}}
 {{- end -}}
 {{- if not (kindIs "slice" $extras) -}}
-{{- fail "krypton: rbac.extraNamespaces must be a list of namespace names (e.g. extraNamespaces: [team-a, team-b])" -}}
+{{- fail "k8ston: rbac.extraNamespaces must be a list of namespace names (e.g. extraNamespaces: [team-a, team-b])" -}}
 {{- end -}}
 {{- range $e := $extras -}}
 {{- $es := $e | toString -}}
 {{- if eq ($es | trim) "" -}}
-{{- fail "krypton: rbac.extraNamespaces entries must be non-empty namespace names; remove the blank entry" -}}
+{{- fail "k8ston: rbac.extraNamespaces entries must be non-empty namespace names; remove the blank entry" -}}
 {{- end -}}
 {{- if ne $es ($es | trim) -}}
-{{- fail (printf "krypton: rbac.extraNamespaces entry %q has leading/trailing whitespace; namespace names cannot contain spaces" $es) -}}
+{{- fail (printf "k8ston: rbac.extraNamespaces entry %q has leading/trailing whitespace; namespace names cannot contain spaces" $es) -}}
 {{- end -}}
 {{- if contains "," $es -}}
-{{- fail (printf "krypton: rbac.extraNamespaces entry %q contains a comma, which would corrupt the derived KRYPTON_NAMESPACES allowlist; use separate list entries" $es) -}}
+{{- fail (printf "k8ston: rbac.extraNamespaces entry %q contains a comma, which would corrupt the derived K8STON_NAMESPACES allowlist; use separate list entries" $es) -}}
 {{- end -}}
 {{- end -}}
 {{- $hasExtras := gt (len $extras) 0 -}}
 {{- if eq $scope "cluster" -}}
 {{- if $hasExtras -}}
-{{- fail "krypton: rbac.extraNamespaces is only used with rbac.scope=namespace; for rbac.scope=cluster, remove extraNamespaces and optionally narrow the dashboard with KRYPTON_NAMESPACES in env" -}}
+{{- fail "k8ston: rbac.extraNamespaces is only used with rbac.scope=namespace; for rbac.scope=cluster, remove extraNamespaces and optionally narrow the dashboard with K8STON_NAMESPACES in env" -}}
 {{- end -}}
 {{- $effScope = "cluster" -}}
-{{- if hasKey $env "KRYPTON_SCOPE" -}}
+{{- if hasKey $env "K8STON_SCOPE" -}}
 {{- if ne $expScope "cluster" -}}
-{{- fail (printf "krypton: env KRYPTON_SCOPE=%q contradicts rbac.scope=cluster; remove the env override to use the derived default or set it to \"cluster\"" (get $env "KRYPTON_SCOPE" | toString)) -}}
+{{- fail (printf "k8ston: env K8STON_SCOPE=%q contradicts rbac.scope=cluster; remove the env override to use the derived default or set it to \"cluster\"" (get $env "K8STON_SCOPE" | toString)) -}}
 {{- end -}}
 {{- end -}}
 {{- if ne ($expNamespaces | trim) "" -}}
@@ -211,13 +211,13 @@ Renders YAML (callers parse it with fromYaml):
 {{- else if $hasExtras -}}
 {{- /* Curated multi-namespace access: runtime cluster scope with a bounded allowlist, served by namespaced Roles only (no ClusterRole). */ -}}
 {{- $effScope = "cluster" -}}
-{{- if hasKey $env "KRYPTON_SCOPE" -}}
+{{- if hasKey $env "K8STON_SCOPE" -}}
 {{- if ne $expScope "cluster" -}}
-{{- fail "krypton: rbac.extraNamespaces renders curated multi-namespace access: the effective runtime scope is KRYPTON_SCOPE=cluster with a chart-derived KRYPTON_NAMESPACES allowlist (release namespace plus rbac.extraNamespaces), served by namespaced Roles only (no ClusterRole). Remove the KRYPTON_SCOPE env override to use the derived default, set it to \"cluster\", or remove rbac.extraNamespaces to stay single-namespace" -}}
+{{- fail "k8ston: rbac.extraNamespaces renders curated multi-namespace access: the effective runtime scope is K8STON_SCOPE=cluster with a chart-derived K8STON_NAMESPACES allowlist (release namespace plus rbac.extraNamespaces), served by namespaced Roles only (no ClusterRole). Remove the K8STON_SCOPE env override to use the derived default, set it to \"cluster\", or remove rbac.extraNamespaces to stay single-namespace" -}}
 {{- end -}}
 {{- end -}}
 {{- if ne ($expNamespaces | trim) "" -}}
-{{- fail "krypton: KRYPTON_NAMESPACES in env contradicts rbac.extraNamespaces; the chart derives the allowlist from the release namespace plus rbac.extraNamespaces. Remove KRYPTON_NAMESPACES from env, or remove rbac.extraNamespaces and use rbac.scope=cluster with an explicit KRYPTON_NAMESPACES allowlist" -}}
+{{- fail "k8ston: K8STON_NAMESPACES in env contradicts rbac.extraNamespaces; the chart derives the allowlist from the release namespace plus rbac.extraNamespaces. Remove K8STON_NAMESPACES from env, or remove rbac.extraNamespaces and use rbac.scope=cluster with an explicit K8STON_NAMESPACES allowlist" -}}
 {{- end -}}
 {{- $nsList := list .Release.Namespace -}}
 {{- range $e := $extras -}}
@@ -229,20 +229,20 @@ Renders YAML (callers parse it with fromYaml):
 {{- $effNamespaces = join "," $nsList -}}
 {{- else -}}
 {{- $effScope = "namespace" -}}
-{{- if hasKey $env "KRYPTON_SCOPE" -}}
+{{- if hasKey $env "K8STON_SCOPE" -}}
 {{- if ne $expScope "namespace" -}}
-{{- fail (printf "krypton: env KRYPTON_SCOPE=%q contradicts rbac.scope=namespace; remove the env override to use the derived default or set it to \"namespace\" (use rbac.extraNamespaces for curated namespaces or rbac.scope=cluster for a centralized dashboard)" (get $env "KRYPTON_SCOPE" | toString)) -}}
+{{- fail (printf "k8ston: env K8STON_SCOPE=%q contradicts rbac.scope=namespace; remove the env override to use the derived default or set it to \"namespace\" (use rbac.extraNamespaces for curated namespaces or rbac.scope=cluster for a centralized dashboard)" (get $env "K8STON_SCOPE" | toString)) -}}
 {{- end -}}
 {{- end -}}
 {{- if ne ($expNamespaces | trim) "" -}}
-{{- fail "krypton: KRYPTON_NAMESPACES in env is ignored by the namespace runtime scope; remove it, move the namespaces to rbac.extraNamespaces (curated access with namespaced Roles only), or switch to rbac.scope=cluster with an explicit KRYPTON_NAMESPACES allowlist" -}}
+{{- fail "k8ston: K8STON_NAMESPACES in env is ignored by the namespace runtime scope; remove it, move the namespaces to rbac.extraNamespaces (curated access with namespaced Roles only), or switch to rbac.scope=cluster with an explicit K8STON_NAMESPACES allowlist" -}}
 {{- end -}}
 {{- end -}}
 {{- else -}}
 {{- /* Externally managed RBAC: rbac.scope/extraNamespaces render nothing, so they must not constrain env; pass env through. */ -}}
-{{- if hasKey $env "KRYPTON_SCOPE" -}}
+{{- if hasKey $env "K8STON_SCOPE" -}}
 {{- if and (ne $expScope "namespace") (ne $expScope "cluster") -}}
-{{- fail (printf "krypton: env KRYPTON_SCOPE=%q is not a valid scope (the runtime treats any value other than \"cluster\" as \"namespace\"); set it to \"namespace\" or \"cluster\" to match your externally managed RBAC" (get $env "KRYPTON_SCOPE" | toString)) -}}
+{{- fail (printf "k8ston: env K8STON_SCOPE=%q is not a valid scope (the runtime treats any value other than \"cluster\" as \"namespace\"); set it to \"namespace\" or \"cluster\" to match your externally managed RBAC" (get $env "K8STON_SCOPE" | toString)) -}}
 {{- end -}}
 {{- $effScope = $expScope -}}
 {{- end -}}
@@ -252,32 +252,32 @@ Renders YAML (callers parse it with fromYaml):
 {{- end -}}
 {{- /* One effective restart value drives BOTH the runtime flag and the apps RBAC rule. */ -}}
 {{- if $hasRestart -}}
-{{- $expRestartBool := eq (include "krypton.parseBool" (dict "value" $expRestart "fallback" false)) "true" -}}
+{{- $expRestartBool := eq (include "k8ston.parseBool" (dict "value" $expRestart "fallback" false)) "true" -}}
 {{- if ne $expRestartBool $restartFlag -}}
-{{- fail (printf "krypton: env KRYPTON_RESTART_ENABLED=%q contradicts restartEnabled=%s; the runtime flag and the apps RBAC rule are derived from the same effective value. Set both to the same value (with rbac.create=false, grant the apps permissions out-of-band to match)" $expRestart ($restartFlag | toString)) -}}
+{{- fail (printf "k8ston: env K8STON_RESTART_ENABLED=%q contradicts restartEnabled=%s; the runtime flag and the apps RBAC rule are derived from the same effective value. Set both to the same value (with rbac.create=false, grant the apps permissions out-of-band to match)" $expRestart ($restartFlag | toString)) -}}
 {{- end -}}
 {{- end -}}
 {{- /* Enabled access ConfigMap name must match the runtime policy reader. */ -}}
 {{- $effAccess := "" -}}
 {{- if $accessEnabled -}}
-{{- $accessName := "krypton-access" -}}
+{{- $accessName := "k8ston-access" -}}
 {{- if hasKey $access "name" -}}
 {{- $accessName = get $access "name" | toString -}}
 {{- end -}}
 {{- if eq ($accessName | trim) "" -}}
-{{- fail "krypton: accessConfig.name must be a non-empty ConfigMap name when accessConfig.enabled=true" -}}
+{{- fail "k8ston: accessConfig.name must be a non-empty ConfigMap name when accessConfig.enabled=true" -}}
 {{- end -}}
 {{- $accessKey := "access.json" -}}
 {{- if hasKey $access "key" -}}
 {{- $accessKey = get $access "key" | toString -}}
 {{- end -}}
 {{- if ne $accessKey "access.json" -}}
-{{- fail (printf "krypton: accessConfig.key must be \"access.json\" (got %q); the runtime policy reader hardcodes that key (see app/lib/authz.ts)" $accessKey) -}}
+{{- fail (printf "k8ston: accessConfig.key must be \"access.json\" (got %q); the runtime policy reader hardcodes that key (see app/lib/authz.ts)" $accessKey) -}}
 {{- end -}}
 {{- $effAccess = $accessName -}}
-{{- if hasKey $env "KRYPTON_ACCESS_CONFIGMAP" -}}
+{{- if hasKey $env "K8STON_ACCESS_CONFIGMAP" -}}
 {{- if ne $expAccess $accessName -}}
-{{- fail (printf "krypton: env KRYPTON_ACCESS_CONFIGMAP=%q contradicts accessConfig.name=%q; remove the env override to use the derived default or set it to the same name" $expAccess $accessName) -}}
+{{- fail (printf "k8ston: env K8STON_ACCESS_CONFIGMAP=%q contradicts accessConfig.name=%q; remove the env override to use the derived default or set it to the same name" $expAccess $accessName) -}}
 {{- end -}}
 {{- end -}}
 {{- else -}}

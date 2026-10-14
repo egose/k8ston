@@ -13,8 +13,8 @@ async function signIn() {
 }
 
 beforeEach(() => {
-  process.env.KRYPTON_IMPERSONATION = 'true';
-  process.env.KRYPTON_HISTORY_LIMIT = '1';
+  process.env.K8STON_IMPERSONATION = 'true';
+  process.env.K8STON_HISTORY_LIMIT = '1';
   vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
@@ -72,7 +72,7 @@ it.each([64, 253])(
       uid,
       ownerReferences: live.metadata!.ownerReferences,
       finalizers: live.metadata!.finalizers,
-      annotations: { 'example.test/controller': 'retained-on-live-only', 'krypton.io/description': 'updated metadata' },
+      annotations: { 'example.test/controller': 'retained-on-live-only', 'k8ston.io/description': 'updated metadata' },
     });
     expect(current.type).toBe('kubernetes.io/tls');
     expect(current.immutable).toBe(false);
@@ -87,9 +87,9 @@ it.each([64, 253])(
       expect(Object.hasOwn(body.data, '__proto__')).toBe(true);
       expect(body.metadata.name.length).toBeLessThanOrEqual(63);
       expect(body.metadata.annotations).toMatchObject({
-        'krypton.io/source-uid': uid,
-        'krypton.io/history-of': name,
-        'krypton.io/source-type': 'kubernetes.io/tls',
+        'k8ston.io/source-uid': uid,
+        'k8ston.io/history-of': name,
+        'k8ston.io/source-type': 'kubernetes.io/tls',
       });
       expect(body.metadata).not.toHaveProperty('ownerReferences');
       expect(body.metadata).not.toHaveProperty('finalizers');
@@ -109,7 +109,7 @@ it.each([64, 253])(
       expect(headerValues(request, 'Impersonate-Group')).toEqual(human.groups);
       expect(headerValues(request, 'Authorization')).toEqual([`Bearer ${SERVICE_TOKEN}`]);
       const selector = new URL(request.url, 'http://loopback.test').searchParams.get('labelSelector');
-      if (selector) expect(selector).toBe(`krypton.io/source-uid=${historyHash(uid)},krypton.io/kind=history`);
+      if (selector) expect(selector).toBe(`k8ston.io/source-uid=${historyHash(uid)},k8ston.io/kind=history`);
     }
   },
 );
@@ -121,8 +121,8 @@ it.each(['missing own key', 'different source revision', 'mutable'])(
     const occupied = boundSnapshot(live, 2);
     if (corruption === 'missing own key') delete occupied.data!.__proto__;
     if (corruption === 'different source revision') {
-      occupied.metadata!.annotations!['krypton.io/source-resource-version'] = 'different-rv';
-      occupied.metadata!.labels!['krypton.io/source-resource-version'] = historyHash('different-rv');
+      occupied.metadata!.annotations!['k8ston.io/source-resource-version'] = 'different-rv';
+      occupied.metadata!.labels!['k8ston.io/source-resource-version'] = historyHash('different-rv');
     }
     if (corruption === 'mutable') occupied.immutable = false;
     const store = await mockHistoryStore([live, occupied]);

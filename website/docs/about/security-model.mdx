@@ -5,13 +5,13 @@ sidebar_position: 3
 
 # Security Model
 
-Read this before production. Krypton makes secret management convenient, but it
+Read this before production. K8ston makes secret management convenient, but it
 cannot make Kubernetes Secrets something they are not.
 
 ## The etcd truth
 
 Out of the box, Kubernetes Secrets are **base64-encoded, not encrypted**, in etcd —
-anyone with etcd or broad API access can decode them. Krypton therefore:
+anyone with etcd or broad API access can decode them. K8ston therefore:
 
 - **Never logs secret values.** Audit logs record key _names_ only
   (`auditLog()` in `lib/validation.ts`); grep the logs to prove it.
@@ -19,14 +19,14 @@ anyone with etcd or broad API access can decode them. Krypton therefore:
 - **Validates the 1 MiB per-object limit** client- and server-side (the form
   meter blocks; forced API calls get `413`).
 - **Shows a warning banner** until you confirm etcd encryption-at-rest is enabled
-  (`KRYPTON_ETCD_ENCRYPTED=true` once the API server uses an encryption provider
+  (`K8STON_ETCD_ENCRYPTED=true` once the API server uses an encryption provider
   such as `aescbc` on OpenShift).
 
 Secrets additionally benefit from strict RBAC, redacted `kubectl` output, and
 `tmpfs` (RAM-backed) volume mounts that never touch node disk.
 
 :::warning
-`KRYPTON_ETCD_ENCRYPTED` is an attestation, not a detector. Set it to `true`
+`K8STON_ETCD_ENCRYPTED` is an attestation, not a detector. Set it to `true`
 only after you have verified the API server encrypts Secret resources at rest.
 :::
 
@@ -49,7 +49,7 @@ Binary values continue to use the separate base64 viewer.
 
 ## Authentication guarantees
 
-- Sessions are stateless HS256 JWTs (`krypton_session` cookie, `HttpOnly`,
+- Sessions are stateless HS256 JWTs (`k8ston_session` cookie, `HttpOnly`,
   `Secure` in production, `SameSite=Lax`, 8-hour default). There is no session
   store to steal — but `SESSION_SECRET` must be ≥32 random characters
   (`openssl rand -hex 32`) and must **never** be committed.
@@ -64,9 +64,9 @@ Binary values continue to use the separate base64 viewer.
 
 ## Authorization rules
 
-1. Admins (`KRYPTON_ADMIN_GROUPS`/`KRYPTON_ADMIN_USERS`) always pass.
+1. Admins (`K8STON_ADMIN_GROUPS`/`K8STON_ADMIN_USERS`) always pass.
 2. A secret with explicit annotations is decided by those alone (override).
-3. Otherwise the namespace fallback in ConfigMap `krypton-access` applies.
+3. Otherwise the namespace fallback in ConfigMap `k8ston-access` applies.
 4. With no rules anywhere, the secret is visible to all authenticated users
    (open by default, restricted once rules are added).
 
@@ -79,10 +79,10 @@ Until any admin is configured, **every authenticated user is treated as admin**
 (bootstrap mode) — set admins promptly. See
 [Authorization](/guides/authorization/) for the full matrix.
 
-**Managed-only mode** (default, `KRYPTON_MANAGED_ONLY=true`): secrets _without_
-`krypton.io/managed-by: krypton` are hidden entirely — excluded from lists, 404
+**Managed-only mode** (default, `K8STON_MANAGED_ONLY=true`): secrets _without_
+`k8ston.io/managed-by: k8ston` are hidden entirely — excluded from lists, 404
 on direct access (read, edit, delete, history, restore, restart) — so K8s-level
-secrets created outside Krypton can't be touched by accident.
+secrets created outside K8ston can't be touched by accident.
 History objects are hidden from direct routes in **both** visibility modes,
 including for admins. Version/restore endpoints authorize the current live
 object first; a snapshot's copied ACL cannot bypass a live ACL revocation.
@@ -123,12 +123,12 @@ recovery requires [operator review](/guides/versioning-history/#upgrade-and-oper
 - Default scope needs only `secrets` (full verbs, own namespace) + `configmaps`
   (read) — see `app/k8s/role.yaml`.
 - The `apps` rule (deployments/statefulsets/daemonsets: get, list, watch, patch)
-  is required **only** when `KRYPTON_RESTART_ENABLED=true`. It ships commented
+  is required **only** when `K8STON_RESTART_ENABLED=true`. It ships commented
   out; enabling the flag without the rule fails closed at the API.
 - Unrestricted cluster scope needs namespace-list permission. A configured
-  `KRYPTON_NAMESPACES` allowlist resolves/checks locally with no namespace-list calls;
+  `K8STON_NAMESPACES` allowlist resolves/checks locally with no namespace-list calls;
   actual operations still need the corresponding resource RBAC in those namespaces.
-- Optional impersonation (`KRYPTON_IMPERSONATION=true`) requires the SA's
+- Optional impersonation (`K8STON_IMPERSONATION=true`) requires the SA's
   `impersonate` permission for the session user and every group, with matching
   human RBAC subjects. Namespace/secret/history operations and workload lists
   and patches use that complete identity. The access-policy ConfigMap is read
@@ -138,9 +138,9 @@ recovery requires [operator review](/guides/versioning-history/#upgrade-and-oper
 ## Operational checklist
 
 - [ ] `SESSION_SECRET` is random, ≥32 chars, stored in a K8s Secret, never in git.
-- [ ] `KRYPTON_ADMIN_GROUPS`/`KRYPTON_ADMIN_USERS` are set (no bootstrap mode).
-- [ ] `KRYPTON_ETCD_ENCRYPTED=true` after verifying apiserver encryption.
+- [ ] `K8STON_ADMIN_GROUPS`/`K8STON_ADMIN_USERS` are set (no bootstrap mode).
+- [ ] `K8STON_ETCD_ENCRYPTED=true` after verifying apiserver encryption.
 - [ ] `AUTH_DISABLED=false` and `OIDC_ALLOW_HTTP=false` in real environments.
 - [ ] Ingress/Route uses TLS; OIDC redirect URI matches `https://<host>/api/auth/callback`.
-- [ ] `apps` RBAC rule present **iff** `KRYPTON_RESTART_ENABLED=true`.
-- [ ] `KRYPTON_MANAGED_ONLY=true` (default) unless you need the legacy adoption flow.
+- [ ] `apps` RBAC rule present **iff** `K8STON_RESTART_ENABLED=true`.
+- [ ] `K8STON_MANAGED_ONLY=true` (default) unless you need the legacy adoption flow.

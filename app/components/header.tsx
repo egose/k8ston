@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconKey, IconLogout } from '@tabler/icons-react';
 import { Button, buttonVariants } from '@egose/shadcn-theme/components/ui/button';
-import { KryptonMark } from '@/components/krypton-mark';
+import { K8stonMark } from '@/components/k8ston-mark';
 import { api } from '@/lib/api-client';
 
 export function Header() {
@@ -29,8 +29,8 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <KryptonMark size={32} />
-          <span className="text-lg tracking-tight">Krypton</span>
+          <K8stonMark size={32} />
+          <span className="text-lg tracking-tight">K8ston</span>
         </Link>
         <div className="flex-1" />
         {user ? (

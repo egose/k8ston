@@ -8,7 +8,7 @@ on:
 env:
   OCI_REGISTRY: ghcr.io
   CHART_REPOSITORY: oci://ghcr.io/egose/charts
-  CHART_PATH: helm/krypton
+  CHART_PATH: helm/k8ston
 
 concurrency:
   group: publish-helm-${{ github.ref }}
@@ -57,13 +57,13 @@ jobs:
         sed -i -E "s/^version: .*/version: ${VERSION}/; s/^appVersion: .*/appVersion: ${VERSION}/" "${CHART_PATH}/Chart.yaml"
         helm lint "${CHART_PATH}"
         helm package "${CHART_PATH}" --destination /tmp/charts
-        helm push "/tmp/charts/krypton-${VERSION}.tgz" "${CHART_REPOSITORY}"
+        helm push "/tmp/charts/k8ston-${VERSION}.tgz" "${CHART_REPOSITORY}"
       env:
         VERSION: ${{ steps.release.outputs.version }}
 
     - name: Verify published chart
       run: |
-        helm pull "${CHART_REPOSITORY}/krypton" --version "${VERSION}" --destination /tmp/verify
-        helm show chart "/tmp/verify/krypton-${VERSION}.tgz"
+        helm pull "${CHART_REPOSITORY}/k8ston" --version "${VERSION}" --destination /tmp/verify
+        helm show chart "/tmp/verify/k8ston-${VERSION}.tgz"
       env:
         VERSION: ${{ steps.release.outputs.version }}

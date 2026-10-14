@@ -27,7 +27,7 @@ sidebar_position: 9
 
 ## 403 from the app vs 403 from Kubernetes
 
-- `You are not allowed to …` → Krypton authz denied it (annotations /
+- `You are not allowed to …` → K8ston authz denied it (annotations /
   namespace rules / admin config). Check the visibility matrix in
   [Authorization](/guides/authorization/).
 - `Kubernetes API (403): Access denied. …` → Kubernetes denied the effective
@@ -39,9 +39,9 @@ sidebar_position: 9
 
 ## 404 on a secret that exists
 
-- `KRYPTON_MANAGED_ONLY=true` (default) hides secrets without
-  `krypton.io/managed-by: krypton` — excluded from lists, 404 on direct access.
-  Either manage the secret through Krypton or set the flag to `false`.
+- `K8STON_MANAGED_ONLY=true` (default) hides secrets without
+  `k8ston.io/managed-by: k8ston` — excluded from lists, 404 on direct access.
+  Either manage the secret through K8ston or set the flag to `false`.
 - History snapshots are always hidden from the live list and direct routes. Use
   the authorized live object's history endpoints. An empty history list can mean
   unbound legacy or predecessor-UID snapshots are quarantined, not erased.
@@ -63,7 +63,7 @@ page; a full reload, sign-out, closed tab, or route eviction can discard them. S
 
 An explicit **snapshot identity/content conflict** needs review of the occupied
 version's UID, source revision, and immutable bytes. A native edit after a failed
-Krypton write can leave the same app counter with a different source revision;
+K8ston write can leave the same app counter with a different source revision;
 reloading alone does not resolve that collision. Follow the
 [reviewed recovery procedure](/guides/versioning-history/#upgrade-and-operator-reviewed-recovery)
 instead of relabeling or overwriting old snapshots.
@@ -75,7 +75,7 @@ missing revisions return 400. Do not automatically retry with a newer revision.
 
 ## 503 history/configuration failure
 
-Use a decimal `KRYPTON_HISTORY_LIMIT` from 1 to 100 (default 20 when unset).
+Use a decimal `K8STON_HISTORY_LIMIT` from 1 to 100 (default 20 when unset).
 History creation/list failures or failed/pending pruning block the live replacement.
 Resolve Kubernetes permissions, quota/admission errors, or snapshot finalizers,
 then retry; an exact-source retry also retries cleanup. Failed DELETE history cleanup
@@ -121,7 +121,7 @@ or workload patches based on earlier pages of that failed inventory. See the
   Use **Retry namespaces** after resolving an error. A namespace URL parameter must
   still identify an available namespace before the dashboard enables creation.
 - `namespace` scope shows only the pod's own namespace — by design.
-- In `cluster` scope, a configured `KRYPTON_NAMESPACES` list is returned/checked
+- In `cluster` scope, a configured `K8STON_NAMESPACES` list is returned/checked
   locally with no namespace-list calls. Check spelling and per-namespace resource
   RBAC; configured entries do not prove the namespace exists or is readable.
 - With an empty allowlist, complete namespace discovery needs namespace-list RBAC
@@ -160,7 +160,7 @@ an error, not a row that will be silently discarded.
 ## _Restart apps_ missing / 403
 
 The button is hidden and the API returns 403 while
-`KRYPTON_RESTART_ENABLED=false`. Enabling the flag also requires workload
+`K8STON_RESTART_ENABLED=false`. Enabling the flag also requires workload
 `list`/`patch` RBAC for Deployments, StatefulSets, and DaemonSets. If the button is
 visible but requests fail, inspect the persistent per-workload/discovery details:
 207 `partial` means some patches were acknowledged; 503 `failed` means none were
@@ -176,13 +176,13 @@ patches, and another request can roll earlier successes again. See
 
 ## etcd warning banner won't go away
 
-Set `KRYPTON_ETCD_ENCRYPTED=true` — but only after verifying the API server
+Set `K8STON_ETCD_ENCRYPTED=true` — but only after verifying the API server
 actually encrypts Secrets at rest (`aescbc` provider or equivalent). The flag
 is an attestation, not a detector.
 
 ## Wrong cluster / stale fixtures (sandbox)
 
-- `kubectl config current-context` should be `kind-krypton-sandbox` —
+- `kubectl config current-context` should be `kind-k8ston-sandbox` —
   `make kind-up` re-selects it. Never seed prod.
 - `make seed` re-applies fixtures idempotently; `make reset` for a clean slate.
 - `make verify-sandbox` runs static checks (compose config + manifest

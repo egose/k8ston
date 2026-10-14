@@ -15,11 +15,11 @@ executes the K8s calls, so SSO users need no cluster identity.
 
 After namespace scope and live-object visibility checks:
 
-1. **Admins always pass authorization** — `KRYPTON_ADMIN_GROUPS` / `KRYPTON_ADMIN_USERS`
+1. **Admins always pass authorization** — `K8STON_ADMIN_GROUPS` / `K8STON_ADMIN_USERS`
    (matched against SSO groups / lowercased email).
 2. **Per-secret annotations override everything below.** If a secret has any
    `allowed-groups`/`allowed-users`, only those decide.
-3. **Team + namespace fallback** in ConfigMap `<app-namespace>/krypton-access`, key
+3. **Team + namespace fallback** in ConfigMap `<app-namespace>/k8ston-access`, key
    `access.json` (cached 60s in memory). Namespace members see all secrets;
    team members see only their team's secrets (see [Teams](#teams)).
 4. **Confirmed absence of rules → visible to all authenticated users** (open by
@@ -42,8 +42,8 @@ Managed in the UI on the secret form:
 ```yaml
 metadata:
   annotations:
-    krypton.io/allowed-groups: 'dev-team, database-admins'
-    krypton.io/allowed-users: 'alice@company.com'
+    k8ston.io/allowed-groups: 'dev-team, database-admins'
+    k8ston.io/allowed-users: 'alice@company.com'
 ```
 
 Annotations use a simple comma-separated list with **no quoting or escaping** for
@@ -125,7 +125,7 @@ Each namespace entry may define up to **64 teams**:
 }
 ```
 
-Secrets opt into a team with the `krypton.io/team` annotation (one team per
+Secrets opt into a team with the `k8ston.io/team` annotation (one team per
 secret; missing/blank means unassigned). Team names are DNS labels (lowercase,
 1–63 chars) and must be unique per namespace. Nested `groups`/`users` follow
 the same 256-entry / 256-byte ceilings and exact-match semantics as namespace
@@ -170,16 +170,16 @@ only the teams lookup is unavailable.
 
 ## Managed-only mode
 
-Default `KRYPTON_MANAGED_ONLY=true`: secrets _without_
-`krypton.io/managed-by: krypton` are hidden entirely — excluded from lists, 404
+Default `K8STON_MANAGED_ONLY=true`: secrets _without_
+`k8ston.io/managed-by: k8ston` are hidden entirely — excluded from lists, 404
 on direct access (read, edit, delete, history, restore, restart) — so K8s-level
-secrets created outside Krypton can't be touched by accident. Set
-`KRYPTON_MANAGED_ONLY=false` to show unmanaged live secrets (legacy adopt-on-edit:
-saving an external secret stamps Krypton annotations onto it).
+secrets created outside K8ston can't be touched by accident. Set
+`K8STON_MANAGED_ONLY=false` to show unmanaged live secrets (legacy adopt-on-edit:
+saving an external secret stamps K8ston annotations onto it).
 
 ## History uses current live authorization
 
-History objects (`krypton.io/kind=history`) are always excluded from lists and
+History objects (`k8ston.io/kind=history`) are always excluded from lists and
 return **404 on direct GET/PUT/DELETE/history/restore/restart routes**, in both
 managed-only modes and for admins too. A managed annotation cannot override the
 history label. All named-secret operations share `lib/secret-access.ts`, which
@@ -194,11 +194,11 @@ Clients previously addressing snapshot names must switch to the live endpoints.
 
 ## Optional K8s-native impersonation
 
-Set `KRYPTON_IMPERSONATION=true` when the session email and groups match the
+Set `K8STON_IMPERSONATION=true` when the session email and groups match the
 intended Kubernetes RBAC subjects. The app's ServiceAccount must have the
 `impersonate` verb for those users and **all** their groups; their RBAC then
-authorizes the human operations. Krypton's visibility and application ACL checks
-still apply, including to users considered Krypton admins.
+authorizes the human operations. K8ston's visibility and application ACL checks
+still apply, including to users considered K8ston admins.
 
 - Namespace requests, live-secret CRUD, history reads/writes/pruning, and all
   Deployment/StatefulSet/DaemonSet **lists and patches** carry the human identity.
@@ -215,9 +215,9 @@ still apply, including to users considered Krypton admins.
 - The application's access-policy ConfigMap is deliberately fetched **as the
   ServiceAccount**, with the same process-wide 60s cache and coalesced reads above.
   Its cache never depends on the requesting human's Kubernetes permissions.
-- Default `KRYPTON_IMPERSONATION=false` uses hybrid mode. Explicit
+- Default `K8STON_IMPERSONATION=false` uses hybrid mode. Explicit
   `AUTH_DISABLED=true` bypasses human impersonation for local development. A real
-  signed session for `dev@krypton.local` is impersonated just like any other user.
+  signed session for `dev@k8ston.local` is impersonated just like any other user.
 
 **Upgrade:** earlier versions overwrote repeated groups, processed only the first
 32 groups, and omitted impersonation on workload lists. Review ServiceAccount
@@ -230,8 +230,8 @@ for secret or workload operations.
 
 | Secret                 | Namespace    | Rule source                             | alice (dev-team) | bob (other-team) | carol (frontend-team) | admin |
 | ---------------------- | ------------ | --------------------------------------- | ---------------- | ---------------- | --------------------- | ----- |
-| `database-credentials` | krypton-test | annotation `allowed-groups: dev-team,…` | ✅               | ❌               | ❌                    | ✅    |
-| `feature-flags`        | krypton-test | none (open by default)                  | ✅               | ✅               | ✅                    | ✅    |
+| `database-credentials` | k8ston-test | annotation `allowed-groups: dev-team,…` | ✅               | ❌               | ❌                    | ✅    |
+| `feature-flags`        | k8ston-test | none (open by default)                  | ✅               | ✅               | ✅                    | ✅    |
 | `frontend-api-keys`    | frontend-ns  | namespace fallback (`frontend-team`)    | ❌               | ❌               | ✅                    | ✅    |
 
 Recreate it headless with `sandbox/scripts/mint-jwt.mjs` — see the

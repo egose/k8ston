@@ -6,7 +6,7 @@ import type { RestartResult } from '../lib/consumers';
 // Fixture data (shapes must match lib/api-client.ts + lib/secrets.ts)
 // ---------------------------------------------------------------------------
 
-const devUser = { sub: 'dev', email: 'dev@krypton.local', name: 'Local Developer', groups: ['krypton-admin'] };
+const devUser = { sub: 'dev', email: 'dev@k8ston.local', name: 'Local Developer', groups: ['k8ston-admin'] };
 
 const publicConfig = (over: Record<string, unknown> = {}) => ({
   scope: 'namespace',
@@ -16,7 +16,7 @@ const publicConfig = (over: Record<string, unknown> = {}) => ({
   historyLimit: 20,
   managedOnly: true,
   restartEnabled: true,
-  appNamespace: 'krypton',
+  appNamespace: 'k8ston',
   ...over,
 });
 
@@ -33,7 +33,7 @@ export const summary = (over: Partial<SecretSummary> = {}): SecretSummary => ({
   allowedGroups: ['dev-team'],
   allowedUsers: [],
   team: '',
-  managedByKrypton: true,
+  managedByK8ston: true,
   immutable: false,
   binaryKeys: [],
   ...over,
@@ -119,7 +119,7 @@ export async function mockApi(
             description: '',
             version: 0,
             allowedGroups: [],
-            managedByKrypton: false,
+            managedByK8ston: false,
           }),
         ],
       },

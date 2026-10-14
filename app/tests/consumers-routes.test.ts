@@ -20,7 +20,7 @@ async function setup(signedIn = true) {
     metadata: {
       namespace,
       name,
-      annotations: { 'krypton.io/managed-by': 'krypton', 'krypton.io/allowed-users': user.email },
+      annotations: { 'k8ston.io/managed-by': 'k8ston', 'k8ston.io/allowed-users': user.email },
     },
     data: { credential: Buffer.from(privateConsumerMarker).toString('base64') },
   });
@@ -69,7 +69,7 @@ function expectSanitized(body: unknown) {
 }
 
 beforeEach(() => {
-  process.env.KRYPTON_RESTART_ENABLED = 'true';
+  process.env.K8STON_RESTART_ENABLED = 'true';
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -286,8 +286,8 @@ it('waits for discovery to settle, then preserves both list and patch failures',
 });
 
 it.each([undefined, 'false'])('enforces opt-in before Kubernetes access (flag=%s)', async (flag) => {
-  if (flag === undefined) delete process.env.KRYPTON_RESTART_ENABLED;
-  else process.env.KRYPTON_RESTART_ENABLED = flag;
+  if (flag === undefined) delete process.env.K8STON_RESTART_ENABLED;
+  else process.env.K8STON_RESTART_ENABLED = flag;
   const mock = await setup();
   const response = await invoke();
   expect(response.status).toBe(403);
@@ -311,8 +311,8 @@ it('denies a revoked live ACL before workload discovery', async () => {
   mock.core.readNamespacedSecret.mockResolvedValue({
     metadata: {
       annotations: {
-        'krypton.io/managed-by': 'krypton',
-        'krypton.io/allowed-users': 'new-owner@example.test',
+        'k8ston.io/managed-by': 'k8ston',
+        'k8ston.io/allowed-users': 'new-owner@example.test',
       },
     },
   });

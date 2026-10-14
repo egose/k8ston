@@ -1,5 +1,5 @@
-# kind cluster for Krypton sandbox testing.
-# Created by `make kind-up` (name passed via --name, default krypton-sandbox).
+# kind cluster for K8ston sandbox testing.
+# Created by `make kind-up` (name passed via --name, default k8ston-sandbox).
 # No port mappings needed: the app talks to the API server through the kind
 # kubeconfig entry (localhost:6443), and Dex runs host-side via compose.
 kind: Cluster

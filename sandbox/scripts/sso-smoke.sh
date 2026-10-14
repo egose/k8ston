@@ -7,7 +7,7 @@ set -euo pipefail
 
 EMAIL="${1:?usage: sso-smoke.sh <email> [password] [jar-file]}"
 PASSWORD="${2:-password}"
-JAR="${3:-/tmp/krypton-sso-cookie.jar}"
+JAR="${3:-/tmp/k8ston-sso-cookie.jar}"
 APP="${APP_URL:-http://localhost:3000}"
 
 rm -f "$JAR"
@@ -39,7 +39,7 @@ case "$CALLBACK_SEED" in http*) :;; *) CALLBACK_SEED="$(echo "$AUTH_URL" | sed -
 # 5. Follow through the app callback (code exchange, session cookie).
 curl -s -m 15 -b "$JAR" -c "$JAR" -o /dev/null -L --max-redirs 8 "$CALLBACK_SEED" \
   || { echo "callback chain failed" >&2; exit 1; }
-grep -q krypton_session "$JAR" || { echo "no session cookie after callback" >&2; exit 1; }
+grep -q k8ston_session "$JAR" || { echo "no session cookie after callback" >&2; exit 1; }
 
 # 6. Prove the session.
 curl -s -m 10 -b "$JAR" "$APP/api/auth/me"

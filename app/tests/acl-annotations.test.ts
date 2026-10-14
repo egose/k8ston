@@ -119,7 +119,7 @@ describe.each(['create', 'update', 'restore'] as const)('direct %s builder bound
   it.each(fields)('normalizes %s without changing the input and round-trips every member', (field) => {
     const input = { [field]: [...entries] };
     const result = build(action, input);
-    const annotation = field === 'allowedGroups' ? 'krypton.io/allowed-groups' : 'krypton.io/allowed-users';
+    const annotation = field === 'allowedGroups' ? 'k8ston.io/allowed-groups' : 'k8ston.io/allowed-users';
     expect(result.metadata?.annotations?.[annotation]).toBe(normalized.join(', '));
     expect(toSummary(args.namespace, result)[field]).toEqual(normalized);
     expect(input[field]).toEqual(entries);

@@ -15,7 +15,7 @@ POST /api/namespaces/:namespace/secrets/:name/restore
 { "version": 1, "resourceVersion": "123456" }
 ```
 
-- `version` is the app-level `krypton.io/version` number from the
+- `version` is the app-level `k8ston.io/version` number from the
   [versions list](/api/versions/) (positive integer, required).
 - `resourceVersion` is the **required**, nonblank opaque revision from the loaded
   **live** Secret. Missing/invalid input returns 400. After current live
@@ -27,7 +27,7 @@ POST /api/namespaces/:namespace/secrets/:name/restore
 - Validates the target data against the **live** type and immutable state before
   any snapshot/write. Then snapshots the **current** state so the restore itself
   is reversible, and replaces the live object with the target snapshot's data (bumping
-  `krypton.io/version` again, stamped with the restoring user).
+  `k8ston.io/version` again, stamped with the restoring user).
 - Copies **raw base64** byte-for-byte, including binary and special-key values;
   it never decodes/re-encodes through text. Live UID, owner references, finalizers,
   immutable state, type, description, and ACLs are retained. Snapshot lifecycle
@@ -65,7 +65,7 @@ the returned live detail/revision and refreshes history and the namespace list.
 No automatic restore retry is performed with a silently updated revision.
 
 ```bash
-curl --cookie "krypton_session=$ALICE" -X POST \
+curl --cookie "k8ston_session=$ALICE" -X POST \
   -H 'Content-Type: application/json' -d '{"version":1,"resourceVersion":"123456"}' \
-  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore
+  localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials/restore
 ```

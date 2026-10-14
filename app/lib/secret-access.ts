@@ -36,7 +36,7 @@ export async function loadAuthorizedLiveSecret(
       result: 'deny',
       detail: isHistorySnapshot(live)
         ? 'history snapshot hidden'
-        : 'unmanaged secret hidden (KRYPTON_MANAGED_ONLY=true)',
+        : 'unmanaged secret hidden (K8STON_MANAGED_ONLY=true)',
     });
     throw new HttpError(404, `Secret "${name}" not found in "${namespace}"`);
   }

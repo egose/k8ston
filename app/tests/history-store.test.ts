@@ -8,7 +8,7 @@ const uid = 'synthetic-live-uid';
 function liveAt(version: number): V1Secret {
   const live = nativeSecret();
   live.metadata!.resourceVersion = `opaque/revision:${version}`;
-  live.metadata!.annotations!['krypton.io/version'] = String(version);
+  live.metadata!.annotations!['k8ston.io/version'] = String(version);
   return live;
 }
 
@@ -34,11 +34,11 @@ describe('source identity, raw storage, and legacy quarantine', () => {
         expect(value).toMatch(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/);
       }
       expect(snapshot.metadata!.annotations).toMatchObject({
-        'krypton.io/history-of': live.metadata!.name,
-        'krypton.io/source-uid': uid,
-        'krypton.io/source-resource-version': live.metadata!.resourceVersion,
-        'krypton.io/source-type': live.type,
-        'krypton.io/history-format': 'uid-rv-v1',
+        'k8ston.io/history-of': live.metadata!.name,
+        'k8ston.io/source-uid': uid,
+        'k8ston.io/source-resource-version': live.metadata!.resourceVersion,
+        'k8ston.io/source-type': live.type,
+        'k8ston.io/history-format': 'uid-rv-v1',
       });
       expect(snapshot).toMatchObject({ immutable: true, type: 'Opaque', data: rawData });
       expect(Object.hasOwn(snapshot.data!, '__proto__')).toBe(true);
@@ -53,7 +53,7 @@ describe('source identity, raw storage, and legacy quarantine', () => {
       expect(record).not.toHaveProperty('binaryData');
       expect(live).toEqual(before);
       expect(store.core.listNamespacedSecret.mock.calls[0][0].labelSelector).toBe(
-        `krypton.io/source-uid=${historyHash(uid)},krypton.io/kind=history`,
+        `k8ston.io/source-uid=${historyHash(uid)},k8ston.io/kind=history`,
       );
     },
   );
@@ -67,7 +67,7 @@ describe('source identity, raw storage, and legacy quarantine', () => {
     await createSnapshot(namespace, live, dataUser);
     const snapshot = store.get(namespace, historyName(uid, 1));
     expect(snapshot.type).toBe('Opaque');
-    expect(snapshot.metadata!.annotations!['krypton.io/source-type']).toBe(live.type);
+    expect(snapshot.metadata!.annotations!['k8ston.io/source-type']).toBe(live.type);
     expect(snapshot.metadata!.annotations).not.toHaveProperty('kubernetes.io/service-account.name');
   });
 
@@ -102,55 +102,55 @@ describe('source identity, raw storage, and legacy quarantine', () => {
     [
       'unbound legacy',
       (s) => {
-        s.metadata!.annotations = { 'krypton.io/version': '1', 'krypton.io/history-of': 'credentials' };
+        s.metadata!.annotations = { 'k8ston.io/version': '1', 'k8ston.io/history-of': 'credentials' };
       },
     ],
     [
       'missing format after partial migration',
       (s) => {
-        delete s.metadata!.annotations!['krypton.io/history-format'];
+        delete s.metadata!.annotations!['k8ston.io/history-format'];
       },
     ],
     [
       'unsupported format',
       (s) => {
-        s.metadata!.annotations!['krypton.io/history-format'] = 'unknown';
+        s.metadata!.annotations!['k8ston.io/history-format'] = 'unknown';
       },
     ],
     [
       'missing source UID',
       (s) => {
-        delete s.metadata!.annotations!['krypton.io/source-uid'];
+        delete s.metadata!.annotations!['k8ston.io/source-uid'];
       },
     ],
     [
       'predecessor UID with forged matching label',
       (s) => {
-        s.metadata!.annotations!['krypton.io/source-uid'] = 'predecessor-uid';
+        s.metadata!.annotations!['k8ston.io/source-uid'] = 'predecessor-uid';
       },
     ],
     [
       'missing source revision',
       (s) => {
-        delete s.metadata!.annotations!['krypton.io/source-resource-version'];
+        delete s.metadata!.annotations!['k8ston.io/source-resource-version'];
       },
     ],
     [
       'mismatched source revision label',
       (s) => {
-        s.metadata!.labels!['krypton.io/source-resource-version'] = 'wrong';
+        s.metadata!.labels!['k8ston.io/source-resource-version'] = 'wrong';
       },
     ],
     [
       'missing original type',
       (s) => {
-        delete s.metadata!.annotations!['krypton.io/source-type'];
+        delete s.metadata!.annotations!['k8ston.io/source-type'];
       },
     ],
     [
       'wrong original name',
       (s) => {
-        s.metadata!.annotations!['krypton.io/history-of'] = 'other-secret';
+        s.metadata!.annotations!['k8ston.io/history-of'] = 'other-secret';
       },
     ],
     [
@@ -174,7 +174,7 @@ describe('source identity, raw storage, and legacy quarantine', () => {
     [
       'invalid version',
       (s) => {
-        s.metadata!.annotations!['krypton.io/version'] = '1extra';
+        s.metadata!.annotations!['k8ston.io/version'] = '1extra';
       },
     ],
     [
@@ -252,7 +252,7 @@ describe('verified idempotency and conflicting source revisions', () => {
       'different data with copied identity/fingerprint',
       (s) => {
         s.data!['archive.bin'] = 'd3Jvbmc=';
-        s.metadata!.annotations!['krypton.io/content-hash'] = 'copied-claim';
+        s.metadata!.annotations!['k8ston.io/content-hash'] = 'copied-claim';
       },
     ],
     [
@@ -282,38 +282,38 @@ describe('verified idempotency and conflicting source revisions', () => {
     [
       'different source type',
       (s) => {
-        s.metadata!.annotations!['krypton.io/source-type'] = 'example.test/different';
+        s.metadata!.annotations!['k8ston.io/source-type'] = 'example.test/different';
       },
     ],
     [
       'different source UID',
       (s) => {
-        s.metadata!.annotations!['krypton.io/source-uid'] = 'other-uid';
+        s.metadata!.annotations!['k8ston.io/source-uid'] = 'other-uid';
       },
     ],
     [
       'different source revision',
       (s) => {
-        s.metadata!.annotations!['krypton.io/source-resource-version'] = 'another-revision';
-        s.metadata!.labels!['krypton.io/source-resource-version'] = historyHash('another-revision');
+        s.metadata!.annotations!['k8ston.io/source-resource-version'] = 'another-revision';
+        s.metadata!.labels!['k8ston.io/source-resource-version'] = historyHash('another-revision');
       },
     ],
     [
       'different description',
       (s) => {
-        s.metadata!.annotations!['krypton.io/description'] = 'changed';
+        s.metadata!.annotations!['k8ston.io/description'] = 'changed';
       },
     ],
     [
       'different source ACL',
       (s) => {
-        s.metadata!.annotations!['krypton.io/allowed-users'] = 'another@example.test';
+        s.metadata!.annotations!['k8ston.io/allowed-users'] = 'another@example.test';
       },
     ],
     [
       'missing binding',
       (s) => {
-        delete s.metadata!.annotations!['krypton.io/history-format'];
+        delete s.metadata!.annotations!['k8ston.io/history-format'];
       },
     ],
     [
@@ -325,7 +325,7 @@ describe('verified idempotency and conflicting source revisions', () => {
     [
       'different slot',
       (s) => {
-        s.metadata!.annotations!['krypton.io/version'] = '2';
+        s.metadata!.annotations!['k8ston.io/version'] = '2';
       },
     ],
     [
@@ -426,7 +426,7 @@ describe('bounded retention and truthful metadata-only cleanup', () => {
     [2, 1],
     [101, 100],
   ])('retains the newest states with %i existing and limit %i', async (count, limit) => {
-    process.env.KRYPTON_HISTORY_LIMIT = String(limit);
+    process.env.K8STON_HISTORY_LIMIT = String(limit);
     const live = liveAt(count + 1);
     const older = Array.from({ length: count }, (_, i) => boundSnapshot(liveAt(i + 1), i + 1));
     const store = await mockHistoryStore(older);
@@ -447,7 +447,7 @@ describe('bounded retention and truthful metadata-only cleanup', () => {
   });
 
   it('never reads snapshot values to prune or delete and bounds concurrent deletion work', async () => {
-    process.env.KRYPTON_HISTORY_LIMIT = '1';
+    process.env.K8STON_HISTORY_LIMIT = '1';
     const store = await mockHistoryStore([1, 2, 3].map((v) => boundSnapshot(liveAt(v), v)));
     const list = store.core.listNamespacedSecret.getMockImplementation()!;
     store.core.listNamespacedSecret.mockImplementation(async (args) => {
@@ -482,7 +482,7 @@ describe('bounded retention and truthful metadata-only cleanup', () => {
   });
 
   it('reports mixed failed/pending pruning, then retries cleanup on the verified source collision', async () => {
-    process.env.KRYPTON_HISTORY_LIMIT = '1';
+    process.env.K8STON_HISTORY_LIMIT = '1';
     const snapshots = [1, 2, 3].map((v) => boundSnapshot(liveAt(v), v));
     snapshots[1].metadata!.finalizers = ['example.test/hold'];
     const store = await mockHistoryStore(snapshots);
@@ -527,7 +527,7 @@ describe('bounded retention and truthful metadata-only cleanup', () => {
   it.each(['uid', 'resourceVersion'] as const)(
     'never deletes a snapshot whose %s changed after listing',
     async (field) => {
-      process.env.KRYPTON_HISTORY_LIMIT = '1';
+      process.env.K8STON_HISTORY_LIMIT = '1';
       const old = boundSnapshot(liveAt(1), 1);
       const store = await mockHistoryStore([old]);
       const remove = store.core.deleteNamespacedSecret.getMockImplementation()!;
@@ -574,7 +574,7 @@ describe('bounded retention and truthful metadata-only cleanup', () => {
   });
 
   it('does not prune newer history after a native version-counter reset', async () => {
-    process.env.KRYPTON_HISTORY_LIMIT = '1';
+    process.env.K8STON_HISTORY_LIMIT = '1';
     const store = await mockHistoryStore([boundSnapshot(liveAt(5), 5)]);
     const { createSnapshot } = await import('@/lib/snapshot-store');
     await expect(createSnapshot(namespace, liveAt(1), dataUser)).rejects.toMatchObject({
@@ -601,7 +601,7 @@ describe('positive bounded configuration and counters', () => {
   it.each([undefined, '1', '20', '100'])(
     'accepts retention %s and reports the effective public limit',
     async (value) => {
-      if (value !== undefined) process.env.KRYPTON_HISTORY_LIMIT = value;
+      if (value !== undefined) process.env.K8STON_HISTORY_LIMIT = value;
       const { config } = await import('@/lib/config');
       expect(config.historyLimit).toBe(value === undefined ? 20 : Number(value));
       const { GET } = await import('@/app/api/config/route');
@@ -612,25 +612,25 @@ describe('positive bounded configuration and counters', () => {
   it.each(['', '0', '-1', '101', '2junk', '1.5', 'NaN', 'Infinity', '1e2', ' 20', '020', '9007199254740992'])(
     'rejects retention %j before any snapshot side effect',
     async (value) => {
-      process.env.KRYPTON_HISTORY_LIMIT = value;
+      process.env.K8STON_HISTORY_LIMIT = value;
       const store = await mockHistoryStore();
       const { createSnapshot } = await import('@/lib/snapshot-store');
       await expect(createSnapshot(namespace, liveAt(1), dataUser)).rejects.toMatchObject({
         status: 503,
-        message: 'KRYPTON_HISTORY_LIMIT must be an integer from 1 to 100',
+        message: 'K8STON_HISTORY_LIMIT must be an integer from 1 to 100',
       });
       expect(store.getCoreApi).not.toHaveBeenCalled();
       const { GET } = await import('@/app/api/config/route');
       const response = await GET();
       expect(response.status).toBe(503);
-      expect(await response.json()).toEqual({ error: 'KRYPTON_HISTORY_LIMIT must be an integer from 1 to 100' });
+      expect(await response.json()).toEqual({ error: 'K8STON_HISTORY_LIMIT must be an integer from 1 to 100' });
     },
   );
 
   it.each([undefined, '0', '1', '2'])('uses a consistent positive adoption baseline for counter %s', async (value) => {
     const live = liveAt(1);
-    if (value === undefined) delete live.metadata!.annotations!['krypton.io/version'];
-    else live.metadata!.annotations!['krypton.io/version'] = value;
+    if (value === undefined) delete live.metadata!.annotations!['k8ston.io/version'];
+    else live.metadata!.annotations!['k8ston.io/version'] = value;
     const { currentSecretVersion, nextSecretVersion } = await import('@/lib/snapshot-store');
     const { toSummary } = await import('@/lib/secrets');
     const current = value === '2' ? 2 : 1;
@@ -643,7 +643,7 @@ describe('positive bounded configuration and counters', () => {
     'rejects malformed native counter %j instead of reusing a version',
     async (value) => {
       const live = liveAt(1);
-      live.metadata!.annotations!['krypton.io/version'] = value;
+      live.metadata!.annotations!['k8ston.io/version'] = value;
       const { nextSecretVersion } = await import('@/lib/snapshot-store');
       expect(() => nextSecretVersion(live)).toThrow('Invalid Secret version counter');
     },

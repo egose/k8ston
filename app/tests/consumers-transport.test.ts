@@ -11,11 +11,11 @@ import {
 import { headerValues, loopbackKubernetes, SERVICE_TOKEN } from './helpers/kubernetes-transport';
 
 it('preserves full per-user transport identity on overlapping successful and failed workload lists/patches', async () => {
-  process.env.KRYPTON_IMPERSONATION = 'true';
+  process.env.K8STON_IMPERSONATION = 'true';
   const mock = await mockConsumers();
   const alice = {
     ...consumerUser,
-    email: 'dev@krypton.local',
+    email: 'dev@k8ston.local',
     groups: [...Array.from({ length: 35 }, (_, i) => `alice-${i}`), 'literal,comma'],
   };
   const bob = { ...consumerUser, sub: 'bob', email: 'bob@example.test', groups: ['bob-team', 'second-team'] };
@@ -125,7 +125,7 @@ it('preserves full per-user transport identity on overlapping successful and fai
           path: '/spec/template/metadata',
           value: {
             annotations: {
-              'krypton.io/restarted-at': expect.any(String),
+              'k8ston.io/restarted-at': expect.any(String),
             },
           },
         },

@@ -15,7 +15,7 @@ beforeEach(() => {
 it.each([false, true])(
   'real SDK routes retain own keys/bytes across HTTP with impersonation=%s',
   async (impersonation) => {
-    process.env.KRYPTON_IMPERSONATION = String(impersonation);
+    process.env.K8STON_IMPERSONATION = String(impersonation);
     const initial = nativeSecret({
       data: Object.fromEntries(
         Object.entries(textData).map(([key, value]) => [key, Buffer.from(value).toString('base64')]),

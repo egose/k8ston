@@ -5,7 +5,7 @@ sidebar_position: 2
 
 # Architecture
 
-Krypton is a stateless Next.js App Router service. All persistent state lives in
+K8ston is a stateless Next.js App Router service. All persistent state lives in
 the Kubernetes API; the app holds no database connection or disk cache. Namespace
 policy uses a 60-second in-memory ConfigMap read-through cache.
 
@@ -57,7 +57,7 @@ without a dependency cycle through storage and authorization.
   (`/var/run/secrets/kubernetes.io/serviceaccount/token`) via `loadFromCluster()`.
   No credentials to manage; RBAC comes from the bound `Role`/`ClusterRole`.
 - **Local dev**: falls back to `loadFromDefault()` (`~/.kube/config`).
-- **Optional impersonation**: `KRYPTON_IMPERSONATION=true` sends the session email
+- **Optional impersonation**: `K8STON_IMPERSONATION=true` sends the session email
   and every group for human-authorized requests, including workload lists/patches.
   A per-request SDK `httpApi` transport uses raw repeated group headers and retains
   the SDK's TLS/auth configuration. The SA needs impersonation permission for the
@@ -87,7 +87,7 @@ without a dependency cycle through storage and authorization.
 | `cluster`, allowlisted   | Configured names, checked locally        | Resource permissions in those namespaces |
 | `cluster`, unrestricted  | Complete bounded namespace inventory     | Cluster namespace-list + resource permissions |
 
-`KRYPTON_NAMESPACES="team-a,team-b"` resolves without namespace-list calls. Names are
+`K8STON_NAMESPACES="team-a,team-b"` resolves without namespace-list calls. Names are
 deduplicated/sorted; actual resource calls still enforce existence and RBAC.
 Unrestricted discovery errors surface explicitly instead of falling back to an
 own-namespace subset. Policy lookups use own properties, including `constructor`.
@@ -97,10 +97,10 @@ own-namespace subset. Policy lookups use own properties, including `constructor`
 - The focused store owns raw/metadata records, identity checks, retry verification,
   and cleanup. `secrets.ts` converts raw records to decoded response DTOs only at
   the authorized route boundary; restore copies raw data and cleanup reads metadata.
-- `krypton.io/version` starts at 1. Adoption treats missing/old-zero counters as
+- `k8ston.io/version` starts at 1. Adoption treats missing/old-zero counters as
   logical v1: archive v1, write v2, then archive v2, write v3. PUT/restore supply their loaded
   resourceVersion; update/restore replacements retain the live UID/RV for native CAS.
-- New snapshots are immutable Opaque Secrets named `krypton-h-<UID hash>-vN`
+- New snapshots are immutable Opaque Secrets named `k8ston-h-<UID hash>-vN`
   (at most 60 characters). Bounded `source-uid` and `source-resource-version` hash
   labels support valid indexing for long live names and opaque revisions. Full UID,
   source resourceVersion, original name/type, format, version, actor/time, and source
@@ -108,7 +108,7 @@ own-namespace subset. Policy lookups use own properties, including `constructor`
 - A snapshot-create 409 is a retry only when the occupied object has the same full
   source identity and actual immutable byte/key content. Replica retries share that
   archive, then race through Kubernetes CAS. Different-source collisions block writing.
-- `KRYPTON_HISTORY_LIMIT` is 1–100, default 20. Pruning uses serial UID/RV-conditional
+- `K8STON_HISTORY_LIMIT` is 1–100, default 20. Pruning uses serial UID/RV-conditional
   deletes, confirms absence, and reports failed/pending cleanup before permitting
   replacement. Snapshots and pruning can persist after a failed live write; these
   pre-write captures are not a transaction or an external-change watcher.
@@ -139,7 +139,7 @@ mounts usually sync after a kubelet delay (`subPath` and application file reload
 need special care). `lib/consumers.ts` scans Deployment, StatefulSet, and DaemonSet
 templates for exact Secret names in `env`/`envFrom` on normal/init/ephemeral
 containers, normal/projected Secret volumes, and `imagePullSecrets`. It then
-requests rollouts with a `krypton.io/restarted-at` JSON-Patch pod-template patch,
+requests rollouts with a `k8ston.io/restarted-at` JSON-Patch pod-template patch,
 bound to each inspected workload UID/resourceVersion via `test` preconditions and
 allowing at most four patches in flight per request across all kinds. Lists and
 patches retain the full request-local impersonated identity.
@@ -151,7 +151,7 @@ still be patched. Audit and UI preserve sanitized per-workload and discovery
 failures. Rollout completion, health, and credential uptake are not checked.
 See [consumer rollout limits and retries](/guides/consumer-restarts/).
 The feature is disabled by default
-(`KRYPTON_RESTART_ENABLED=false`: button hidden, API returns 403, no `apps`
+(`K8STON_RESTART_ENABLED=false`: button hidden, API returns 403, no `apps`
 permissions needed).
 
 ## Project layout
@@ -164,7 +164,7 @@ app/                    # Next.js App Router
   lib/                  # k8s client, OIDC+session, authz, snapshots, consumers, validation
   components/           # dashboard, tables, forms, masked values, history
   k8s/                  # namespace, SA, Role/ClusterRole, configs, deployment
-helm/                   # helm/main chart + helm/krypton subchart
+helm/                   # helm/main chart + helm/k8ston subchart
 sandbox/                # kind cluster + Dex + fixtures + helper scripts
 website/                # this documentation site (Docusaurus)
 ```

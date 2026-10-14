@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Mint a Krypton session JWT without an IdP round-trip — for headless authz
+ * Mint a K8ston session JWT without an IdP round-trip — for headless authz
  * testing (e.g. verify alice-403 vs bob-200 matrices via curl).
  *
  * Zero dependencies (node:crypto only). The secret must match the app's
@@ -9,7 +9,7 @@
  * Usage:
  *   node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team
  *   node sandbox/scripts/mint-jwt.mjs --email bob@company.com --name Bob --groups other-team --sub bob-id --secret "$SESSION_SECRET"
- *   curl --cookie "krypton_session=$(node ... )" localhost:3000/api/auth/me
+ *   curl --cookie "k8ston_session=$(node ... )" localhost:3000/api/auth/me
  */
 import { createHmac } from 'node:crypto';
 
@@ -44,7 +44,7 @@ const payload = {
     .filter(Boolean),
   iat: now,
   exp: now + Number.parseInt(arg('ttl', '28800'), 10),
-  iss: 'krypton',
+  iss: 'k8ston',
 };
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');

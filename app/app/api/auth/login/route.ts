@@ -31,7 +31,7 @@ export async function GET() {
     console.error(
       JSON.stringify({
         ts: new Date().toISOString(),
-        app: 'krypton',
+        app: 'k8ston',
         action: 'auth.login',
         result: 'error',
         ...details,

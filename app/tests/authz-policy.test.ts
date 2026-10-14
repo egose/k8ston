@@ -11,7 +11,7 @@ const live: V1Secret = {
     namespace,
     name: 'credentials',
     resourceVersion: '17',
-    annotations: { 'krypton.io/managed-by': 'krypton' },
+    annotations: { 'k8ston.io/managed-by': 'k8ston' },
   },
   data: { credential: Buffer.from('synthetic-live-value').toString('base64') },
 };
@@ -128,7 +128,7 @@ describe('namespace policy failures at real read/list/create handlers', () => {
     expect(getAppsApi).not.toHaveBeenCalled();
     expect(vi.mocked(console.warn).mock.calls).toEqual(
       Array.from({ length: 3 }, () => [
-        '[krypton] namespace access policy unavailable',
+        '[k8ston] namespace access policy unavailable',
         { reason, ...(status ? { status } : {}) },
       ]),
     );
@@ -145,7 +145,7 @@ describe('namespace policy failures at real read/list/create handlers', () => {
           ...live,
           metadata: {
             ...live.metadata,
-            annotations: { ...live.metadata?.annotations, 'krypton.io/allowed-users': user.email },
+            annotations: { ...live.metadata?.annotations, 'k8ston.io/allowed-users': user.email },
           },
         },
       ],
@@ -179,7 +179,7 @@ describe('intentional absence and authorization precedence', () => {
     expect(list.status).toBe(200);
     expect(await list.json()).toMatchObject({ canCreate: true, secrets: [{ name: 'credentials' }] });
     expect((await request('create')).status).toBe(201);
-    expect(core.readNamespacedConfigMap).toHaveBeenCalledExactlyOnceWith({ namespace, name: 'krypton-access' });
+    expect(core.readNamespacedConfigMap).toHaveBeenCalledExactlyOnceWith({ namespace, name: 'k8ston-access' });
     expect(console.warn).not.toHaveBeenCalled();
   });
 
@@ -209,12 +209,12 @@ describe('intentional absence and authorization precedence', () => {
   it.each<{ label: string; annotations: Record<string, string>; allowed: boolean }>([
     {
       label: 'matching user',
-      annotations: { 'krypton.io/allowed-users': '  ALICE@EXAMPLE.TEST, bob@example.test ' },
+      annotations: { 'k8ston.io/allowed-users': '  ALICE@EXAMPLE.TEST, bob@example.test ' },
       allowed: true,
     },
-    { label: 'matching group', annotations: { 'krypton.io/allowed-groups': ' operators, developers ' }, allowed: true },
-    { label: 'different user', annotations: { 'krypton.io/allowed-users': 'bob@example.test' }, allowed: false },
-    { label: 'case-sensitive group', annotations: { 'krypton.io/allowed-groups': 'Developers' }, allowed: false },
+    { label: 'matching group', annotations: { 'k8ston.io/allowed-groups': ' operators, developers ' }, allowed: true },
+    { label: 'different user', annotations: { 'k8ston.io/allowed-users': 'bob@example.test' }, allowed: false },
+    { label: 'case-sensitive group', annotations: { 'k8ston.io/allowed-groups': 'Developers' }, allowed: false },
   ])('decides an explicit live ACL ($label) without namespace policy', async ({ annotations, allowed }) => {
     const { core } = await setupCore();
     core.readNamespacedConfigMap.mockRejectedValue(apiFailure(403));
@@ -232,8 +232,8 @@ describe('intentional absence and authorization precedence', () => {
   it.each(['admin group', 'admin email', 'bootstrap', 'explicit auth bypass'])(
     'preserves %s policy precedence',
     async (mode) => {
-      if (mode === 'admin email') process.env.KRYPTON_ADMIN_USERS = 'ALICE@EXAMPLE.TEST';
-      if (mode === 'bootstrap') delete process.env.KRYPTON_ADMIN_GROUPS;
+      if (mode === 'admin email') process.env.K8STON_ADMIN_USERS = 'ALICE@EXAMPLE.TEST';
+      if (mode === 'bootstrap') delete process.env.K8STON_ADMIN_GROUPS;
       if (mode === 'explicit auth bypass') {
         process.env.AUTH_DISABLED = 'true';
         delete process.env.SESSION_SECRET;
@@ -244,7 +244,7 @@ describe('intentional absence and authorization precedence', () => {
         ...live,
         metadata: {
           ...live.metadata,
-          annotations: { ...live.metadata?.annotations, 'krypton.io/allowed-users': 'bob@example.test' },
+          annotations: { ...live.metadata?.annotations, 'k8ston.io/allowed-users': 'bob@example.test' },
         },
       };
       core.readNamespacedSecret.mockResolvedValue(deniedLive);

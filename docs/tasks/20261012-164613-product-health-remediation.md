@@ -1,14 +1,14 @@
-# Krypton product-health review and remediation
+# K8ston product-health review and remediation
 
 Created: 2026-10-12 16:46:13 (repository-local timestamp)
 
 ## Objective and business context
 
-Krypton is a lightweight, stateless secret-management UI/API over native Kubernetes
+K8ston is a lightweight, stateless secret-management UI/API over native Kubernetes
 Secrets. Its users need to create and rotate credentials, restrict team access,
 recover earlier values, and restart consumers without learning cluster credentials.
 Kubernetes remains the system of record: ownership, optimistic concurrency, RBAC,
-and native data must survive operations through Krypton.
+and native data must survive operations through K8ston.
 
 This plan closes evidenced security/correctness gaps and improves operator recovery,
 bounded resource use, deployment usability, and testable subsystem boundaries. It
@@ -84,7 +84,7 @@ not implement prior tasks. Independent findings get a new task ID before work st
   `pnpm --dir app e2e --project=chromium-dark <affected-spec>` for UI changes.
   Tests use mocked APIs, an available Chromium installation, and local port 3100.
 - **W:** `pnpm --dir website typecheck` and `pnpm --dir website build`.
-- **H:** `helm lint helm/krypton`, the regression render checks introduced in KRY-11,
+- **H:** `helm lint helm/k8ston`, the regression render checks introduced in KRY-11,
   and the umbrella chart lint/template commands from `.github/workflows/helm.yml`.
 - Run focused tests with each fix; run the combined full checks once at integration.
   Never mark completion based only on writing code. Record exact commands/results;
@@ -327,7 +327,7 @@ Completion evidence:
   correct user, ServiceAccount bearer token, and strategic-merge content type.
   HTTPS checks verify custom CA/server-name handling, fresh configured auth, and
   rejection of untrusted certificates/wrong names. Nine real handler paths use a
-  signed `dev@krypton.local` session with **36 groups**, covering namespace/secret
+  signed `dev@k8ston.local` session with **36 groups**, covering namespace/secret
   operations, history creation/list/pruning/deletion/restore, and all six workload
   list/patch calls. Hybrid/local bypass work; two humans coalesce one service-policy
   read and receive their own authorization decisions from the shared cache.
@@ -1318,7 +1318,7 @@ Suggested agent: deployment-contract engineer
 
 Dependencies: KRY-03, KRY-07, KRY-08
 
-Primary ownership: `helm/krypton/templates/{_helpers.tpl,deployment.yaml,rbac.yaml}`,
+Primary ownership: `helm/k8ston/templates/{_helpers.tpl,deployment.yaml,rbac.yaml}`,
 values/docs, chart render regression script/fixtures, Helm CI, relevant website guides.
 
 Finding: deployment merges globals ahead of local env despite the documented local
@@ -1355,17 +1355,17 @@ Verification: H and focused rendered-object assertions; final W verifies doc bui
 
 Completion evidence:
 
-- Added single effective-config helper `krypton.effectiveConfig` (+
-  `krypton.managedEnvKeys`, runtime-faithful `krypton.parseBool`) in
-  `helm/krypton/templates/_helpers.tpl`, shared by `deployment.yaml`,
+- Added single effective-config helper `k8ston.effectiveConfig` (+
+  `k8ston.managedEnvKeys`, runtime-faithful `k8ston.parseBool`) in
+  `helm/k8ston/templates/_helpers.tpl`, shared by `deployment.yaml`,
   `rbac.yaml`, and `access-configmap.yaml`. Local `env` wins over
   `global.env` per key (fixes reversed `merge` precedence); the Deployment
-  renders canonical managed env (`KRYPTON_SCOPE` from `rbac.scope`,
-  curated `KRYPTON_NAMESPACES` from the release namespace plus
-  `rbac.extraNamespaces`, `KRYPTON_RESTART_ENABLED` from `restartEnabled`,
-  `KRYPTON_ACCESS_CONFIGMAP` from `accessConfig.name` when enabled) and
+  renders canonical managed env (`K8STON_SCOPE` from `rbac.scope`,
+  curated `K8STON_NAMESPACES` from the release namespace plus
+  `rbac.extraNamespaces`, `K8STON_RESTART_ENABLED` from `restartEnabled`,
+  `K8STON_ACCESS_CONFIGMAP` from `accessConfig.name` when enabled) and
   skips managed keys in user-env iteration, so each renders exactly once.
-- Curated `extraNamespaces` derive `KRYPTON_SCOPE=cluster` with a bounded
+- Curated `extraNamespaces` derive `K8STON_SCOPE=cluster` with a bounded
   allowlist served by namespaced Roles only (no ClusterRole/ClusterRoleBinding;
   cluster-scope runtime with an allowlist needs no namespace-list permission).
   Runtime restart flag and `apps` RBAC rule come from the same effective value
@@ -1376,15 +1376,15 @@ Completion evidence:
   Roles and passes scope/allowlist env through untouched (unrendered
   scope/extras cannot constrain it); `accessConfig.key` must be `access.json`
   (runtime reader hardcodes it); unrelated `extraEnv`/custom settings preserved.
-- Added `helm/krypton/tests/render-regressions.sh` (executable, helm+grep
+- Added `helm/k8ston/tests/render-regressions.sh` (executable, helm+grep
   only, mktemp + trap cleanup, explicit `-n` on every render): 11 success
   groups (default, cluster, cluster allowlist, curated ±restart, local/global
   conflicts, false/truthy overrides, external RBAC, custom/external access
   config, explicit-match single-render, extras dedupe) and 16 failure groups
   (F1–F16, each asserting its guidance text). Wired into
   `.github/workflows/helm.yml` as a new `Chart regression assertions` step.
-- Documented defaults/upgrade semantics in `helm/krypton/README.md` (effective
-  table + upgrade notes), `helm/krypton/values.yaml` and
+- Documented defaults/upgrade semantics in `helm/k8ston/README.md` (effective
+  table + upgrade notes), `helm/k8ston/values.yaml` and
   `helm/main/values.yaml` comments, `helm/main/values-k8s-prod.example.yaml`
   comment, `website/docs/guides/deploy-helm.mdx` (knobs/RBAC/restart/CI
   sections), and `website/.samples/values-helm.yaml` comment. Untracked
@@ -1393,12 +1393,12 @@ Completion evidence:
   since `helm template` otherwise inherits the ambient kubeconfig namespace):
 
   ```bash
-  helm lint helm/krypton
-  TMPDIR=/tmp/opencode helm/krypton/tests/render-regressions.sh
+  helm lint helm/k8ston
+  TMPDIR=/tmp/opencode helm/k8ston/tests/render-regressions.sh
   helm dependency update helm/main
   helm lint helm/main
-  helm template test helm/krypton -n ci > /dev/null
-  helm template test helm/krypton -n ci --set rbac.scope=cluster --set restartEnabled=true --set ingress.enabled=true --set httpRoute.enabled=true --set route.enabled=true --set accessConfig.enabled=true --set autoscaling.enabled=true --set podDisruptionBudget.enabled=true --set serviceAccount.create=false > /dev/null
+  helm template test helm/k8ston -n ci > /dev/null
+  helm template test helm/k8ston -n ci --set rbac.scope=cluster --set restartEnabled=true --set ingress.enabled=true --set httpRoute.enabled=true --set route.enabled=true --set accessConfig.enabled=true --set autoscaling.enabled=true --set podDisruptionBudget.enabled=true --set serviceAccount.create=false > /dev/null
   helm template test helm/main -n ci -f helm/main/values.yaml -f helm/main/values-example.yaml > /dev/null
   helm template test helm/main -n ci -f helm/main/values.yaml -f helm/main/values-k8s-prod.example.yaml > /dev/null
   git diff --check
@@ -1409,15 +1409,15 @@ Completion evidence:
 
   Results: both charts lint clean; regressions **78 passed / 0 failed**;
   subchart default + full-flag matrix and both umbrella examples render;
-  umbrella prod example spot-checked to inject `KRYPTON_SCOPE=namespace`,
-  `KRYPTON_RESTART_ENABLED=false`, `KRYPTON_ACCESS_CONFIGMAP=krypton-access`.
+  umbrella prod example spot-checked to inject `K8STON_SCOPE=namespace`,
+  `K8STON_RESTART_ENABLED=false`, `K8STON_ACCESS_CONFIGMAP=k8ston-access`.
   `git diff --check` and staged/unstaged changelog checks pass
   (**CHANGELOG.md untouched**). Website production build passes (bonus check
   for the edited guide; formal W remains KRY-12).
 
 - Limits/triage: no cluster/credential access; all verification is
   client-side rendering plus the docs build. Curated mode intentionally
-  renders runtime `KRYPTON_SCOPE=cluster` while `rbac.scope` stays
+  renders runtime `K8STON_SCOPE=cluster` while `rbac.scope` stays
   `namespace` — operators auditing scope strings should read the derived env,
   not the input value (documented). `envSecretName` secrets must not repeat
   managed keys (explicit env shadows `envFrom`; documented). Only KRY-11's
@@ -1733,11 +1733,11 @@ Completion evidence:
   whole-value `HIGHLIGHT_BUDGET` (131072) gates Markdown/Shiki with an
   untruncated escaped-text fallback; measured DOM work (1683 elements within
   budget vs single text node above) is recorded without timing claims.
-- **KRY-11:** `krypton.effectiveConfig` derives one runtime/RBAC truth:
+- **KRY-11:** `k8ston.effectiveConfig` derives one runtime/RBAC truth:
   local-over-global env, curated allowlist via namespaced Roles only,
   restart flag and apps rules from the same value, 16 contradictory-config
   template errors, external-RBAC passthrough, `access.json` key enforcement.
-  `helm/krypton/tests/render-regressions.sh` asserts 11 success + 16 failure
+  `helm/k8ston/tests/render-regressions.sh` asserts 11 success + 16 failure
   groups and is wired into `.github/workflows/helm.yml`. Chart READMEs,
   values comments, and deploy guides document defaults/upgrades.
 - **KRY-13:** create step reordered so no comment follows a continuation
@@ -1750,7 +1750,7 @@ Completion evidence:
   - `TMPDIR="$PWD/app/tests/.runtime" NODE_OPTIONS="--require=$PWD/app/tests/helpers/offline-runtime.cjs" pnpm --dir app build` → pass, **14/14** static pages.
   - `CI=1 TMPDIR="$PWD/app/tests/.runtime" NODE_OPTIONS="--require=$PWD/app/tests/helpers/offline-runtime.cjs" pnpm --dir app e2e --workers=2` → **161 passed** total (**80** chromium-dark, **80** chromium-light, **1** mobile), 0 failures.
   - `pnpm --dir website typecheck` → pass; `pnpm --dir website build` → pass (Docusaurus SUCCESS).
-  - `helm lint helm/krypton`, `helm dependency update helm/main`, `helm lint helm/main` → pass; four `helm template` renders (subchart default/full-flag, umbrella example/prod) → pass; `TMPDIR="$PWD/app/tests/.runtime" helm/krypton/tests/render-regressions.sh` → **78 passed / 0 failed**.
+  - `helm lint helm/k8ston`, `helm dependency update helm/main`, `helm lint helm/main` → pass; four `helm template` renders (subchart default/full-flag, umbrella example/prod) → pass; `TMPDIR="$PWD/app/tests/.runtime" helm/k8ston/tests/render-regressions.sh` → **78 passed / 0 failed**.
 - Standalone smoke: copied `app/.next/standalone` (+ `.next/static`, `public`,
   mirroring the Dockerfile) to an isolated directory outside the repository
   module-resolution chain; started with fully synthetic env (auth enabled,
@@ -1785,7 +1785,7 @@ Completion evidence:
   or external-change watcher); Kubernetes multi-object cleanup is ordered
   but non-atomic and can need operator recovery; JSON-Patch conflict status
   is server-defined (409 vs 422); curated Helm mode renders runtime
-  `KRYPTON_SCOPE=cluster` while `rbac.scope` stays `namespace` (read the
+  `K8STON_SCOPE=cluster` while `rbac.scope` stays `namespace` (read the
   derived env); workload scans cover explicit references in the three
   controller templates only; standalone client-JS execution was not
   exercised beyond HTML serving; no background sweeper was added. Prior

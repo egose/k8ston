@@ -2,13 +2,13 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   labels:
-    {{- include "krypton.labels" . | nindent 4 }}
+    {{- include "k8ston.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "krypton.selectorLabels" . | nindent 6 }}
+      {{- include "k8ston.selectorLabels" . | nindent 6 }}
   {{- if .Values.podDisruptionBudget.maxUnavailable }}
   maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
   {{- else }}

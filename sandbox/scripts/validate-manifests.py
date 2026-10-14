@@ -65,7 +65,7 @@ def main() -> int:
             ):
                 fail(f"{rel}: Secret/{name} stringData must be a string map")
             secrets[(ns or "default", name)] = set(data)
-        elif kind == "ConfigMap" and name == "krypton-access":
+        elif kind == "ConfigMap" and name == "k8ston-access":
             raw = (doc.get("data", {}) or {}).get("access.json", "{}")
             try:
                 parsed = json.loads(raw)
@@ -86,7 +86,7 @@ def main() -> int:
                 fail(f"{rel}: Deployment/{name} has no containers")
 
     # Cross-reference checks on the sandbox fixtures.
-    for base_ns in ("krypton-test", "frontend-ns"):
+    for base_ns in ("k8ston-test", "frontend-ns"):
         if base_ns not in namespaces:
             fail(f"fixtures: expected Namespace/{base_ns}")
     for ruled_ns in fixture_access_rules:

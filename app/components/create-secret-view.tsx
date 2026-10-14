@@ -58,7 +58,7 @@ export function CreateSecretView({ namespace }: { namespace: string }) {
           </div>
         </Alert>
       )}
-      {!error && !canCreateAny && (
+      {!error && typeof data?.canCreate === 'boolean' && !canCreateAny && (
         <>
           <Alert variant="warning" role="alert">
             <div>

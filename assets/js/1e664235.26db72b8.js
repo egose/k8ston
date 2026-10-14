@@ -80,6 +80,7 @@ const toc = [{
 }];
 function _createMdxContent(props) {
   const _components = {
+    a: "a",
     code: "code",
     em: "em",
     h1: "h1",
@@ -362,9 +363,20 @@ function _createMdxContent(props) {
         children: "accessConfig.enabled: false"
       }), ", point ", (0,jsx_runtime.jsx)(_components.code, {
         children: "KRYPTON_ACCESS_CONFIGMAP"
-      }), "\nat an externally managed ConfigMap. ", (0,jsx_runtime.jsx)(_components.code, {
+      }), "\nat an externally managed ConfigMap. Each namespace entry accepts ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "groups"
+      }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "users"
+      }), ", and an optional ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "teams"
+      }), " array (see\n", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/authorization/#teams",
+        children: "Authorization"
+      }), "); deploy the app before adding\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "teams"
+      }), ", since older releases reject the unknown field. ", (0,jsx_runtime.jsx)(_components.code, {
         children: "extraEnv"
-      }), " entries must not set managed\nkeys (they render last and would shadow the derived values)."]
+      }), " entries must\nnot set managed keys (they render last and would shadow the derived values)."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "networkpolicy-notes",
       children: "NetworkPolicy notes"

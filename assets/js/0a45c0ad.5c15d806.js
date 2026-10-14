@@ -23,9 +23,9 @@ var lib = __webpack_require__(3191);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+theme-classic@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10.0_@sw_d80ed93973d8fdb1b9e1067267ab632b/node_modules/@docusaurus/theme-classic/lib/theme/CodeBlock/index.js + 27 modules
 var CodeBlock = __webpack_require__(4401);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/raw-loader@4.0.2_webpack@5.111.1_@swc+core@1.16.18_@swc+html@1.16.18_clean-css@5.3.3_cs_0a2048681882c260752bdc7655a466eb/node_modules/raw-loader/dist/cjs.js!./.samples/secret-annotated.yaml
-/* export default */ const secret_annotated = ("# What a Krypton-managed Secret looks like in etcd.\n# Per-secret annotations override the namespace fallback in krypton-access.\napiVersion: v1\nkind: Secret\nmetadata:\n  name: database-credentials\n  namespace: krypton-test\n  labels:\n    krypton.io/managed-by: krypton\n  annotations:\n    krypton.io/managed-by: krypton\n    krypton.io/version: '3'\n    krypton.io/description: Primary database credentials\n    krypton.io/allowed-groups: dev-team, database-admins\n    krypton.io/allowed-users: alice@company.com\n    krypton.io/last-modified-by: alice@company.com\ntype: Opaque\ndata:\n  DATABASE_URL: cG9zdGdyZXM6Ly9kYjppbmZyYS1vbmx5QGtleXM= # illustrative base64, never plaintext\n  DB_PASSWORD: czNjcjN0LW9ubHktaW4tZXhj bXBsZXM=\n");
+/* export default */ const secret_annotated = ("# What a Krypton-managed Secret looks like in etcd.\n# Per-secret annotations override the namespace fallback in krypton-access.\napiVersion: v1\nkind: Secret\nmetadata:\n  name: database-credentials\n  namespace: krypton-test\n  labels:\n    krypton.io/managed-by: krypton\n  annotations:\n    krypton.io/managed-by: krypton\n    krypton.io/version: '3'\n    krypton.io/description: Primary database credentials\n    krypton.io/allowed-groups: dev-team, database-admins\n    krypton.io/allowed-users: alice@company.com\n    krypton.io/team: team1\n    krypton.io/last-modified-by: alice@company.com\ntype: Opaque\ndata:\n  DATABASE_URL: cG9zdGdyZXM6Ly9kYjppbmZyYS1vbmx5QGtleXM= # illustrative base64, never plaintext\n  DB_PASSWORD: czNjcjN0LW9ubHktaW4tZXhj bXBsZXM=\n");
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/raw-loader@4.0.2_webpack@5.111.1_@swc+core@1.16.18_@swc+html@1.16.18_clean-css@5.3.3_cs_0a2048681882c260752bdc7655a466eb/node_modules/raw-loader/dist/cjs.js!./.samples/access-config.json.txt
-/* export default */ const access_config_json = ("{\n  \"frontend-ns\": {\n    \"groups\": [\"AzureAD-Frontend-Team\"],\n    \"users\": []\n  },\n  \"production\": {\n    \"groups\": [\"dev-team\", \"database-admins\"],\n    \"users\": [\"alice@company.com\"]\n  }\n}\n");
+/* export default */ const access_config_json = ("{\n  \"frontend-ns\": {\n    \"groups\": [\"AzureAD-Frontend-Team\"],\n    \"users\": []\n  },\n  \"production\": {\n    \"groups\": [\"dev-team\", \"database-admins\"],\n    \"users\": [\"alice@company.com\"],\n    \"teams\": [\n      { \"name\": \"team1\", \"groups\": [\"team1-dev\"], \"users\": [] },\n      { \"name\": \"team2\", \"groups\": [], \"users\": [\"bob@company.com\"] }\n    ]\n  }\n}\n");
 ;// CONCATENATED MODULE: ./docs/guides/authorization.mdx
 
 
@@ -55,6 +55,10 @@ const toc = [{
 }, {
   "value": "Namespace fallback (<code>access.json</code>)",
   "id": "namespace-fallback-accessjson",
+  "level": 2
+}, {
+  "value": "Teams",
+  "id": "teams",
   "level": 2
 }, {
   "value": "Creation is special",
@@ -138,12 +142,15 @@ function _createMdxContent(props) {
         }), ", only those decide."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
-          children: "Namespace fallback"
+          children: "Team + namespace fallback"
         }), " in ConfigMap ", (0,jsx_runtime.jsx)(_components.code, {
           children: "<app-namespace>/krypton-access"
         }), ", key\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "access.json"
-        }), " (cached 60s in memory)."]
+        }), " (cached 60s in memory). Namespace members see all secrets;\nteam members see only their team's secrets (see ", (0,jsx_runtime.jsx)(_components.a, {
+          href: "#teams",
+          children: "Teams"
+        }), ")."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Confirmed absence of rules → visible to all authenticated users"
@@ -209,11 +216,16 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Namespaces absent from a valid map are open to all authenticated users until\nrestricted. ", (0,jsx_runtime.jsx)(_components.code, {
         children: "{}"
-      }), " and namespace entries with empty rule lists are valid open\npolicies. Entries accept only ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " and namespace entries with empty rule lists are valid open\npolicies. Entries accept ", (0,jsx_runtime.jsx)(_components.code, {
         children: "groups"
       }), " and ", (0,jsx_runtime.jsx)(_components.code, {
         children: "users"
-      }), " string arrays; omitted lists\ndefault to empty, and unknown fields are rejected to catch misspelled rules.\nEach policy array has the same 256-entry / 256-UTF-8-byte ceilings; a violation is\ninvalid policy, not an open fallback. Namespace lookups use own properties, so a\nvalid namespace named ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " string arrays plus an optional\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "teams"
+      }), " array (see ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "#teams",
+        children: "Teams"
+      }), "); omitted lists default to empty, and unknown\nfields are rejected to catch misspelled rules.\nEach policy array has the same 256-entry / 256-UTF-8-byte ceilings; a violation is\ninvalid policy, not an open fallback. Namespace lookups use own properties, so a\nvalid namespace named ", (0,jsx_runtime.jsx)(_components.code, {
         children: "constructor"
       }), " follows the same absent/empty/explicit rules."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
@@ -243,24 +255,92 @@ function _createMdxContent(props) {
         children: "access.json: '{}'"
       }), "."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
+      id: "teams",
+      children: "Teams"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Each namespace entry may define up to ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "64 teams"
+      }), ":"]
+    }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
+      children: (0,jsx_runtime.jsx)(_components.code, {
+        className: "language-json",
+        children: "{\n  \"production\": {\n    \"groups\": [\"platform-leads\"],\n    \"users\": [],\n    \"teams\": [{ \"name\": \"team1\", \"groups\": [\"team1-dev\"], \"users\": [] }]\n  }\n}\n"
+      })
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Secrets opt into a team with the ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "krypton.io/team"
+      }), " annotation (one team per\nsecret; missing/blank means unassigned). Team names are DNS labels (lowercase,\n1–63 chars) and must be unique per namespace. Nested ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "groups"
+      }), "/", (0,jsx_runtime.jsx)(_components.code, {
+        children: "users"
+      }), " follow\nthe same 256-entry / 256-byte ceilings and exact-match semantics as namespace\narrays (groups case-sensitive, users case-insensitive)."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
+      children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Namespace members see everything"
+        }), " — every team plus unassigned secrets."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Team members see only their team's secrets."
+        }), " Unassigned secrets use\nnamespace rules alone, so team membership never grants them."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Empty team rules grant nothing"
+        }), " (unlike empty namespace rules, which are\nopen): a team with no members is visible only to namespace members — or to\neveryone when the namespace itself is also unrestricted."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Unknown teams fail closed"
+        }), ": a secret assigned to a team missing from the\npolicy is denied unless the namespace is completely unrestricted."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: [(0,jsx_runtime.jsx)(_components.strong, {
+          children: "Per-secret ACLs still win"
+        }), ": an explicit ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "allowed-groups"
+        }), "/", (0,jsx_runtime.jsx)(_components.code, {
+          children: "allowed-users"
+        }), "\nannotation decides alone, ignoring both namespace and team rules."]
+      }), "\n"]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["The secrets list shows a team dropdown (filter) and each secret's team; the\ncreate/edit form assigns the team. Moving a secret to another team (or to\nunassigned) requires creation rights in the target, so members cannot escalate\nsecrets into teams they cannot create in. Unknown teams are rejected with\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "400"
+      }), "; forbidden targets with ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "403"
+      }), "."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: [(0,jsx_runtime.jsx)(_components.strong, {
+        children: "Teams upgrade:"
+      }), " deploy the app before adding ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "teams"
+      }), " to ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "access.json"
+      }), " —\nolder releases reject the unknown field as invalid policy (", (0,jsx_runtime.jsx)(_components.code, {
+        children: "503"
+      }), "). Existing\npolicies without ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "teams"
+      }), " and secrets without the annotation behave exactly as\nbefore."]
+    }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "creation-is-special",
       children: "Creation is special"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["A new secret has no annotations yet, so creating in a namespace is decided by\nthe ", (0,jsx_runtime.jsx)(_components.strong, {
-        children: "namespace rules alone"
-      }), " — the per-secret allowed groups/users you set in\nthe form only take effect ", (0,jsx_runtime.jsx)(_components.em, {
+      children: ["A new secret has no annotations yet, so creating is decided by the ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "namespace\nand team rules for the chosen target"
+      }), " — the per-secret allowed groups/users\nyou set in the form only take effect ", (0,jsx_runtime.jsx)(_components.em, {
         children: "after"
-      }), " the secret exists. The secrets list response\nincludes ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " the secret exists. Unassigned\ncreation uses namespace rules alone; assigned creation also accepts the target\nteam's members. The secrets list response includes ", (0,jsx_runtime.jsx)(_components.code, {
         children: "canCreate"
-      }), " so the UI disables creation upfront when the rules exclude\nyou (POST still enforces server-side: ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " (unassigned),\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "teams"
+      }), ", and ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "creatableTeams"
+      }), " so the UI disables creation upfront when the\nrules exclude you (POST still enforces server-side: ", (0,jsx_runtime.jsx)(_components.code, {
         children: "403"
-      }), "). Policy failures return ", (0,jsx_runtime.jsx)(_components.code, {
+      }), "). Policy failures\nreturn ", (0,jsx_runtime.jsx)(_components.code, {
         children: "503"
-      }), " for\nnon-admin creation ", (0,jsx_runtime.jsx)(_components.strong, {
+      }), " for non-admin creation ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "and list requests"
-      }), ". Lists need the policy for ", (0,jsx_runtime.jsx)(_components.code, {
+      }), ". Lists need the policy\nfor ", (0,jsx_runtime.jsx)(_components.code, {
         children: "canCreate"
-      }), "\neven when empty or containing only explicitly authorized secrets; they return\nan error rather than a partial list or an invented creation hint."]
+      }), " even when empty or containing only explicitly authorized\nsecrets; they return an error rather than a partial list or an invented\ncreation hint. Admin lists degrade to empty team hints instead of failing when\nonly the teams lookup is unavailable."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "managed-only-mode",
       children: "Managed-only mode"

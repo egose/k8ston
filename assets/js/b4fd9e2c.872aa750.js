@@ -140,8 +140,17 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"namespace\": \"krypton-test\",\n  \"name\": \"database-credentials\",\n  \"type\": \"Opaque\",\n  \"keys\": [\"DATABASE_URL\", \"DB_PASSWORD\"],\n  \"keyCount\": 2,\n  \"description\": \"Primary database credentials\",\n  \"version\": 3,\n  \"resourceVersion\": \"123456\",\n  \"creationTimestamp\": \"2026-01-04T12:00:00Z\",\n  \"allowedGroups\": [\"dev-team\"],\n  \"allowedUsers\": [],\n  \"managedByKrypton\": true,\n  \"immutable\": false,\n  \"binaryKeys\": []\n}\n"
+        children: "{\n  \"namespace\": \"krypton-test\",\n  \"name\": \"database-credentials\",\n  \"type\": \"Opaque\",\n  \"keys\": [\"DATABASE_URL\", \"DB_PASSWORD\"],\n  \"keyCount\": 2,\n  \"description\": \"Primary database credentials\",\n  \"version\": 3,\n  \"resourceVersion\": \"123456\",\n  \"creationTimestamp\": \"2026-01-04T12:00:00Z\",\n  \"allowedGroups\": [\"dev-team\"],\n  \"allowedUsers\": [],\n  \"team\": \"team1\",\n  \"managedByKrypton\": true,\n  \"immutable\": false,\n  \"binaryKeys\": []\n}\n"
       })
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: [(0,jsx_runtime.jsx)(_components.code, {
+        children: "team"
+      }), " is the secret's single-team assignment (", (0,jsx_runtime.jsx)(_components.code, {
+        children: "\"\""
+      }), " means unassigned and is\ngoverned by namespace rules alone). See\n", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/authorization/#teams",
+        children: "Authorization"
+      }), "."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
         children: "SecretDetail"
@@ -293,7 +302,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"namespace\": \"krypton-test\",\n  \"secrets\": [{ \"...\": \"SecretSummary[]\" }],\n  \"canCreate\": true\n}\n"
+        children: "{\n  \"namespace\": \"krypton-test\",\n  \"secrets\": [{ \"...\": \"SecretSummary[]\" }],\n  \"canCreate\": true,\n  \"teams\": [\"team1\", \"team2\"],\n  \"creatableTeams\": [\"team1\"]\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["History snapshots are excluded ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -306,11 +315,15 @@ function _createMdxContent(props) {
         children: "KRYPTON_MANAGED_ONLY=true"
       }), ". ", (0,jsx_runtime.jsx)(_components.code, {
         children: "canCreate"
-      }), " is a UX hint (namespace rules only) —\nPOST still enforces server-side.\nFor non-admins, an unavailable/invalid namespace policy returns\n", (0,jsx_runtime.jsx)(_components.code, {
+      }), " is a UX hint for unassigned creation\n(namespace rules only), ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "teams"
+      }), " lists the namespace's team names, and\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "creatableTeams"
+      }), " lists the teams the caller may create in — POST still enforces\nserver-side.\nFor non-admins, an unavailable/invalid namespace policy returns\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "503 { \"error\": \"Namespace access policy is unavailable\" }"
       }), " for the whole list,\neven if there are no items or all items have explicit ACLs: ", (0,jsx_runtime.jsx)(_components.code, {
         children: "canCreate"
-      }), " requires\nnamespace policy. No partial list or guessed creation hint is returned."]
+      }), " requires\nnamespace policy. No partial list or guessed creation hint is returned.\nAdmin lists degrade to empty team hints instead of failing when only the teams\nlookup is unavailable."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "create-secret",
       children: "Create secret"
@@ -368,13 +381,19 @@ function _createMdxContent(props) {
           children: "[]"
         }), "; empty arrays store empty annotations. If both\nare empty, namespace fallback applies and may intentionally be open."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Creation is gated by ", (0,jsx_runtime.jsx)(_components.strong, {
-          children: "namespace rules alone"
-        }), " (the secret has no annotations\nyet) → ", (0,jsx_runtime.jsx)(_components.code, {
+        children: ["Optional ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "team"
+        }), " assigns the secret to a namespace team (DNS label, must exist\nin the policy when teams are defined → ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "400"
+        }), " for unknown teams). Omitted means\nunassigned (namespace rules alone)."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: ["Creation is gated by the ", (0,jsx_runtime.jsx)(_components.strong, {
+          children: "namespace and team rules for the chosen target"
+        }), "\n→ ", (0,jsx_runtime.jsx)(_components.code, {
           children: "403"
         }), " when excluded, ", (0,jsx_runtime.jsx)(_components.code, {
           children: "503"
-        }), " when required policy is unavailable or invalid."]
+        }), " when required policy is unavailable or invalid.\nNamespace members may create in any team; team members only in their own."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Answers ", (0,jsx_runtime.jsx)(_components.code, {
           children: "201 { \"secret\": SecretSummary }"
@@ -409,7 +428,7 @@ function _createMdxContent(props) {
         children: "binaryData"
       }), " included. ", (0,jsx_runtime.jsx)(_components.code, {
         children: "403"
-      }), " when the\nuser fails the secret / namespace rules. Admins and explicit live ACLs take\nprecedence over namespace policy availability; fallback decisions return ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " when the\nuser fails the secret / team / namespace rules. Admins and explicit live ACLs take\nprecedence over namespace policy availability; fallback decisions return ", (0,jsx_runtime.jsx)(_components.code, {
         children: "503"
       }), "\non policy failure. Only confirmed 404 absence or valid empty rules are open."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
@@ -433,7 +452,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"data\": { \"API_KEY\": \"<rotated-value>\" },\n  \"description\": \"Demo\",\n  \"allowedGroups\": [\"dev-team\"],\n  \"allowedUsers\": [],\n  \"resourceVersion\": \"123456\"\n}\n"
+        children: "{\n  \"data\": { \"API_KEY\": \"<rotated-value>\" },\n  \"description\": \"Demo\",\n  \"allowedGroups\": [\"dev-team\"],\n  \"allowedUsers\": [],\n  \"team\": \"team1\",\n  \"resourceVersion\": \"123456\"\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
@@ -451,7 +470,19 @@ function _createMdxContent(props) {
           children: "allowedGroups"
         }), "/\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "allowedUsers"
+        }), "/", (0,jsx_runtime.jsx)(_components.code, {
+          children: "team"
         }), " keep their previous values."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: ["Optional ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "team"
+        }), " moves the secret: a defined team name assigns it, ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "\"\""
+        }), " clears\nback to unassigned. Unknown teams return ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "400"
+        }), "; moving into a team (or out of\none) requires creation rights in the target → ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "403"
+        }), " otherwise."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Submitted ACL arrays use the same validation and trimming as create, before any\nsnapshot or live write. ", (0,jsx_runtime.jsx)(_components.code, {
           children: "[]"

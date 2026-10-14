@@ -200,6 +200,7 @@ function snapshotFor(source: LiveIdentity, live: V1Secret, user: SessionUser): V
         [ANNOTATIONS.description]: ann[ANNOTATIONS.description] ?? '',
         [ANNOTATIONS.allowedGroups]: ann[ANNOTATIONS.allowedGroups] ?? '',
         [ANNOTATIONS.allowedUsers]: ann[ANNOTATIONS.allowedUsers] ?? '',
+        [ANNOTATIONS.team]: ann[ANNOTATIONS.team] ?? '',
       },
     },
     // A standalone data archive must not trigger native type controllers or
@@ -227,6 +228,7 @@ function sameSourceContent(expected: V1Secret, actual: V1Secret, source: LiveIde
     ANNOTATIONS.description,
     ANNOTATIONS.allowedGroups,
     ANNOTATIONS.allowedUsers,
+    ANNOTATIONS.team,
   ]) {
     if (actual.metadata?.annotations?.[key] !== expected.metadata?.annotations?.[key]) return false;
   }

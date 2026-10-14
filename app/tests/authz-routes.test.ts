@@ -338,7 +338,8 @@ describe.each([true, false])('shared live-object boundary with managedOnly=%s', 
       ...(!managedOnly ? ['external'] : []),
     ]);
     expect(JSON.stringify(body)).not.toContain(historicalValue);
-    expect(core.readNamespacedConfigMap).toHaveBeenCalledTimes(admin ? 0 : 1);
+    // Non-admins read for authz; admins read once for the teams dropdown (cached, open policy).
+    expect(core.readNamespacedConfigMap).toHaveBeenCalledTimes(1);
   });
 });
 

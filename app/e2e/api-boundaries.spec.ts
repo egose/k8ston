@@ -15,10 +15,13 @@ test('classified callback errors reach the login banner without raw provider val
   expect(response.status()).toBe(307);
   expect(response.headers()['cache-control']).toBe('no-store');
   const location = response.headers().location;
-  expect(new URL(location).search).toBe('?auth=error&idp_error=provider_error');
+  const redirect = new URL(location);
+  expect(redirect.search).toBe('?auth=error&idp_error=provider_error');
   expect(location).not.toContain(marker);
   await mockApi(page, { loggedIn: false, authDisabled: false });
-  await page.goto(location, { waitUntil: 'networkidle' });
+  // Follow the redirect path on the test server: the Location origin comes
+  // from APP_URL and may differ from the Playwright baseURL port.
+  await page.goto(`${redirect.pathname}${redirect.search}`, { waitUntil: 'networkidle' });
   await expect(page.getByText(/SSO sign-in failed \(provider_error\)/)).toBeVisible();
   await expect(page.getByText(marker)).toHaveCount(0);
 });

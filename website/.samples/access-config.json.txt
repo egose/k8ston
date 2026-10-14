@@ -5,6 +5,10 @@
   },
   "production": {
     "groups": ["dev-team", "database-admins"],
-    "users": ["alice@company.com"]
+    "users": ["alice@company.com"],
+    "teams": [
+      { "name": "team1", "groups": ["team1-dev"], "users": [] },
+      { "name": "team2", "groups": [], "users": ["bob@company.com"] }
+    ]
   }
 }

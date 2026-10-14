@@ -32,6 +32,7 @@ export const summary = (over: Partial<SecretSummary> = {}): SecretSummary => ({
   creationTimestamp: '2026-09-01T10:00:00Z',
   allowedGroups: ['dev-team'],
   allowedUsers: [],
+  team: '',
   managedByKrypton: true,
   immutable: false,
   binaryKeys: [],
@@ -106,6 +107,8 @@ export async function mockApi(
       json: {
         namespace: 'demo',
         canCreate: true,
+        teams: [],
+        creatableTeams: [],
         secrets: [
           summary(),
           summary({
@@ -124,7 +127,7 @@ export async function mockApi(
   );
   await page.route('**/api/namespaces/payments/secrets', (r) =>
     // payments excludes the user: covers the denied-create UX.
-    r.fulfill({ json: { namespace: 'payments', canCreate: false, secrets: [] } }),
+    r.fulfill({ json: { namespace: 'payments', canCreate: false, teams: [], creatableTeams: [], secrets: [] } }),
   );
   await page.route('**/api/namespaces/demo/secrets/app-config/versions', (r) =>
     r.fulfill({ json: { namespace: 'demo', name: 'app-config', versions } }),

@@ -68,16 +68,30 @@ submitting: `team-a, ,team-b` means two principals; a blank field submits `[]`.
 (see `k8s/configmap-access.yaml`):
 
 ```json
-{ "production": { "groups": ["dev-team"], "users": ["alice@company.com"] } }
+{
+  "production": {
+    "groups": ["dev-team"],
+    "users": ["alice@company.com"],
+    "teams": [{ "name": "team1", "groups": ["team1-dev"], "users": [] }]
+  }
+}
 ```
 
 These JSON arrays retain exact entries, including literal commas and surrounding
 whitespace: `["team-a,team-b"]` matches that one group, not `team-a` or `team-b`.
 They are not split or trimmed; user matching still ignores email case.
 
+**Teams:** each namespace may define up to 64 teams; secrets opt in with the
+`krypton.io/team` annotation (missing/blank = unassigned). Team names are unique
+DNS labels per namespace. Namespace members see all secrets; team members see
+only their team's secrets, while unassigned secrets use namespace rules alone.
+Empty team rules grant nothing; unknown teams fail closed unless the namespace
+is fully unrestricted. Per-secret ACLs still override both.
+
 Rules: admins (`KRYPTON_ADMIN_GROUPS`/`KRYPTON_ADMIN_USERS`) always pass; a secret
-with explicit annotations is decided by those alone; otherwise the namespace rules
-apply; with no rules anywhere the secret is visible to all authenticated users
+with explicit annotations is decided by those alone; otherwise the team and
+namespace rules apply; with no rules anywhere the secret is visible to all
+authenticated users
 (open by default, restricted once rules are added). Until any admin is configured,
 every authenticated user is treated as admin (bootstrap mode — set admins promptly).
 
@@ -101,18 +115,26 @@ History objects (`krypton.io/kind=history`) are always hidden from lists and ret
 404 on direct named-secret routes, including for admins and in legacy mode.
 Read or restore history through the **live secret's** `/versions` and `/restore`
 endpoints, which authorize against its current ACL, never a snapshot's copied ACL.
-Creation is special: a new secret has no annotations yet, so creating in a
-namespace is decided by the namespace rules alone — the per-secret allowed
+Creation is special: a new secret has no annotations yet, so creating is decided
+by the namespace and team rules for the chosen target — the per-secret allowed
 groups/users you set in the form only take effect _after_ the secret exists
-(the UI requires a loaded namespace and an explicit allowed creation hint). Non-admin creation
+(the UI requires a loaded namespace and an explicit allowed creation hint).
+Unassigned creation uses namespace rules alone; assigned creation also accepts
+the target team's members. Moving a secret between teams needs creation rights
+in the target. Non-admin creation
 and list requests return 503 on policy failure; lists need namespace policy for
 their `canCreate` hint, even when empty or containing only explicit-ACL secrets.
+The list response also carries `teams` and `creatableTeams` for the team
+dropdown; admin lists degrade to empty team hints instead of failing when only
+the teams lookup is unavailable.
 
 **Authorization upgrade:** fix malformed access ConfigMaps and ensure the app's
 ServiceAccount can read them before upgrading. To express an intentionally open
 policy in an existing ConfigMap, use valid `access.json: '{}'`. Rule entries accept
-only `groups` and `users` string arrays (omitted lists default to empty).
-Clients that addressed snapshot names directly must use the live history endpoints.
+`groups`/`users` string arrays plus an optional `teams` array (omitted lists
+default to empty). Deploy the app before adding `teams` — older releases reject
+the unknown field as invalid policy. Clients that addressed snapshot names
+directly must use the live history endpoints.
 
 **ACL input upgrade:** earlier API writers accepted `["team-a,team-b"]` as one
 entry but stored two principals, and whitespace-only entries could disappear into

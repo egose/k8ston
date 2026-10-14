@@ -2,6 +2,7 @@
 {{- if .Values.accessConfig.enabled -}}
 # Namespace-level ownership fallback for SSO users that have no cluster identity.
 # Per-secret annotations (krypton.io/allowed-groups / allowed-users) override these.
+# Namespace groups/users see all teams; team members see only their team's secrets.
 # Namespaces absent from this map are open to all authenticated users until restricted.
 apiVersion: v1
 kind: ConfigMap

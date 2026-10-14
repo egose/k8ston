@@ -1,7 +1,7 @@
 import type { V1Secret } from '@kubernetes/client-node';
 import { ANNOTATIONS, LABELS, MANAGED_BY_VALUE, config } from './config';
 import type { SessionUser } from './auth';
-import { annotationAclSchema, estimateSecretSize, secretDataSchema } from './validation';
+import { annotationAclSchema, estimateSecretSize, secretDataSchema, teamNameSchema } from './validation';
 import { K8S_SECRET_SIZE_LIMIT } from './config';
 import {
   BINARY_EDIT_GUIDANCE,
@@ -32,6 +32,8 @@ export interface SecretSummary {
   deletionTimestamp?: string;
   allowedGroups: string[];
   allowedUsers: string[];
+  /** Single-team assignment; "" = unassigned (namespace default). */
+  team: string;
   managedByKrypton: boolean;
   immutable: boolean;
   /** Names only; never include values in list/create responses. */
@@ -124,6 +126,8 @@ export function isVisibleLiveSecret(secret: V1Secret): boolean {
 
 export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
   const ann = secret.metadata?.annotations ?? {};
+  const rawTeam = ann[ANNOTATIONS.team];
+  const team = typeof rawTeam === 'string' ? rawTeam.trim() : '';
   return {
     namespace,
     name: secret.metadata?.name ?? '',
@@ -137,6 +141,7 @@ export function toSummary(namespace: string, secret: V1Secret): SecretSummary {
     deletionTimestamp: secret.metadata?.deletionTimestamp as unknown as string | undefined,
     allowedGroups: csv(ann[ANNOTATIONS.allowedGroups]),
     allowedUsers: csv(ann[ANNOTATIONS.allowedUsers]),
+    team,
     managedByKrypton: isManagedByKrypton(secret),
     immutable: secret.immutable === true,
     binaryKeys: binaryKeys(secret),
@@ -176,6 +181,8 @@ interface LiveSecretArgs {
   description?: string;
   allowedGroups?: string[];
   allowedUsers?: string[];
+  /** Undefined preserves, "" clears to unassigned, otherwise a team name. */
+  team?: string;
   user: SessionUser;
 }
 
@@ -219,11 +226,13 @@ function sameDataBytes(a: V1Secret['data'], b: V1Secret['data']): boolean {
 
 /** All validation happens while building, before callers persist a snapshot. */
 function buildEncodedLiveSecret(args: LiveSecretArgs, encodedData: V1Secret['data']): V1Secret {
-  const { live, name, namespace, type, description, allowedGroups, allowedUsers, user } = args;
+  const { live, name, namespace, type, description, allowedGroups, allowedUsers, team, user } = args;
   // Keep the invariant for callers that bypass route schemas, including raw restore.
   // Undefined preserves native annotations; [] intentionally encodes an empty rule.
   const groupAnnotation = allowedGroups === undefined ? undefined : annotationAclSchema.parse(allowedGroups).join(', ');
   const userAnnotation = allowedUsers === undefined ? undefined : annotationAclSchema.parse(allowedUsers).join(', ');
+  // Team: undefined preserves, "" clears to unassigned, otherwise a validated name.
+  const teamAnnotation = team === undefined ? undefined : team === '' ? '' : teamNameSchema.parse(team);
   const effectiveType = live?.type ?? type ?? 'Opaque';
   assertSecretMutationSupported(effectiveType);
   if (live?.immutable && !sameDataBytes(live.data, encodedData)) {
@@ -266,6 +275,7 @@ function buildEncodedLiveSecret(args: LiveSecretArgs, encodedData: V1Secret['dat
         [ANNOTATIONS.description]: description ?? prevAnn[ANNOTATIONS.description] ?? '',
         [ANNOTATIONS.allowedGroups]: groupAnnotation ?? prevAnn[ANNOTATIONS.allowedGroups] ?? '',
         [ANNOTATIONS.allowedUsers]: userAnnotation ?? prevAnn[ANNOTATIONS.allowedUsers] ?? '',
+        [ANNOTATIONS.team]: teamAnnotation ?? prevAnn[ANNOTATIONS.team] ?? '',
       },
     },
     ...(live?.immutable !== undefined ? { immutable: live.immutable } : {}),

@@ -25,6 +25,12 @@ export default defineConfig({
     port: 3100,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Server redirects (e.g. /api/auth/callback) are built from config.appUrl.
+    // APP_URL is read at runtime; NEXT_PUBLIC_APP_URL is inlined at build time
+    // so setting it here would not affect the already-built server.
+    env: {
+      APP_URL: 'http://localhost:3100',
+    },
   },
   projects: [
     {

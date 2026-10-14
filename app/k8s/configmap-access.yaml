@@ -1,5 +1,7 @@
 # Namespace-level ownership fallback for SSO users that have no cluster identity.
 # Per-secret annotations (krypton.io/allowed-groups / allowed-users) override these.
+# Namespace groups/users see ALL secrets; team members see only their team's
+# secrets (krypton.io/team annotation; unassigned uses namespace rules only).
 # Namespaces absent from this map are open to all authenticated users until restricted.
 apiVersion: v1
 kind: ConfigMap
@@ -17,6 +19,10 @@ data:
       },
       "production": {
         "groups": ["dev-team", "database-admins"],
-        "users": ["alice@company.com"]
+        "users": ["alice@company.com"],
+        "teams": [
+          { "name": "team1", "groups": ["team1-dev"], "users": [] },
+          { "name": "team2", "groups": [], "users": ["bob@company.com"] }
+        ]
       }
     }

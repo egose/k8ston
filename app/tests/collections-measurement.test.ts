@@ -33,6 +33,11 @@ it('measures transferred synthetic JSON for the original full list versus histor
   const transferred: Array<{ bytes: number; objects: number }> = [];
   const server = await loopbackKubernetes((request) => {
     const url = new URL(request.url, 'http://loopback.test');
+    // No access policy ConfigMap in this fixture: the teams lookup 404s (open),
+    // like a cluster without namespace restrictions. Not a secrets page.
+    if (url.pathname.includes('/configmaps/')) {
+      return { status: 404, body: { kind: 'Status', code: 404, message: 'configmaps "krypton-access" not found' } };
+    }
     const selected = url.searchParams.has('labelSelector')
       ? objects.filter((secret) => secret.metadata?.labels?.['krypton.io/kind'] !== 'history')
       : objects;
@@ -63,6 +68,8 @@ it('measures transferred synthetic JSON for the original full list versus histor
       toSummary('unit-test', secret),
     ),
     canCreate: true,
+    teams: [],
+    creatableTeams: [],
   });
   const before = { requests: server.requests.length, objects: transferred[0].objects, bytes: transferred[0].bytes };
   const { GET } = await import('@/app/api/namespaces/[namespace]/secrets/route');
@@ -79,7 +86,8 @@ it('measures transferred synthetic JSON for the original full list versus histor
   };
   expect(before.requests).toBe(1);
   expect(before.objects).toBe(2520);
-  expect(after.requests).toBe(2);
+  // Two history-excluding secrets pages + one teams policy lookup (404 = open).
+  expect(after.requests).toBe(3);
   expect(after.objects).toBe(120);
   expect(after.bytes).toBeLessThan(before.bytes / 20);
   expect(mock.core.listNamespace).not.toHaveBeenCalled();

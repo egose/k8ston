@@ -7,40 +7,57 @@ import { Badge } from '@egose/shadcn-theme/components/ui/badge';
 import { Input } from '@egose/shadcn-theme/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@egose/shadcn-theme/components/ui/table';
 import type { SecretSummary } from '@/lib/secrets';
+import { ALL_TEAMS, NO_TEAM, TeamSelector } from './team-selector';
 
-export function SecretTable({ namespace, secrets }: { namespace: string; secrets: SecretSummary[] }) {
+interface Props {
+  namespace: string;
+  secrets: SecretSummary[];
+  teams: string[];
+  selectedTeam: string;
+  onTeamChange: (team: string) => void;
+}
+
+export function SecretTable({ namespace, secrets, teams, selectedTeam, onTeamChange }: Props) {
   const [filter, setFilter] = useState('');
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    const filtered = q
-      ? secrets.filter(
-          (s) =>
-            s.name.toLowerCase().includes(q) ||
-            s.description.toLowerCase().includes(q) ||
-            s.keys.some((k) => k.toLowerCase().includes(q)),
-        )
-      : [...secrets];
+    const filtered = secrets.filter((s) => {
+      if (selectedTeam === NO_TEAM && (s.team ?? '') !== '') return false;
+      if (selectedTeam !== ALL_TEAMS && selectedTeam !== NO_TEAM && (s.team ?? '') !== selectedTeam) return false;
+      if (!q) return true;
+      return (
+        s.name.toLowerCase().includes(q) ||
+        s.description.toLowerCase().includes(q) ||
+        s.keys.some((k) => k.toLowerCase().includes(q))
+      );
+    });
     filtered.sort((a, b) => a.name.localeCompare(b.name));
     return filtered;
-  }, [secrets, filter]);
+  }, [secrets, filter, selectedTeam]);
+
+  const showTeamColumn = teams.length > 0 || secrets.some((s) => (s.team ?? '') !== '');
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative max-w-sm">
-        <IconSearch size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Filter secrets…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="pl-8"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1">
+          <IconSearch size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Filter secrets…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <TeamSelector value={selectedTeam} onChange={onTeamChange} teams={teams} disabled={false} />
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              {showTeamColumn && <TableHead>Team</TableHead>}
               <TableHead>Type</TableHead>
               <TableHead>Keys</TableHead>
               <TableHead>Version</TableHead>
@@ -51,8 +68,12 @@ export function SecretTable({ namespace, secrets }: { namespace: string; secrets
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                  No secrets found{filter ? ` matching "${filter}"` : ''} in this namespace.
+                <TableCell colSpan={showTeamColumn ? 7 : 6} className="py-8 text-center text-muted-foreground">
+                  No secrets found{filter ? ` matching "${filter}"` : ''}
+                  {selectedTeam !== ALL_TEAMS
+                    ? ` for ${selectedTeam === NO_TEAM ? 'unassigned secrets' : `team "${selectedTeam}"`}`
+                    : ''}{' '}
+                  in this namespace.
                 </TableCell>
               </TableRow>
             ) : (
@@ -66,6 +87,17 @@ export function SecretTable({ namespace, secrets }: { namespace: string; secrets
                       {s.name}
                     </Link>
                   </TableCell>
+                  {showTeamColumn && (
+                    <TableCell>
+                      {s.team ? (
+                        <Badge variant="secondary" size="sm">
+                          {s.team}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge variant="secondary" size="sm">
                       {s.type}

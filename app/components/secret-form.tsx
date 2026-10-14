@@ -36,6 +36,8 @@ import { reloadSecret, secretQueryOptions } from '@/lib/secret-queries';
 import { ValueDialog } from './value-dialog';
 import { RevealValue } from './reveal-value';
 
+const NO_TEAM_VALUE = '__none__';
+
 const formSchema = z.object({
   // Slugify BEFORE validating so submit-without-blur (e.g. pressing Enter
   // with "test secret" typed) still passes — the blur handler only fixes
@@ -57,6 +59,7 @@ const formSchema = z.object({
   description: z.string().max(1024),
   allowedGroups: z.string(),
   allowedUsers: z.string(),
+  team: z.string(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -90,6 +93,10 @@ interface Props {
   namespace: string;
   initial?: SecretDetail;
   canCreate?: boolean;
+  /** All teams in the namespace (empty = teams hidden). */
+  teams?: string[];
+  /** Teams the user may create/move secrets in; namespace members see all. */
+  creatableTeams?: string[];
 }
 
 const defaultValues = (secret?: SecretDetail): FormValues => ({
@@ -98,14 +105,28 @@ const defaultValues = (secret?: SecretDetail): FormValues => ({
   description: secret?.description ?? '',
   allowedGroups: (secret?.allowedGroups ?? []).join(', '),
   allowedUsers: (secret?.allowedUsers ?? []).join(', '),
+  team: secret?.team ?? '',
 });
 const isCustomType = (secret?: SecretDetail) =>
   secret != null && !SECRET_TYPE_PRESETS.some((preset) => preset.value === secret.type);
 
-export function SecretForm({ mode, namespace, initial, canCreate }: Props) {
+export function SecretForm({ mode, namespace, initial, canCreate, teams = [], creatableTeams }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const formId = useId();
+  // Creation targets: creatable teams (+ unassigned iff canCreate). Edit also
+  // keeps the current team so unrelated edits never force a move.
+  const currentTeam = initial?.team ?? '';
+  const creatable = creatableTeams ?? teams;
+  const showTeamField = teams.length > 0 || currentTeam !== '';
+  // Unassigned is pickable on create only when creation allows it (team-only
+  // creators must pick a team); on edit it is always shown and the server
+  // enforces move permission (preserving an existing unassigned needs none).
+  const showUnassignedOption = mode === 'edit' ? true : canCreate !== false;
+  const teamOptions = Array.from(new Set([currentTeam, ...creatable].filter((t) => t !== '')));
+  // Team-only creators default to their first creatable team instead of unassigned.
+  const initialTeam =
+    mode === 'create' && !initial && canCreate === false && creatable.length > 0 ? creatable[0] : (initial?.team ?? '');
   // The draft and its revision are one baseline. Query props may change during
   // reconnects or while Activity hides this form; those changes cannot rebase it.
   const [baseline, setBaseline] = useState(initial);
@@ -127,7 +148,7 @@ export function SecretForm({ mode, namespace, initial, canCreate }: Props) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues(baseline),
+    defaultValues: { ...defaultValues(baseline), team: baseline?.team ?? initialTeam },
   });
 
   const nameField = form.register('name');
@@ -137,16 +158,26 @@ export function SecretForm({ mode, namespace, initial, canCreate }: Props) {
   // react-hooks/incompatible-library) — kept in sync via the pickers below.
   const [customType, setCustomType] = useState(() => isCustomType(baseline));
   const [selectedType, setSelectedType] = useState(baseline?.type ?? 'Opaque');
+  const [selectedTeam, setSelectedTeam] = useState(baseline?.team ?? initialTeam);
+  const pickTeam = (v: string) => {
+    const team = v === NO_TEAM_VALUE ? '' : v;
+    setSelectedTeam(team);
+    form.setValue('team', team, { shouldDirty: true, shouldValidate: true });
+  };
   const typeHint = customType
     ? 'Custom type — preserved exactly. Service-account token creation and editing are unsupported.'
     : (SECRET_TYPE_PRESETS.find((p) => p.value === selectedType)?.hint ?? 'Arbitrary key-value pairs.');
 
   function resetDraft(secret?: SecretDetail) {
     setBaseline(secret);
-    form.reset(defaultValues(secret));
+    const defaults = defaultValues(secret);
+    // Preserve the team-only create default when resetting to a blank form.
+    if (!secret && mode === 'create') defaults.team = initialTeam;
+    form.reset(defaults);
     setEntries(secret ? toEntries(secret.data) : [{ id: nextId++, key: '', value: '', revealed: false }]);
     setCustomType(isCustomType(secret));
     setSelectedType(secret?.type ?? 'Opaque');
+    setSelectedTeam(secret?.team ?? (!secret && mode === 'create' ? initialTeam : ''));
     setOpenEntryId(null);
     setBulkDraft('');
     setBulkError(null);
@@ -267,6 +298,7 @@ export function SecretForm({ mode, namespace, initial, canCreate }: Props) {
           description: values.description,
           allowedGroups: parseCsv(values.allowedGroups),
           allowedUsers: parseCsv(values.allowedUsers),
+          ...(showTeamField && values.team ? { team: values.team } : {}),
         });
         toast.success(`Secret "${name}" created`);
         // Activity retains this page on navigation; a completed create starts fresh.
@@ -283,6 +315,8 @@ export function SecretForm({ mode, namespace, initial, canCreate }: Props) {
           description: values.description,
           allowedGroups: parseCsv(values.allowedGroups),
           allowedUsers: parseCsv(values.allowedUsers),
+          // Omit when unchanged to preserve; "" explicitly clears to unassigned.
+          ...(showTeamField && values.team !== (baseline.team ?? '') ? { team: values.team } : {}),
           resourceVersion: baseline.resourceVersion,
         });
         const queryKey = secretQueryOptions(namespace, baseline.name).queryKey;
@@ -449,6 +483,32 @@ export function SecretForm({ mode, namespace, initial, canCreate }: Props) {
                 placeholder="What is this used for?"
               />
             </div>
+            {showTeamField && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`${formId}-team`}>Team</Label>
+                <Select
+                  value={selectedTeam === '' ? NO_TEAM_VALUE : selectedTeam}
+                  onValueChange={pickTeam}
+                  disabled={!!readOnlyReason}
+                >
+                  <SelectTrigger id={`${formId}-team`} className="w-full">
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {showUnassignedOption && <SelectItem value={NO_TEAM_VALUE}>No team (namespace default)</SelectItem>}
+                    {teamOptions.map((team) => (
+                      <SelectItem key={team} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Team members see only their team&apos;s secrets; namespace members see all teams. Unassigned secrets
+                  use namespace rules only.
+                </p>
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor={`${formId}-allowedGroups`}>Allowed SSO groups (comma-separated)</Label>

@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api-client';
 import { namespaceQueryOptions, secretListQueryOptions } from '@/lib/secret-queries';
 import { NamespaceSelector } from './namespace-selector';
 import { SecretTable } from './secret-table';
+import { ALL_TEAMS, NO_TEAM } from './team-selector';
 
 export function Dashboard() {
   const router = useRouter();
@@ -29,14 +30,21 @@ export function Dashboard() {
     ...secretListQueryOptions(namespace),
     enabled: namespaceReady,
   });
+  const teams = secretsQuery.data?.teams ?? [];
+  const creatableTeams = secretsQuery.data?.creatableTeams ?? [];
+  // Team filter is also URL-driven; unknown values fall back to all teams.
+  const teamParam = searchParams.get('team') ?? ALL_TEAMS;
+  const selectedTeam =
+    teamParam === ALL_TEAMS || teamParam === NO_TEAM || teams.includes(teamParam) ? teamParam : ALL_TEAMS;
   // A cached allow hint cannot enable creation after either query fails. The
   // server still authorizes every POST; this is only an upfront usability hint.
+  // Team members without unassigned rights can still create in their teams.
   const canCreate =
     namespaceReady &&
     !nsQuery.isFetching &&
     secretsQuery.isSuccess &&
     !secretsQuery.isFetching &&
-    secretsQuery.data.canCreate === true;
+    (secretsQuery.data.canCreate === true || creatableTeams.length > 0);
   const createHint =
     nsQuery.isPending || nsQuery.isFetching
       ? 'Loading namespaces before creation…'
@@ -48,12 +56,18 @@ export function Dashboard() {
             ? 'Checking create permission…'
             : secretsQuery.isError || typeof secretsQuery.data?.canCreate !== 'boolean'
               ? 'Create permission is unavailable. Retry loading secrets.'
-              : !secretsQuery.data.canCreate
+              : !secretsQuery.data.canCreate && creatableTeams.length === 0
                 ? 'You are not allowed to create secrets in this namespace.'
                 : undefined;
 
   const pick = (ns: string) => {
+    // Teams are per-namespace; switching namespaces clears the team filter.
     router.replace(`/?ns=${encodeURIComponent(ns)}`, { scroll: false });
+  };
+  const pickTeam = (team: string) => {
+    const params = new URLSearchParams({ ns: namespace });
+    if (team !== ALL_TEAMS) params.set('team', team);
+    router.replace(`/?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -192,7 +206,13 @@ export function Dashboard() {
                       </div>
                     </Alert>
                   )}
-                  <SecretTable namespace={namespace} secrets={secretsQuery.data.secrets} />
+                  <SecretTable
+                    namespace={namespace}
+                    secrets={secretsQuery.data.secrets}
+                    teams={teams}
+                    selectedTeam={selectedTeam}
+                    onTeamChange={pickTeam}
+                  />
                 </>
               )}
             </div>

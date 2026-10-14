@@ -23,6 +23,7 @@ function detail(resourceVersion: string): { secret: SecretDetail } {
       keyCount: 1,
       allowedGroups: [],
       allowedUsers: [],
+      team: '',
       immutable: false,
       managedByKrypton: true,
       binaryKeys: [],

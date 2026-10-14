@@ -1,6 +1,7 @@
 import { getCoreApi, requestOptions } from '@/lib/k8s';
 import { HttpError, isConflict, jsonError, jsonResponse, readJson, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
+import { canCreateInNamespace, getNamespaceAccessMap, secretTeam } from '@/lib/authz';
 import { loadAuthorizedLiveSecret } from '@/lib/secret-access';
 import { assertExpectedResourceVersion, deleteLiveSecret } from '@/lib/secret-mutations';
 import { buildLiveSecret, toDetail } from '@/lib/secrets';
@@ -46,6 +47,38 @@ export async function PUT(req: Request, ctx: Ctx) {
       throw new HttpError(409, 'This secret changed since you loaded it (resourceVersion mismatch). Reload and retry.');
     }
 
+    // Team moves require creation rights in the target (assigned or unassigned),
+    // so members cannot escalate secrets into teams they cannot create in.
+    // Unknown teams fail as bad requests when the policy defines teams.
+    const currentTeam = secretTeam(live) ?? '';
+    if (input.team !== undefined && input.team !== currentTeam) {
+      const target = input.team === '' ? undefined : input.team;
+      if (target) {
+        const nsMap = await getNamespaceAccessMap();
+        const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
+        if (nsRules && nsRules.teams.length > 0 && !nsRules.teams.some((t) => t.name === target)) {
+          throw new HttpError(400, `Unknown team "${target}" in "${namespace}"`);
+        }
+      }
+      if (!(await canCreateInNamespace(user, namespace, target))) {
+        auditLog({
+          action: 'secret.update',
+          user: user.email,
+          namespace,
+          name,
+          resourceVersion: live.metadata?.resourceVersion,
+          result: 'deny',
+          detail: target ? `team move to "${target}" denied` : 'team move to unassigned denied',
+        });
+        throw new HttpError(
+          403,
+          target
+            ? `You are not allowed to move secrets to team "${target}" in "${namespace}"`
+            : `You are not allowed to move secrets out of their team in "${namespace}"`,
+        );
+      }
+    }
+
     // Validate the entire replacement before any history or mutation side effects.
     const next = buildLiveSecret({
       live,
@@ -55,6 +88,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       description: input.description,
       allowedGroups: input.allowedGroups,
       allowedUsers: input.allowedUsers,
+      team: input.team,
       user,
     });
     await createSnapshot(namespace, live, user);

@@ -1,7 +1,14 @@
 import { getCoreApi, requestOptions } from '@/lib/k8s';
 import { HttpError, isConflict, jsonError, jsonResponse, readJson, requireUser } from '@/lib/http';
 import { assertNamespaceAllowed } from '@/lib/namespaces';
-import { canCreateInNamespace, filterVisibleSecrets } from '@/lib/authz';
+import {
+  canCreateInNamespace,
+  filterVisibleSecrets,
+  getNamespaceAccessMap,
+  isAdmin,
+  listCreatableTeams,
+  listNamespaceTeams,
+} from '@/lib/authz';
 import { assertSizeOk, buildLiveSecret, toSummary } from '@/lib/secrets';
 import { auditLog, createSecretSchema } from '@/lib/validation';
 import { LABELS } from '@/lib/config';
@@ -31,11 +38,26 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/namespaces/[nam
       (secret) => secret,
     );
     const visible = await filterVisibleSecrets(user, namespace, secrets);
+    // UX hints so the UI can disable creation upfront (POST still enforces).
+    // canCreate = unassigned (namespace default); creatableTeams = assigned targets.
+    // Non-admins already read policy above (filter/canCreate throw 503 on failure,
+    // so the cached teams reads below cannot newly fail). Admins never needed
+    // policy for listing — a teams outage degrades to [] instead of blocking them.
+    const canCreate = await canCreateInNamespace(user, namespace);
+    let teams: string[] = [];
+    let creatableTeams: string[] = [];
+    try {
+      teams = await listNamespaceTeams(namespace);
+      creatableTeams = await listCreatableTeams(user, namespace);
+    } catch (err) {
+      if (!isAdmin(user)) throw err;
+    }
     return jsonResponse({
       namespace,
       secrets: visible.map((s) => toSummary(namespace, s)),
-      // UX hint so the UI can disable creation upfront (POST still enforces).
-      canCreate: await canCreateInNamespace(user, namespace),
+      canCreate,
+      teams,
+      creatableTeams,
     });
   } catch (err) {
     return jsonError(err);
@@ -48,17 +70,34 @@ export async function POST(req: Request, ctx: RouteContext<'/api/namespaces/[nam
     const { namespace } = await ctx.params;
     await assertNamespaceAllowed(namespace, user);
 
-    if (!(await canCreateInNamespace(user, namespace))) {
+    // Parse first: the target team determines both existence (400) and creation (403) checks.
+    const body = createSecretSchema.parse(await readJson(req));
+
+    // Unknown teams fail as bad requests when the policy defines teams.
+    // Policy failures (503) surface from this read, same as the creation check.
+    if (body.team) {
+      const nsMap = await getNamespaceAccessMap();
+      const nsRules = Object.hasOwn(nsMap, namespace) ? nsMap[namespace] : undefined;
+      if (nsRules && nsRules.teams.length > 0 && !nsRules.teams.some((t) => t.name === body.team)) {
+        throw new HttpError(400, `Unknown team "${body.team}" in "${namespace}"`);
+      }
+    }
+
+    if (!(await canCreateInNamespace(user, namespace, body.team))) {
       auditLog({
         action: 'secret.create',
         user: user.email,
         namespace,
         result: 'deny',
       });
-      throw new HttpError(403, `You are not allowed to create secrets in "${namespace}"`);
+      throw new HttpError(
+        403,
+        body.team
+          ? `You are not allowed to create secrets for team "${body.team}" in "${namespace}"`
+          : `You are not allowed to create secrets in "${namespace}"`,
+      );
     }
 
-    const body = createSecretSchema.parse(await readJson(req));
     const data = { ...body.data, ...(body.stringData ?? {}) };
     assertSizeOk(data);
 
@@ -75,6 +114,7 @@ export async function POST(req: Request, ctx: RouteContext<'/api/namespaces/[nam
             description: body.description,
             allowedGroups: body.allowedGroups,
             allowedUsers: body.allowedUsers,
+            team: body.team,
             user,
           }),
         },

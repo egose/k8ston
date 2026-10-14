@@ -84,8 +84,11 @@ ConfigMap instead of applying `app/k8s/configmap-access.yaml` by hand, **and**
 derives `KRYPTON_ACCESS_CONFIGMAP` from `accessConfig.name` so the runtime
 policy reader finds it. The key must stay `access.json` (hardcoded by the
 reader); with `accessConfig.enabled: false`, point `KRYPTON_ACCESS_CONFIGMAP`
-at an externally managed ConfigMap. `extraEnv` entries must not set managed
-keys (they render last and would shadow the derived values).
+at an externally managed ConfigMap. Each namespace entry accepts `groups`,
+`users`, and an optional `teams` array (see
+[Authorization](/guides/authorization/#teams)); deploy the app before adding
+`teams`, since older releases reject the unknown field. `extraEnv` entries must
+not set managed keys (they render last and would shadow the derived values).
 
 ## NetworkPolicy notes
 

@@ -99,6 +99,22 @@ export const annotationAclSchema = z
   )
   .max(ACL_ENTRY_LIMIT);
 
+/** Team name: DNS label (safe for annotations, URLs, and dropdowns). */
+export const TEAM_NAME_BYTE_LIMIT = 63;
+export const TEAM_LIMIT = 64;
+export const teamNameSchema = z
+  .string()
+  .min(1)
+  .max(TEAM_NAME_BYTE_LIMIT)
+  .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'must be a DNS label (lowercase letters, numbers, "-" e.g. team1)')
+  .refine(
+    (value) => new TextEncoder().encode(value).byteLength <= TEAM_NAME_BYTE_LIMIT,
+    'Team names must be at most 63 UTF-8 bytes',
+  );
+
+/** Update accepts "" to clear back to unassigned (namespace default). */
+const updateTeamSchema = z.union([teamNameSchema, z.literal('')]);
+
 export const createSecretSchema = z.object({
   name: k8sName,
   type: secretTypeSchema.default('Opaque'),
@@ -108,6 +124,8 @@ export const createSecretSchema = z.object({
   description: z.string().max(1024).optional().default(''),
   allowedGroups: annotationAclSchema.default([]),
   allowedUsers: annotationAclSchema.default([]),
+  /** Omit for unassigned (namespace default). Must exist in the namespace policy when teams are defined. */
+  team: teamNameSchema.optional(),
 });
 
 export const updateSecretSchema = z.object({
@@ -120,6 +138,8 @@ export const updateSecretSchema = z.object({
   description: z.string().max(1024).optional(),
   allowedGroups: annotationAclSchema.optional(),
   allowedUsers: annotationAclSchema.optional(),
+  /** Omit to preserve, "" to clear to unassigned, or a defined team name. */
+  team: updateTeamSchema.optional(),
   /** optimistic concurrency: must match current metadata.resourceVersion */
   resourceVersion: z.string().min(1, 'resourceVersion is required for safe updates'),
 });
@@ -155,6 +175,15 @@ export function estimateSecretSize(data: Record<string, string>): number {
   return Math.ceil(size * 1.4);
 }
 
+/** One team within a namespace: members see only this team's secrets (plus unassigned iff namespace is open). */
+const teamAccessSchema = z
+  .object({
+    name: teamNameSchema,
+    groups: z.array(aclEntry).max(ACL_ENTRY_LIMIT).default([]),
+    users: z.array(aclEntry).max(ACL_ENTRY_LIMIT).default([]),
+  })
+  .strict();
+
 /** Namespace-level access rules stored in the krypton-access ConfigMap. */
 export const namespaceAccessSchema = z.record(
   z.string(),
@@ -162,8 +191,12 @@ export const namespaceAccessSchema = z.record(
     .object({
       groups: z.array(aclEntry).max(ACL_ENTRY_LIMIT).default([]),
       users: z.array(aclEntry).max(ACL_ENTRY_LIMIT).default([]),
+      teams: z.array(teamAccessSchema).max(TEAM_LIMIT).default([]),
     })
-    .strict(),
+    .strict()
+    .refine((entry) => new Set(entry.teams.map((t) => t.name)).size === entry.teams.length, {
+      message: 'Team names must be unique within a namespace',
+    }),
 );
 export type NamespaceAccessMap = z.infer<typeof namespaceAccessSchema>;
 

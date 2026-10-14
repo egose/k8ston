@@ -29,7 +29,7 @@ export function BinaryValueDialog({
           <DialogTitle>{keyName} — binary (base64)</DialogTitle>
           <DialogDescription>
             This value cannot be safely edited as text. Base64 preserves its original bytes. Use it in a Kubernetes
-            Secret&apos;s data field, not Krypton&apos;s plaintext data fields.
+            Secret&apos;s data field, not K8ston&apos;s plaintext data fields.
           </DialogDescription>
         </DialogHeader>
         <Textarea aria-label="Base64 value" value={value} readOnly rows={8} className="font-mono text-xs" />

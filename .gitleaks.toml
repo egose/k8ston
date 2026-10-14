@@ -1,4 +1,4 @@
-title = "Krypton gitleaks configuration"
+title = "K8ston gitleaks configuration"
 
 # Scan with the default rule set. False positives from committed fixtures
 # (fake credentials by design) are handled with path allowlists below —

@@ -31,9 +31,9 @@ export function nativeSecret(overrides: Partial<V1Secret> = {}): V1Secret {
       creationTimestamp: new Date('2026-01-01T00:00:00Z'),
       labels: { 'example.test/application': 'synthetic' },
       annotations: {
-        'krypton.io/managed-by': 'krypton',
-        'krypton.io/version': '2',
-        'krypton.io/description': 'live description',
+        'k8ston.io/managed-by': 'k8ston',
+        'k8ston.io/version': '2',
+        'k8ston.io/description': 'live description',
       },
       ownerReferences: [
         {

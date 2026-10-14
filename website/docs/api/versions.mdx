@@ -22,12 +22,12 @@ API; see the [upgrade/recovery guide](/guides/versioning-history/#upgrade-and-op
 
 ```json
 {
-  "namespace": "krypton-test",
+  "namespace": "k8ston-test",
   "name": "database-credentials",
   "versions": [
     {
       "version": 2,
-      "snapshotName": "krypton-h-7b6ad742c31e4d37b5c8a90486d05a10-v2",
+      "snapshotName": "k8ston-h-7b6ad742c31e4d37b5c8a90486d05a10-v2",
       "snapshotAt": "2026-01-05T09:30:00Z",
       "snapshotBy": "alice@company.com",
       "keys": ["DATABASE_URL"],
@@ -40,7 +40,7 @@ API; see the [upgrade/recovery guide](/guides/versioning-history/#upgrade-and-op
 ```
 
 Versions sort by app counter descending. Each entry is a real immutable Opaque
-Kubernetes Secret (`krypton-h-<UID hash>-vN`, labeled `krypton.io/kind=history`),
+Kubernetes Secret (`k8ston-h-<UID hash>-vN`, labeled `k8ston.io/kind=history`),
 with full source UID/resourceVersion/name/type annotations. Treat `snapshotName`
 as an opaque returned identifier, not a name to reconstruct or use on live routes.
 The response contains decoded DTOs, not internal raw/metadata storage records.

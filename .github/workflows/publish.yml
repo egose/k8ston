@@ -7,7 +7,7 @@ on:
 
 env:
   DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME: egose/krypton
+  IMAGE_NAME: egose/k8ston
 
 concurrency:
   group: publish-${{ github.ref }}

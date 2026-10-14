@@ -25,14 +25,14 @@ jobs:
 
     - name: Lint charts
       run: |
-        helm lint helm/krypton
+        helm lint helm/k8ston
         helm dependency update helm/main
         helm lint helm/main
 
     - name: Template charts
       run: |
-        helm template test helm/krypton > /dev/null
-        helm template test helm/krypton \
+        helm template test helm/k8ston > /dev/null
+        helm template test helm/k8ston \
           --set rbac.scope=cluster \
           --set restartEnabled=true \
           --set ingress.enabled=true \
@@ -46,4 +46,4 @@ jobs:
         helm template test helm/main -f helm/main/values.yaml -f helm/main/values-k8s-prod.example.yaml > /dev/null
 
     - name: Chart regression assertions
-      run: helm/krypton/tests/render-regressions.sh
+      run: helm/k8ston/tests/render-regressions.sh

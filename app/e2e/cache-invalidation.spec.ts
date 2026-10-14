@@ -9,7 +9,7 @@ import type { SecretDetail as Detail } from '../lib/secrets';
  * fixtures in helpers.ts) and assert freshness WITHOUT clicking reload.
  */
 
-const devUser = { sub: 'dev', email: 'dev@krypton.local', name: 'Local Developer', groups: ['krypton-admin'] };
+const devUser = { sub: 'dev', email: 'dev@k8ston.local', name: 'Local Developer', groups: ['k8ston-admin'] };
 
 const baseDetail = (): Detail => ({
   namespace: 'demo',
@@ -24,7 +24,7 @@ const baseDetail = (): Detail => ({
   allowedGroups: [],
   allowedUsers: [],
   team: '',
-  managedByKrypton: true,
+  managedByK8ston: true,
   immutable: false,
   binaryKeys: [],
   data: { DB_HOST: 'db.internal' },
@@ -50,7 +50,7 @@ const summaryOf = (d: Detail) => ({
   allowedGroups: d.allowedGroups,
   allowedUsers: d.allowedUsers,
   team: d.team,
-  managedByKrypton: d.managedByKrypton,
+  managedByK8ston: d.managedByK8ston,
   immutable: d.immutable,
   binaryKeys: d.binaryKeys,
 });
@@ -71,7 +71,7 @@ async function mockMutable(page: Page, state: State) {
         historyLimit: 20,
         managedOnly: true,
         restartEnabled: true,
-        appNamespace: 'krypton',
+        appNamespace: 'k8ston',
       },
     }),
   );
@@ -120,7 +120,7 @@ async function mockMutable(page: Page, state: State) {
           version: state.detail.version,
           snapshotName: `${state.detail.name}-v${state.detail.version}`,
           snapshotAt: new Date().toISOString(),
-          snapshotBy: 'dev@krypton.local',
+          snapshotBy: 'dev@k8ston.local',
           keys: state.detail.keys,
           data: state.detail.data,
           binaryData: state.detail.binaryData,
@@ -198,7 +198,7 @@ test('create → dashboard lists the new secret without a manual reload', async 
   await expect(page.getByText('API_TOKEN').first()).toBeVisible({ timeout: 10_000 });
   // Header brand links home (plain `/`, namespace derived client-side);
   // the dashboard must refetch the invalidated list.
-  await page.getByRole('link', { name: 'Krypton' }).click();
+  await page.getByRole('link', { name: 'K8ston' }).click();
   await expect(page.getByText('Secrets in demo')).toBeVisible({ timeout: 10_000 });
   // The table row link (the toast + detail title also name the secret).
   await expect(page.getByRole('link', { name: 'smoke-secret' })).toBeVisible({ timeout: 10_000 });

@@ -1,5 +1,5 @@
 {
-  "name": "krypton",
+  "name": "k8ston",
   "version": "0.5.0",
   "description": "",
   "type": "module",
@@ -18,10 +18,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/egose/krypton.git"
+    "url": "git+https://github.com/egose/k8ston.git"
   },
   "bugs": {
-    "url": "https://github.com/egose/krypton/issues"
+    "url": "https://github.com/egose/k8ston/issues"
   },
   "engines": {
     "node": ">=20"

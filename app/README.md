@@ -1,8 +1,8 @@
-# Krypton — Kubernetes-native secret manager
+# K8ston — Kubernetes-native secret manager
 
 A lightweight secret manager UI/API backed **directly by Kubernetes Secret objects**.
 No database, no persistent volumes, no secret sprawl: Kubernetes is the source of
-truth, and Krypton is the translation + visualization layer on top.
+truth, and K8ston is the translation + visualization layer on top.
 
 Built with Next.js (App Router), `@kubernetes/client-node`, generic OIDC SSO, and
 shadcn-theme components.
@@ -10,7 +10,7 @@ shadcn-theme components.
 ## How it works
 
 ```
-Browser ──SSO login──▶ Krypton (Next.js)
+Browser ──SSO login──▶ K8ston (Next.js)
                             │  ServiceAccount token (auto-mounted in-cluster)
                             │  https://kubernetes.default.svc  — no credentials to manage
                             ▼
@@ -24,20 +24,20 @@ Browser ──SSO login──▶ Krypton (Next.js)
 - **Authz (hybrid)**: SSO proves _who you are_; per-secret annotations and one
   namespace-level ConfigMap decide _what you may see_. The app's ServiceAccount
   executes the K8s calls.
-- **History**: K8s overwrites secrets in place, so Krypton snapshots the previous
+- **History**: K8s overwrites secrets in place, so K8ston snapshots the previous
   state into an immutable, source-UID-bound Secret before each update/restore.
   Rollbacks preserve the original bytes and use the current live access rules.
 
 ## Security model (read this)
 
 Out of the box, Kubernetes Secrets are **base64-encoded, not encrypted**, in etcd —
-anyone with etcd or broad API access can decode them. Krypton therefore:
+anyone with etcd or broad API access can decode them. K8ston therefore:
 
 - never logs secret values (audit logs record key _names_ only),
 - masks values in the UI until explicitly revealed,
 - validates the 1 MiB per-object limit client- and server-side,
 - shows a warning banner until you confirm etcd encryption-at-rest is enabled
-  (`KRYPTON_ETCD_ENCRYPTED=true` once the API server uses an encryption provider
+  (`K8STON_ETCD_ENCRYPTED=true` once the API server uses an encryption provider
   such as `aescbc` on OpenShift).
 
 Secrets additionally benefit from strict RBAC, redacted `kubectl` output, and
@@ -50,8 +50,8 @@ Secrets additionally benefit from strict RBAC, redacted `kubectl` output, and
 ```yaml
 metadata:
   annotations:
-    krypton.io/allowed-groups: 'dev-team, database-admins'
-    krypton.io/allowed-users: 'alice@company.com'
+    k8ston.io/allowed-groups: 'dev-team, database-admins'
+    k8ston.io/allowed-users: 'alice@company.com'
 ```
 
 API `allowedGroups`/`allowedUsers` arrays are stored as comma-separated annotations.
@@ -64,7 +64,7 @@ applies and may intentionally be open. Omitted create ACLs default to `[]`.
 The UI still splits comma-list text, trims entries, and drops blank segments before
 submitting: `team-a, ,team-b` means two principals; a blank field submits `[]`.
 
-**Namespace fallback** in ConfigMap `<app-namespace>/krypton-access`, key `access.json`
+**Namespace fallback** in ConfigMap `<app-namespace>/k8ston-access`, key `access.json`
 (see `k8s/configmap-access.yaml`):
 
 ```json
@@ -82,13 +82,13 @@ whitespace: `["team-a,team-b"]` matches that one group, not `team-a` or `team-b`
 They are not split or trimmed; user matching still ignores email case.
 
 **Teams:** each namespace may define up to 64 teams; secrets opt in with the
-`krypton.io/team` annotation (missing/blank = unassigned). Team names are unique
+`k8ston.io/team` annotation (missing/blank = unassigned). Team names are unique
 DNS labels per namespace. Namespace members see all secrets; team members see
 only their team's secrets, while unassigned secrets use namespace rules alone.
 Empty team rules grant nothing; unknown teams fail closed unless the namespace
 is fully unrestricted. Per-secret ACLs still override both.
 
-Rules: admins (`KRYPTON_ADMIN_GROUPS`/`KRYPTON_ADMIN_USERS`) always pass; a secret
+Rules: admins (`K8STON_ADMIN_GROUPS`/`K8STON_ADMIN_USERS`) always pass; a secret
 with explicit annotations is decided by those alone; otherwise the team and
 namespace rules apply; with no rules anywhere the secret is visible to all
 authenticated users
@@ -105,13 +105,13 @@ Valid policy and confirmed absence are cached in memory per process for 60 secon
 from read completion; concurrent misses share one read. After expiry, a failed
 refresh never serves the old policy, and the next request retries immediately.
 
-**Managed-only mode** (default, `KRYPTON_MANAGED_ONLY=true`): secrets _without_
-`krypton.io/managed-by: krypton` are hidden entirely — excluded from lists, 404
+**Managed-only mode** (default, `K8STON_MANAGED_ONLY=true`): secrets _without_
+`k8ston.io/managed-by: k8ston` are hidden entirely — excluded from lists, 404
 on direct access (read, edit, delete, history, restore, restart) — so K8s-level
-secrets created outside Krypton can't be touched by accident. Set
-`KRYPTON_MANAGED_ONLY=false` to show unmanaged live secrets (legacy adopt-on-edit:
-saving an external secret stamps Krypton annotations onto it).
-History objects (`krypton.io/kind=history`) are always hidden from lists and return
+secrets created outside K8ston can't be touched by accident. Set
+`K8STON_MANAGED_ONLY=false` to show unmanaged live secrets (legacy adopt-on-edit:
+saving an external secret stamps K8ston annotations onto it).
+History objects (`k8ston.io/kind=history`) are always hidden from lists and return
 404 on direct named-secret routes, including for admins and in legacy mode.
 Read or restore history through the **live secret's** `/versions` and `/restore`
 endpoints, which authorize against its current ACL, never a snapshot's copied ACL.
@@ -145,26 +145,26 @@ and restores retain their stored values. Review and correct affected live ACLs;
 the original array intent cannot be recovered from CSV. Literal-comma principals
 remain supported by namespace JSON policy, subject to normal fallback precedence.
 
-**Optional K8s-native impersonation**: set `KRYPTON_IMPERSONATION=true` when the
+**Optional K8s-native impersonation**: set `K8STON_IMPERSONATION=true` when the
 session email/groups match your cluster's RBAC subjects and the ServiceAccount
 has `impersonate` permission for those users and **all** their groups. Human
 namespace, secret, and history operations, plus workload **lists and patches**,
 send the session email in `Impersonate-User` and each group as a separate repeated
-`Impersonate-Group` header. Krypton's application authorization also still applies.
+`Impersonate-Group` header. K8ston's application authorization also still applies.
 The SDK's per-request transport extension preserves ServiceAccount authentication,
 TLS configuration, and JSON-Patch content type; identity is request-local.
 
 There is **no application group-count cap** or comma splitting. User/group values
 must be nonempty printable ASCII without surrounding whitespace; unsupported
 values fail with a controlled 400 instead of being trimmed or re-encoded.
-API-server/proxy header-size limits may reject a whole request; Krypton never
+API-server/proxy header-size limits may reject a whole request; K8ston never
 silently truncates its identity. Impersonated API requests do not follow redirects.
 
 The access-policy ConfigMap is intentionally read **as the ServiceAccount**, using
 the shared 60s policy cache described above. Humans need no Kubernetes permission
-to read that application policy. Default `KRYPTON_IMPERSONATION=false` keeps hybrid
+to read that application policy. Default `K8STON_IMPERSONATION=false` keeps hybrid
 mode; `AUTH_DISABLED=true` explicitly bypasses human impersonation for local dev.
-A real authenticated session with email `dev@krypton.local` is impersonated normally.
+A real authenticated session with email `dev@k8ston.local` is impersonated normally.
 
 **Impersonation upgrade:** earlier versions overwrote repeated groups and silently
 limited processing to 32 groups; workload lists also used the service identity.
@@ -208,21 +208,21 @@ to header-safe subjects in your identity provider and corresponding RBAC binding
 
 ## Versioning & consumer restarts
 
-- Created Secrets start at `krypton.io/version=1`. An adopted native Secret with
+- Created Secrets start at `k8ston.io/version=1`. An adopted native Secret with
   no counter (or the old `0` counter) is also logically **v1**: its first edit
   saves v1 and writes v2; the next saves v2 and writes v3. This counter describes
-  Krypton states, not every external Kubernetes change. PUT and restore send the loaded
+  K8ston states, not every external Kubernetes change. PUT and restore send the loaded
   `metadata.resourceVersion` and replacement retains live UID/RV for Kubernetes CAS.
 - `lib/snapshot-store.ts` owns native snapshot records, verified retries, and
   metadata-only cleanup. `lib/secrets.ts` decodes history only for response DTOs.
   All history operations require the authorized live object; none selects by name alone.
 - New snapshots use `type: Opaque`, `immutable: true`, and raw native `data`.
   They never copy live owners, finalizers, managed fields, or controller annotations.
-  Names are `krypton-h-<UID hash>-vN` (at most 60 characters), including for
+  Names are `k8ston-h-<UID hash>-vN` (at most 60 characters), including for
   253-character live names. UID/revision hashes are the first 32 lowercase hex
   characters of SHA-256; they are indexing keys, not ownership proofs.
-- Labels include `krypton.io/kind=history`, `krypton.io/source-uid=<UID hash>`,
-  and `krypton.io/source-resource-version=<revision hash>`. Annotations retain
+- Labels include `k8ston.io/kind=history`, `k8ston.io/source-uid=<UID hash>`,
+  and `k8ston.io/source-resource-version=<revision hash>`. Annotations retain
   full `source-uid`, `source-resource-version`, readable `history-of` name,
   `source-type`, `history-format=uid-rv-v1`, version, first snapshot actor/time,
   description, and ACLs. Full identity/binding is checked after UID-scoped listing.
@@ -232,7 +232,7 @@ to header-safe subjects in your identity provider and corresponding RBAC binding
   and own keys, original type, and copied source description/ACLs. Different retry
   actors/times keep the first snapshot's attribution. An unrelated, mutable,
   terminating, controller-owned, or different-source collision blocks the live write.
-- `KRYPTON_HISTORY_LIMIT` is **1–100**, default **20** when unset. Empty, zero,
+- `K8STON_HISTORY_LIMIT` is **1–100**, default **20** when unset. Empty, zero,
   negative, fractional, malformed, or out-of-range settings return 503 before
   history writes (`GET /api/config` also reports the configuration error).
   Newest eligible snapshots per UID are kept. Cleanup uses snapshot UID/RV delete
@@ -242,7 +242,7 @@ to header-safe subjects in your identity provider and corresponding RBAC binding
   snapshot can exist even when the live replacement failed, and older history
   may already have been pruned. Failed cleanup can temporarily exceed retention;
   pruning runs on update/restore attempts, not in a background job. ResourceVersions
-  are opaque; external intermediate changes between Krypton writes are not captured.
+  are opaque; external intermediate changes between K8ston writes are not captured.
 
 ### Consumer rollouts and response upgrade
 
@@ -257,13 +257,13 @@ names do not match. Direct Pods, Jobs/CronJobs, storage-driver references, and
 references injected into live Pods or inherited through ServiceAccounts are not
 discovered. A workload with multiple references is patched once per request.
 
-Disabled by default (`KRYPTON_RESTART_ENABLED=false`: button + hint hidden, API
+Disabled by default (`K8STON_RESTART_ENABLED=false`: button + hint hidden, API
 returns 403 before discovery). To opt in, set it to `true` and grant `list`/`patch`
 on all three `apps` resources. In impersonation mode, lists and patches carry the
 complete human identity; both impersonation grants and human RBAC must allow them.
 
 The endpoint waits for discovery, then allows at most **four in-flight patches
-per request**, across all kinds, setting `krypton.io/restarted-at` on each matched
+per request**, across all kinds, setting `k8ston.io/restarted-at` on each matched
 pod template. Each patch is an RFC 6902 JSON Patch that first tests the inspected
 workload UID and resourceVersion: a same-name replacement or any intervening edit
 (including reference removal) fails with 409/422 before any mutation, is reported
@@ -327,17 +327,17 @@ name or old ACL alone is insufficient. Review the selected raw data and destinat
 access/lifecycle requirements, then recover the approved **base64 data** through
 native tooling into a reviewed live Secret, using current UID/RV preconditions for
 an existing target. Do not retag legacy objects as bound history or submit base64
-as plaintext to Krypton. Future Krypton edits create fresh bound history. The old
+as plaintext to K8ston. Future K8ston edits create fresh bound history. The old
 copies remain quarantined until the operator explicitly removes them.
 
-If an external edit follows a failed Krypton write, the app counter may be unchanged
+If an external edit follows a failed K8ston write, the app counter may be unchanged
 while its occupied snapshot slot is bound to the earlier resourceVersion. Even a
 metadata-only external change then causes a **409 source conflict**. After reviewing
 the current UID, occupied snapshots, and their contents, an operator can CAS-update
 only the live version counter to an unused positive value above that UID's retained
 history, then reload and retry. Preserve the archived objects; do not overwrite or
 retag them to force a retry. Malformed/exhausted counters and counters behind retained
-history likewise need review. Normal external edits after a successful Krypton write
+history likewise need review. Normal external edits after a successful K8ston write
 are captured at their current native revision on the next write.
 
 ### Restore/delete contract upgrade
@@ -418,7 +418,7 @@ the raw display. Binary values keep their separate read-only base64 viewer.
 
 ## Native data, types, and lifecycle
 
-Kubernetes `Secret.data` stores bytes as base64. Krypton keeps those bytes intact:
+Kubernetes `Secret.data` stores bytes as base64. K8ston keeps those bytes intact:
 
 - Detail and history responses split values into **`data`** (lossless Unicode
   text) and **`binaryData`** (original base64 for non-UTF-8 or binary-control
@@ -430,7 +430,7 @@ Kubernetes `Secret.data` stores bytes as base64. Krypton keeps those bytes intac
 - Create `data` and optional `stringData` are **plaintext**, with `stringData`
   taking precedence. Invalid Unicode and binary controls are rejected before
   encoding; use Kubernetes tooling with base64 `data` to create/change binary
-  values. Do not paste base64 into Krypton's plaintext fields. Write requests
+  values. Do not paste base64 into K8ston's plaintext fields. Write requests
   containing the response-only `binaryData` field return 400; PUT also rejects
   the create-only `stringData` alias instead of silently ignoring an intended edit.
 - On PUT, **omit `data` for a metadata-only update**. This preserves every stored
@@ -505,7 +505,7 @@ All API JSON successes/errors and authentication redirects explicitly send
   Status bodies, and headers are never returned or logged by error serializers.
   A Kubernetes 403 can be **effective human RBAC or SA impersonation permissions**
   in impersonation mode, or ServiceAccount RBAC in hybrid mode. It is distinct
-  from a Krypton session/ACL denial; clients must not parse upstream error text.
+  from a K8ston session/ACL denial; clients must not parse upstream error text.
 
 `lib/k8s-list.ts` reads serial **100-object pages**, at most **100 pages per
 inventory**. It preserves selectors and complete per-user request options on
@@ -539,7 +539,7 @@ produce partial success or an automatic token restart (history surfaces controll
 backlogs can require operator-reviewed native cleanup.
 
 **Namespace upgrade:** own-namespace scope still exposes only the pod namespace.
-In cluster scope, a nonempty `KRYPTON_NAMESPACES` is deduplicated/sorted and checked
+In cluster scope, a nonempty `K8STON_NAMESPACES` is deduplicated/sorted and checked
 locally with **zero namespace-list requests**; entries are configuration, not proof
 of existence or Kubernetes permission. An empty allowlist requires complete bounded
 namespace discovery. Failure now returns an error instead of silently falling back
@@ -576,7 +576,7 @@ invalidates its existing sessions; users must sign in again. Validation happens
 when authentication is used, so builds need no runtime key. Explicit
 `AUTH_DISABLED=true` still supplies the local mock user without minting a JWT.
 
-Sessions require HS256, issuer `krypton`, nonempty `sub`/`email`, numeric `iat`/`exp`,
+Sessions require HS256, issuer `k8ston`, nonempty `sub`/`email`, numeric `iat`/`exp`,
 and an unexpired lifetime; malformed identity/group claims are rejected. Omitted
 display names and groups still default to the email and an empty list.
 
@@ -600,7 +600,7 @@ optional classified `code`/`hint`; they no longer return the raw issuer URL.
 ## Local development
 
 Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster
-(Krypton uses `~/.kube/config` when not running in-cluster).
+(K8ston uses `~/.kube/config` when not running in-cluster).
 
 ```bash
 cd app
@@ -650,30 +650,30 @@ Manifests live in `k8s/`. Namespace-scoped (default, least privilege):
 kubectl apply -f k8s/namespace.yaml -f k8s/serviceaccount.yaml -f k8s/role.yaml
 kubectl apply -f k8s/configmap-access.yaml -f k8s/configmap-app.yaml
 # real secrets — never commit values:
-kubectl create secret generic krypton-oidc -n krypton \
+kubectl create secret generic k8ston-oidc -n k8ston \
   --from-literal=OIDC_CLIENT_SECRET='...' \
   --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
 kubectl apply -f k8s/deployment.yaml
 ```
 
-For a centralized multi-namespace dashboard instead, set `KRYPTON_SCOPE=cluster`
+For a centralized multi-namespace dashboard instead, set `K8STON_SCOPE=cluster`
 in `k8s/configmap-app.yaml`, apply `k8s/clusterrole.yaml`, and optionally narrow
-with `KRYPTON_NAMESPACES="team-a,team-b"`. Then expose via Ingress/Route with TLS
+with `K8STON_NAMESPACES="team-a,team-b"`. Then expose via Ingress/Route with TLS
 and register the OIDC redirect URI (`https://<host>/api/auth/callback`).
 
 ## Configuration reference
 
 | Variable                                             | Default                                               | Purpose                                                          |
 | ---------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| `KRYPTON_SCOPE`                                      | `namespace`                                           | `namespace` (own NS only) or `cluster`                           |
-| `KRYPTON_NAMESPACES`                                 | —                                                     | comma allowlist for cluster scope                                |
-| `KRYPTON_HISTORY_LIMIT`                              | `20`                                                  | eligible snapshots per live UID, integer 1–100                   |
-| `KRYPTON_MANAGED_ONLY`                               | `true`                                                | hide secrets without `managed-by=krypton` (404)                  |
-| `KRYPTON_ETCD_ENCRYPTED`                             | `false`                                               | set `true` once apiserver encryption is on                       |
-| `KRYPTON_IMPERSONATION`                              | `false`                                               | forward SSO identity to K8s RBAC                                 |
-| `KRYPTON_RESTART_ENABLED`                            | `false`                                               | `true` enables "Restart apps" (needs apps RBAC rule)             |
-| `KRYPTON_ADMIN_GROUPS/USERS`                         | —                                                     | bootstrap admins (empty = everyone, lock down!)                  |
-| `KRYPTON_ACCESS_CONFIGMAP`                           | `krypton-access`                                      | namespace-rules ConfigMap name                                   |
+| `K8STON_SCOPE`                                       | `namespace`                                           | `namespace` (own NS only) or `cluster`                           |
+| `K8STON_NAMESPACES`                                  | —                                                     | comma allowlist for cluster scope                                |
+| `K8STON_HISTORY_LIMIT`                               | `20`                                                  | eligible snapshots per live UID, integer 1–100                   |
+| `K8STON_MANAGED_ONLY`                                | `true`                                                | hide secrets without `managed-by=k8ston` (404)                   |
+| `K8STON_ETCD_ENCRYPTED`                              | `false`                                               | set `true` once apiserver encryption is on                       |
+| `K8STON_IMPERSONATION`                               | `false`                                               | forward SSO identity to K8s RBAC                                 |
+| `K8STON_RESTART_ENABLED`                             | `false`                                               | `true` enables "Restart apps" (needs apps RBAC rule)             |
+| `K8STON_ADMIN_GROUPS/USERS`                          | —                                                     | bootstrap admins (empty = everyone, lock down!)                  |
+| `K8STON_ACCESS_CONFIGMAP`                            | `k8ston-access`                                       | namespace-rules ConfigMap name                                   |
 | `AUTH_DISABLED`                                      | `false`                                               | `true` = mock admin, local dev only                              |
 | `SESSION_SECRET`                                     | — (required with auth)                                | ≥32-char random HMAC key; no development fallback                |
 | `OIDC_ISSUER/CLIENT_ID/CLIENT_SECRET`                | —                                                     | SSO provider (discovery-based)                                   |

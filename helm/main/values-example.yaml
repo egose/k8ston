@@ -1,36 +1,36 @@
 global:
   env: {}
 
-krypton:
+k8ston:
   enabled: true
   # Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes
   # Secret referenced by envSecretName; non-secret configuration goes in `env`.
   # Full variable reference: app/.env.example.
-  envSecretName: krypton-oidc
-  # Krypton is stateless (all state lives in Kubernetes Secrets), so more than
+  envSecretName: k8ston-oidc
+  # K8ston is stateless (all state lives in Kubernetes Secrets), so more than
   # one replica is always safe.
   replicaCount: 2
   env:
-    KRYPTON_SCOPE: namespace
-    KRYPTON_ETCD_ENCRYPTED: 'false'
-    KRYPTON_ADMIN_GROUPS: krypton-admin
+    K8STON_SCOPE: namespace
+    K8STON_ETCD_ENCRYPTED: 'false'
+    K8STON_ADMIN_GROUPS: k8ston-admin
     OIDC_ISSUER: https://keycloak.example.com/realms/company
-    OIDC_CLIENT_ID: krypton
+    OIDC_CLIENT_ID: k8ston
     OIDC_SCOPES: openid profile email groups
-    NEXT_PUBLIC_APP_URL: https://krypton.example.com
+    NEXT_PUBLIC_APP_URL: https://k8ston.example.com
   topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: ScheduleAnyway
     labelSelector:
       matchLabels:
-        app.kubernetes.io/name: krypton
+        app.kubernetes.io/name: k8ston
 
 # Standard NetworkPolicy cannot match DNS names. Add the CIDR ranges used by
 # your IdP here; note allowKubeApiEgress already permits 443 egress, so this
 # only restricts further when that is set to false.
 networkPolicy:
   allowOpenShiftIngress: false
-  krypton:
+  k8ston:
     idpEgressIpBlocks:
     - cidr: 203.0.113.10/32

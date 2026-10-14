@@ -94,9 +94,9 @@ interface ConsumerSource {
   patch: (name: string, body: unknown) => Promise<unknown>;
 }
 
-const RESTART_ANNOTATION = 'krypton.io/restarted-at';
+const RESTART_ANNOTATION = 'k8ston.io/restarted-at';
 // JSON Pointer escape (`~1` for `/`) for the annotation key above.
-const RESTART_POINTER = 'krypton.io~1restarted-at';
+const RESTART_POINTER = 'k8ston.io~1restarted-at';
 
 /**
  * RFC 6902 patch bound to the inspected revision. The API server evaluates

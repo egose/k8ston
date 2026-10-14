@@ -3,7 +3,7 @@ import { useId } from 'react';
 // Brand mark shared with the docs site (website/static/img/favicon.svg):
 // green hexagon crystal with a keyhole. Inlined (not <img>) so it stays crisp
 // at any size and keeps working where an inline <svg> is expected.
-export function KryptonMark({ size = 20, className }: { size?: number; className?: string }) {
+export function K8stonMark({ size = 20, className }: { size?: number; className?: string }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const rim = `kr-rim-${uid}`;
   const facet = `kr-facet-${uid}`;

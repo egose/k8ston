@@ -11,13 +11,13 @@ global:
 nameOverride: ''
 fullnameOverride: ''
 
-krypton:
+k8ston:
   enabled: true
   replicaCount: 2
   image:
     pullPolicy: IfNotPresent
 
-  nameOverride: krypton
+  nameOverride: k8ston
   fullnameOverride: ''
 
   resources:
@@ -28,40 +28,40 @@ krypton:
       cpu: 1000m        # 1 CPU core
       memory: 1Gi       # 1 GB RAM
 
-  # krypton takes no extra CLI args (`node app/server.js` standalone).
+  # k8ston takes no extra CLI args (`node app/server.js` standalone).
   args: []
 
-  # Non-secret krypton configuration, e.g. KRYPTON_ADMIN_GROUPS, OIDC_ISSUER,
+  # Non-secret k8ston configuration, e.g. K8STON_ADMIN_GROUPS, OIDC_ISSUER,
   # OIDC_CLIENT_ID, OIDC_SCOPES, NEXT_PUBLIC_APP_URL. Secret values
   # (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes Secret
   # referenced by envSecretName. Full variable reference: app/.env.example.
-  # Chart-managed keys (KRYPTON_SCOPE, KRYPTON_NAMESPACES,
-  # KRYPTON_RESTART_ENABLED, KRYPTON_ACCESS_CONFIGMAP) are derived from the
+  # Chart-managed keys (K8STON_SCOPE, K8STON_NAMESPACES,
+  # K8STON_RESTART_ENABLED, K8STON_ACCESS_CONFIGMAP) are derived from the
   # rbac/restartEnabled/accessConfig values below — omit them or set the same
   # effective value (mismatches fail rendering with guidance).
   env: {}
   envSecretName: ''
 
-  # RBAC for the app ServiceAccount. The chart derives KRYPTON_SCOPE from
-  # `scope` (and a curated KRYPTON_NAMESPACES allowlist from
+  # RBAC for the app ServiceAccount. The chart derives K8STON_SCOPE from
+  # `scope` (and a curated K8STON_NAMESPACES allowlist from
   # `extraNamespaces`): `namespace` (own namespace only, the default) or
   # `cluster` (centralized multi-namespace dashboard, optionally narrowed with
-  # KRYPTON_NAMESPACES in `env`). See helm/krypton/values.yaml and its README
+  # K8STON_NAMESPACES in `env`). See helm/k8ston/values.yaml and its README
   # for the full effective-configuration reference.
   rbac:
     create: true
     scope: namespace
 
   # "Restart apps" feature: the single effective value driving BOTH the
-  # KRYPTON_RESTART_ENABLED runtime flag AND the apps RBAC rule for
+  # K8STON_RESTART_ENABLED runtime flag AND the apps RBAC rule for
   # deployments/statefulsets/daemonsets. Default false (least privilege):
   # the UI button is hidden and the API returns 403. Set true to enable.
   restartEnabled: false
 
-  # Namespace-level ownership fallback ConfigMap (krypton-access / access.json).
+  # Namespace-level ownership fallback ConfigMap (k8ston-access / access.json).
   # Per-secret annotations override these rules (see app/k8s/configmap-access.yaml).
   # Namespace groups/users see all teams; team members see only their team's
-  # secrets. When enabled, KRYPTON_ACCESS_CONFIGMAP is derived from the ConfigMap name.
+  # secrets. When enabled, K8STON_ACCESS_CONFIGMAP is derived from the ConfigMap name.
   accessConfig:
     enabled: false
 
@@ -84,9 +84,9 @@ networkPolicy:
             - kube-system
             - openshift-dns
     podSelector: {}
-  krypton:
+  k8ston:
     ingressFrom: []
-    # Krypton calls the Kubernetes API (https://kubernetes.default.svc), which
+    # K8ston calls the Kubernetes API (https://kubernetes.default.svc), which
     # is a ClusterIP and cannot be selected by podSelector, so this allows TCP
     # egress on the API ports. Override kubeApiPorts / extraEgress when the
     # API server CIDRs are known and tighter rules are wanted.

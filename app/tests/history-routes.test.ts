@@ -11,7 +11,7 @@ const uid = 'synthetic-live-uid';
 const encoded = (value: string) => ({ value: Buffer.from(value).toString('base64') });
 function liveSecret(version = 2): V1Secret {
   const live = nativeSecret({ data: encoded('current') });
-  live.metadata!.annotations!['krypton.io/version'] = String(version);
+  live.metadata!.annotations!['k8ston.io/version'] = String(version);
   live.metadata!.finalizers = [];
   return live;
 }
@@ -47,12 +47,12 @@ beforeEach(() => {
 
 describe('history identity across the real route boundaries', () => {
   it.each([true, false])('retains and isolates predecessor/legacy history with managedOnly=%s', async (managedOnly) => {
-    process.env.KRYPTON_MANAGED_ONLY = String(managedOnly);
-    process.env.KRYPTON_HISTORY_LIMIT = '1';
+    process.env.K8STON_MANAGED_ONLY = String(managedOnly);
+    process.env.K8STON_HISTORY_LIMIT = '1';
     const previous = liveSecret();
     const oldUser = { sub: 'old-id', email: 'old@example.test', name: 'Old owner', groups: ['old-team'] };
     const newUser = { sub: 'new-id', email: 'new@example.test', name: 'New owner', groups: ['new-team'] };
-    previous.metadata!.annotations!['krypton.io/allowed-users'] = oldUser.email;
+    previous.metadata!.annotations!['k8ston.io/allowed-users'] = oldUser.email;
     const oldHistory = boundSnapshot(previous, 1, encoded('predecessor-value'));
     const legacy: V1Secret = {
       metadata: {
@@ -60,8 +60,8 @@ describe('history identity across the real route boundaries', () => {
         name: 'credentials-v1',
         uid: 'legacy-uid',
         resourceVersion: 'legacy-rv',
-        labels: { 'krypton.io/kind': 'history', 'krypton.io/history-of': name },
-        annotations: { 'krypton.io/version': '1', 'krypton.io/allowed-users': newUser.email },
+        labels: { 'k8ston.io/kind': 'history', 'k8ston.io/history-of': name },
+        annotations: { 'k8ston.io/version': '1', 'k8ston.io/allowed-users': newUser.email },
       },
       data: encoded('unbound-legacy-value'),
     };
@@ -77,7 +77,7 @@ describe('history identity across the real route boundaries', () => {
     const recreated = liveSecret(1);
     recreated.metadata!.uid = 'new-lifetime-uid';
     recreated.metadata!.resourceVersion = 'new-lifetime-rv';
-    recreated.metadata!.annotations!['krypton.io/allowed-users'] = newUser.email;
+    recreated.metadata!.annotations!['k8ston.io/allowed-users'] = newUser.email;
     recreated.data = encoded('new-lifetime-value');
     store.seed(recreated);
     await signIn(newUser);
@@ -99,7 +99,7 @@ describe('history identity across the real route boundaries', () => {
     expect(JSON.stringify(response)).not.toContain('unbound-legacy-value');
     for (const [args] of store.core.listNamespacedSecret.mock.calls) {
       expect(args.labelSelector).toBe(
-        `krypton.io/source-uid=${historyHash(recreated.metadata!.uid!)},krypton.io/kind=history`,
+        `k8ston.io/source-uid=${historyHash(recreated.metadata!.uid!)},k8ston.io/kind=history`,
       );
     }
     expect(
@@ -121,12 +121,12 @@ describe('history identity across the real route boundaries', () => {
   it.each([true, false])(
     'authorizes current ACLs and hides bound snapshots on every named path with managedOnly=%s',
     async (managedOnly) => {
-      process.env.KRYPTON_MANAGED_ONLY = String(managedOnly);
-      process.env.KRYPTON_RESTART_ENABLED = 'true';
+      process.env.K8STON_MANAGED_ONLY = String(managedOnly);
+      process.env.K8STON_RESTART_ENABLED = 'true';
       const live = liveSecret();
-      live.metadata!.annotations!['krypton.io/allowed-users'] = 'current-owner@example.test';
+      live.metadata!.annotations!['k8ston.io/allowed-users'] = 'current-owner@example.test';
       const snapshot = boundSnapshot(live, 1);
-      snapshot.metadata!.annotations!['krypton.io/allowed-users'] = 'revoked@example.test';
+      snapshot.metadata!.annotations!['k8ston.io/allowed-users'] = 'revoked@example.test';
       const store = await mockHistoryStore([live, snapshot]);
       await signIn({ ...dataUser, email: 'revoked@example.test', groups: ['revoked-team'] });
       expect((await versions()).status).toBe(403);
@@ -160,17 +160,17 @@ describe('history identity across the real route boundaries', () => {
     const response = await put(live.metadata!.resourceVersion!, { value: 'updated' }, live.metadata!.name);
     expect(response.status).toBe(200);
     expect((await response.json()).secret.name).toBe(live.metadata!.name);
-    expect(store.get(namespace, historyName(uid, 2)).metadata!.annotations!['krypton.io/history-of']).toBe(
+    expect(store.get(namespace, historyName(uid, 2)).metadata!.annotations!['k8ston.io/history-of']).toBe(
       live.metadata!.name,
     );
     expect(store.core.replaceNamespacedSecret).toHaveBeenCalledTimes(1);
   });
 
   it('keeps adoption rollback states distinct and consecutively numbered across edits and restore', async () => {
-    process.env.KRYPTON_MANAGED_ONLY = 'false';
+    process.env.K8STON_MANAGED_ONLY = 'false';
     const live = liveSecret();
-    delete live.metadata!.annotations!['krypton.io/version'];
-    delete live.metadata!.annotations!['krypton.io/managed-by'];
+    delete live.metadata!.annotations!['k8ston.io/version'];
+    delete live.metadata!.annotations!['k8ston.io/managed-by'];
     const store = await mockHistoryStore([live]);
     await signIn();
     const { GET } = await import('@/app/api/namespaces/[namespace]/secrets/[name]/route');
@@ -204,11 +204,11 @@ describe('history identity across the real route boundaries', () => {
     const live = liveSecret();
     live.type = 'example.test/native-type';
     live.metadata!.finalizers = ['example.test/native-finalizer'];
-    live.metadata!.annotations!['krypton.io/allowed-users'] = dataUser.email;
+    live.metadata!.annotations!['k8ston.io/allowed-users'] = dataUser.email;
     const old = structuredClone(live);
     old.metadata!.resourceVersion = 'old-source-rv';
-    old.metadata!.annotations!['krypton.io/description'] = 'old description';
-    old.metadata!.annotations!['krypton.io/allowed-users'] = 'former@example.test';
+    old.metadata!.annotations!['k8ston.io/description'] = 'old description';
+    old.metadata!.annotations!['k8ston.io/allowed-users'] = 'former@example.test';
     const target = boundSnapshot(old, 1, rawData);
     const store = await mockHistoryStore([live, target]);
     await signIn();
@@ -235,9 +235,9 @@ describe('history identity across the real route boundaries', () => {
       ownerReferences: live.metadata!.ownerReferences,
       finalizers: live.metadata!.finalizers,
       annotations: {
-        'krypton.io/allowed-users': dataUser.email,
-        'krypton.io/description': 'live description',
-        'krypton.io/version': '3',
+        'k8ston.io/allowed-users': dataUser.email,
+        'k8ston.io/description': 'live description',
+        'k8ston.io/version': '3',
       },
     });
     expect(next.type).toBe(live.type);
@@ -256,11 +256,11 @@ describe('write gating, native changes, and replica CAS', () => {
       const live = liveSecret();
       const occupied = boundSnapshot(live, 2);
       if (kind === 'other source revision') {
-        occupied.metadata!.annotations!['krypton.io/source-resource-version'] = 'older-native-rv';
-        occupied.metadata!.labels!['krypton.io/source-resource-version'] = historyHash('older-native-rv');
+        occupied.metadata!.annotations!['k8ston.io/source-resource-version'] = 'older-native-rv';
+        occupied.metadata!.labels!['k8ston.io/source-resource-version'] = historyHash('older-native-rv');
       }
       if (kind === 'wrong immutable bytes') occupied.data = encoded('forged-history');
-      if (kind === 'unbound legacy') delete occupied.metadata!.annotations!['krypton.io/history-format'];
+      if (kind === 'unbound legacy') delete occupied.metadata!.annotations!['k8ston.io/history-format'];
       if (kind === 'unrelated object') {
         occupied.metadata!.labels = {};
         occupied.metadata!.annotations = {};
@@ -292,7 +292,7 @@ describe('write gating, native changes, and replica CAS', () => {
   it.each(['save', 'list', 'prune', 'config'])(
     'blocks live replacement on a history %s failure and reports it',
     async (failure) => {
-      process.env.KRYPTON_HISTORY_LIMIT = failure === 'config' ? '0' : '1';
+      process.env.K8STON_HISTORY_LIMIT = failure === 'config' ? '0' : '1';
       const live = liveSecret();
       const store = await mockHistoryStore([live, boundSnapshot(live, 1)]);
       if (failure === 'save') store.core.createNamespacedSecret.mockRejectedValueOnce(apiError(403));
@@ -329,10 +329,10 @@ describe('write gating, native changes, and replica CAS', () => {
     expect(retry.status).toBe(409);
     expect(store.core.replaceNamespacedSecret).toHaveBeenCalledTimes(1);
 
-    // Explicit operator review/repair is outside Krypton; no automatic adoption
+    // Explicit operator review/repair is outside K8ston; no automatic adoption
     // or retagging by name. The fixture models a CAS metadata repair on this UID.
     const repaired = store.get(namespace, name);
-    repaired.metadata!.annotations!['krypton.io/version'] = '3';
+    repaired.metadata!.annotations!['k8ston.io/version'] = '3';
     repaired.metadata!.resourceVersion = 'operator-reviewed-rv';
     store.seed(repaired);
     const recovered = await put('operator-reviewed-rv', { value: 'fresh browser intent' });
@@ -355,7 +355,7 @@ describe('write gating, native changes, and replica CAS', () => {
     expect((await put(native.metadata!.resourceVersion, { value: 'second app update' })).status).toBe(200);
     const snapshot = store.get(namespace, historyName(uid, 3));
     expect(snapshot.data).toEqual(encoded('external value'));
-    expect(snapshot.metadata!.annotations!['krypton.io/source-resource-version']).toBe('external/opaque:rv');
+    expect(snapshot.metadata!.annotations!['k8ston.io/source-resource-version']).toBe('external/opaque:rv');
   });
 
   it('lets two isolated replicas verify one source snapshot while Kubernetes CAS admits only one replacement', async () => {
@@ -396,7 +396,7 @@ describe('write gating, native changes, and replica CAS', () => {
     expect(store.get(namespace, historyName(uid, 2)).data).toEqual(live.data);
     const winner = store.get(namespace, name);
     expect([encoded('replica A'), encoded('replica B')]).toContainEqual(winner.data);
-    expect(winner.metadata!.annotations!['krypton.io/version']).toBe('3');
+    expect(winner.metadata!.annotations!['k8ston.io/version']).toBe('3');
     expect(store.objects.size).toBe(2);
     for (const [args] of store.core.replaceNamespacedSecret.mock.calls)
       expect(args.body.metadata).toMatchObject({ uid, resourceVersion: live.metadata!.resourceVersion });

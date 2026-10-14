@@ -1,32 +1,32 @@
-# Minimal Helm values for Krypton (chart: helm/main, subchart: helm/krypton).
+# Minimal Helm values for K8ston (chart: helm/main, subchart: helm/k8ston).
 # Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes
 # Secret referenced by envSecretName — never in values files.
 global:
   env: {}
 
-krypton:
+k8ston:
   enabled: true
   replicaCount: 2
-  # kubectl create secret generic krypton-oidc -n krypton \
+  # kubectl create secret generic k8ston-oidc -n k8ston \
   #   --from-literal=OIDC_CLIENT_SECRET='...' \
   #   --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
-  envSecretName: krypton-oidc
+  envSecretName: k8ston-oidc
   env:
-    KRYPTON_SCOPE: namespace
-    KRYPTON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on
-    KRYPTON_ADMIN_GROUPS: krypton-admin
+    K8STON_SCOPE: namespace
+    K8STON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on
+    K8STON_ADMIN_GROUPS: k8ston-admin
     OIDC_ISSUER: https://keycloak.example.com/realms/company
-    OIDC_CLIENT_ID: krypton
+    OIDC_CLIENT_ID: k8ston
     OIDC_SCOPES: openid profile email groups
-    NEXT_PUBLIC_APP_URL: https://krypton.example.com
-  # Derives the default KRYPTON_SCOPE (explicit entries must match):
+    NEXT_PUBLIC_APP_URL: https://k8ston.example.com
+  # Derives the default K8STON_SCOPE (explicit entries must match):
   # namespace (default) or cluster. Curated extras add a derived allowlist.
   rbac:
     create: true
     scope: namespace
   # "Restart apps" (API + UI + apps RBAC rule). Default false.
   restartEnabled: false
-  # Namespace fallback rules (krypton-access / access.json).
+  # Namespace fallback rules (k8ston-access / access.json).
   accessConfig:
     enabled: false
 

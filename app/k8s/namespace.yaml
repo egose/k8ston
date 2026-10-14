@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: krypton
+  name: k8ston
   labels:
-    app.kubernetes.io/name: krypton
-    app.kubernetes.io/part-of: krypton
+    app.kubernetes.io/name: k8ston
+    app.kubernetes.io/part-of: k8ston

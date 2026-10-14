@@ -6,7 +6,7 @@ import type { WireRequest } from './kubernetes-transport';
 
 /** Synthetic fixtures for the documented uid-rv-v1 storage format. */
 export const historyHash = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 32);
-export const historyName = (uid: string, version: number) => `krypton-h-${historyHash(uid)}-v${version}`;
+export const historyName = (uid: string, version: number) => `k8ston-h-${historyHash(uid)}-v${version}`;
 export const apiError = (status: number) =>
   new ApiException(
     status,
@@ -24,23 +24,23 @@ export function boundSnapshot(source: V1Secret, version: number, data = source.d
       uid: `synthetic-history-${meta.uid}-${version}`,
       resourceVersion: `snapshot-${version}`,
       labels: {
-        'krypton.io/managed-by': 'krypton',
-        'krypton.io/kind': 'history',
-        'krypton.io/source-uid': historyHash(meta.uid!),
-        'krypton.io/source-resource-version': historyHash(meta.resourceVersion!),
+        'k8ston.io/managed-by': 'k8ston',
+        'k8ston.io/kind': 'history',
+        'k8ston.io/source-uid': historyHash(meta.uid!),
+        'k8ston.io/source-resource-version': historyHash(meta.resourceVersion!),
       },
       annotations: {
-        'krypton.io/history-format': 'uid-rv-v1',
-        'krypton.io/history-of': meta.name!,
-        'krypton.io/source-uid': meta.uid!,
-        'krypton.io/source-resource-version': meta.resourceVersion!,
-        'krypton.io/source-type': source.type ?? 'Opaque',
-        'krypton.io/version': String(version),
-        'krypton.io/snapshot-at': '2026-01-01T00:00:00.000Z',
-        'krypton.io/snapshot-by': 'first@example.test',
-        'krypton.io/description': meta.annotations?.['krypton.io/description'] ?? '',
-        'krypton.io/allowed-users': meta.annotations?.['krypton.io/allowed-users'] ?? '',
-        'krypton.io/allowed-groups': meta.annotations?.['krypton.io/allowed-groups'] ?? '',
+        'k8ston.io/history-format': 'uid-rv-v1',
+        'k8ston.io/history-of': meta.name!,
+        'k8ston.io/source-uid': meta.uid!,
+        'k8ston.io/source-resource-version': meta.resourceVersion!,
+        'k8ston.io/source-type': source.type ?? 'Opaque',
+        'k8ston.io/version': String(version),
+        'k8ston.io/snapshot-at': '2026-01-01T00:00:00.000Z',
+        'k8ston.io/snapshot-by': 'first@example.test',
+        'k8ston.io/description': meta.annotations?.['k8ston.io/description'] ?? '',
+        'k8ston.io/allowed-users': meta.annotations?.['k8ston.io/allowed-users'] ?? '',
+        'k8ston.io/allowed-groups': meta.annotations?.['k8ston.io/allowed-groups'] ?? '',
       },
     },
     type: 'Opaque',

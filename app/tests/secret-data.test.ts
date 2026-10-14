@@ -54,13 +54,13 @@ describe('lossless Secret bytes and DTOs', () => {
     expect(restored.immutable).toBe(false);
     expect(restored.metadata).toMatchObject({
       ...live.metadata,
-      annotations: { ...live.metadata?.annotations, 'krypton.io/version': '3' },
+      annotations: { ...live.metadata?.annotations, 'k8ston.io/version': '3' },
     });
     expect(Object.hasOwn(restored.data!, '__proto__')).toBe(true);
     for (const key of Object.keys(rawData))
       expect(Buffer.from(restored.data![key], 'base64')).toEqual(Buffer.from(rawData[key], 'base64'));
     expect(snapshot.metadata?.uid).toBe('historical-uid');
-    expect(live.metadata?.annotations?.['krypton.io/version']).toBe('2');
+    expect(live.metadata?.annotations?.['k8ston.io/version']).toBe('2');
   });
 
   it('raw restore preserves base64 itself and permits a native-size binary snapshot', () => {

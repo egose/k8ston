@@ -1,18 +1,18 @@
-{{- $cfg := include "krypton.effectiveConfig" . | fromYaml -}}
+{{- $cfg := include "k8ston.effectiveConfig" . | fromYaml -}}
 {{- if $cfg.rbacCreate -}}
 {{- $global := .Values.global | default dict -}}
-{{- $serviceAccountName := .Values.serviceAccountName | default ($global.serviceAccountName | default (include "krypton.serviceAccountName" .)) -}}
+{{- $serviceAccountName := .Values.serviceAccountName | default ($global.serviceAccountName | default (include "k8ston.serviceAccountName" .)) -}}
 {{- $isCluster := eq $cfg.rbacScope "cluster" -}}
 {{- if $isCluster }}
-# Cluster-wide permissions (effective KRYPTON_SCOPE=cluster) for a centralized
-# dashboard managing secrets across namespaces. Narrow with KRYPTON_NAMESPACES
+# Cluster-wide permissions (effective K8STON_SCOPE=cluster) for a centralized
+# dashboard managing secrets across namespaces. Narrow with K8STON_NAMESPACES
 # to allowlist namespaces (see app/k8s/clusterrole.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   labels:
-    {{- include "krypton.labels" . | nindent 4 }}
+    {{- include "k8ston.labels" . | nindent 4 }}
 rules:
 - apiGroups: ['']
   resources: [secrets]
@@ -32,36 +32,36 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   labels:
-    {{- include "krypton.labels" . | nindent 4 }}
+    {{- include "k8ston.labels" . | nindent 4 }}
 subjects:
 - kind: ServiceAccount
   name: {{ $serviceAccountName }}
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   apiGroup: rbac.authorization.k8s.io
 {{- else }}
 # Namespaced permissions (see app/k8s/role.yaml). Without
-# rbac.extraNamespaces the effective runtime scope is KRYPTON_SCOPE=namespace
+# rbac.extraNamespaces the effective runtime scope is K8STON_SCOPE=namespace
 # (own namespace only, the default). With rbac.extraNamespaces the chart
-# renders curated multi-namespace access: effective KRYPTON_SCOPE=cluster with
-# a derived KRYPTON_NAMESPACES allowlist (release namespace plus extras),
+# renders curated multi-namespace access: effective K8STON_SCOPE=cluster with
+# a derived K8STON_NAMESPACES allowlist (release namespace plus extras),
 # served by these namespaced Roles only (no ClusterRole).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   labels:
-    {{- include "krypton.labels" . | nindent 4 }}
+    {{- include "k8ston.labels" . | nindent 4 }}
 rules:
   # Core state: secrets incl. version snapshots (also Secrets)
 - apiGroups: ['']
   resources: [secrets]
   verbs: [get, list, watch, create, update, patch, delete]
-  # Namespace-level access rules (krypton-access ConfigMap)
+  # Namespace-level access rules (k8ston-access ConfigMap)
 - apiGroups: ['']
   resources: [configmaps]
   verbs: [get, list, watch]
@@ -75,26 +75,26 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   labels:
-    {{- include "krypton.labels" . | nindent 4 }}
+    {{- include "k8ston.labels" . | nindent 4 }}
 subjects:
 - kind: ServiceAccount
   name: {{ $serviceAccountName }}
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role
-  name: {{ include "krypton.fullname" . }}
+  name: {{ include "k8ston.fullname" . }}
   apiGroup: rbac.authorization.k8s.io
 {{- range .Values.rbac.extraNamespaces }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "krypton.fullname" $ }}
+  name: {{ include "k8ston.fullname" $ }}
   namespace: {{ . }}
   labels:
-    {{- include "krypton.labels" $ | nindent 4 }}
+    {{- include "k8ston.labels" $ | nindent 4 }}
 rules:
 - apiGroups: ['']
   resources: [secrets]
@@ -111,17 +111,17 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "krypton.fullname" $ }}
+  name: {{ include "k8ston.fullname" $ }}
   namespace: {{ . }}
   labels:
-    {{- include "krypton.labels" $ | nindent 4 }}
+    {{- include "k8ston.labels" $ | nindent 4 }}
 subjects:
 - kind: ServiceAccount
   name: {{ $serviceAccountName }}
   namespace: {{ $.Release.Namespace }}
 roleRef:
   kind: Role
-  name: {{ include "krypton.fullname" $ }}
+  name: {{ include "k8ston.fullname" $ }}
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
 {{- end }}

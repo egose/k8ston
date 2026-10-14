@@ -1,14 +1,14 @@
-# Krypton sandbox — supporting services for local development.
+# K8ston sandbox — supporting services for local development.
 # Local Kubernetes itself (kind) is managed by the root Makefile, not compose:
 #   make up     # kind cluster + dex + fixtures
 #   make down   # stop dex (keeps kind cluster for fast iteration)
 #   make destroy
 #
 # NOTE: there is intentionally no docker-compose.prod.yml overlay here —
-# production Krypton deploys to Kubernetes via ../app/k8s/*.yaml, not compose.
+# production K8ston deploys to Kubernetes via ../app/k8s/*.yaml, not compose.
 x-common-props: &common-props
   restart: unless-stopped
-  networks: [krypton]
+  networks: [k8ston]
 
 services:
   # ---------------------------------------------------------------------------
@@ -18,7 +18,7 @@ services:
   # ---------------------------------------------------------------------------
   dex:
     <<: *common-props
-    container_name: krypton_dex
+    container_name: k8ston_dex
     image: ghcr.io/dexidp/dex:v2.46.0
     command: [dex, serve, /etc/dex/config.yaml]
     ports:
@@ -34,5 +34,5 @@ services:
       retries: 12
 
 networks:
-  krypton:
+  k8ston:
     driver: bridge

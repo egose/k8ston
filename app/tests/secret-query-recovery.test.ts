@@ -25,7 +25,7 @@ function detail(resourceVersion: string): { secret: SecretDetail } {
       allowedUsers: [],
       team: '',
       immutable: false,
-      managedByKrypton: true,
+      managedByK8ston: true,
       binaryKeys: [],
       binaryData: {},
       data: { ['__proto__']: resourceVersion },

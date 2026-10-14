@@ -15,9 +15,9 @@ const live: V1Secret = {
     uid: 'synthetic-live-uid',
     resourceVersion: '17',
     annotations: {
-      'krypton.io/managed-by': 'krypton',
-      'krypton.io/version': '2',
-      'krypton.io/allowed-users': user.email,
+      'k8ston.io/managed-by': 'k8ston',
+      'k8ston.io/version': '2',
+      'k8ston.io/allowed-users': user.email,
     },
   },
   data: { credential: Buffer.from(liveValue).toString('base64') },
@@ -27,11 +27,11 @@ const snapshot: V1Secret = {
     namespace,
     name: 'credentials-v1',
     resourceVersion: '11',
-    labels: { 'krypton.io/kind': 'history', 'krypton.io/history-of': 'credentials' },
+    labels: { 'k8ston.io/kind': 'history', 'k8ston.io/history-of': 'credentials' },
     annotations: {
-      'krypton.io/version': '1',
-      'krypton.io/history-of': 'credentials',
-      'krypton.io/allowed-users': user.email,
+      'k8ston.io/version': '1',
+      'k8ston.io/history-of': 'credentials',
+      'k8ston.io/allowed-users': user.email,
     },
   },
   data: { credential: Buffer.from(historicalValue).toString('base64') },
@@ -125,7 +125,7 @@ async function setupAllowedActions(current = live) {
   });
   // Old ACLs can deny Alice: history is governed by the current live ACL alone.
   const target = boundSnapshot({ ...live, metadata: { ...live.metadata, resourceVersion: '11' } }, 1, snapshot.data);
-  target.metadata!.annotations!['krypton.io/allowed-users'] = 'bob@example.test';
+  target.metadata!.annotations!['k8ston.io/allowed-users'] = 'bob@example.test';
   const snapshots = [target];
   mock.core.listNamespacedSecret.mockImplementation(async () => ({
     items: snapshots.filter((s) => !deleted.has(s.metadata!.name!)),
@@ -161,14 +161,14 @@ async function setupAllowedActions(current = live) {
 }
 
 beforeEach(() => {
-  process.env.KRYPTON_RESTART_ENABLED = 'true';
+  process.env.K8STON_RESTART_ENABLED = 'true';
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 describe.each([true, false])('shared live-object boundary with managedOnly=%s', (managedOnly) => {
   beforeEach(() => {
-    process.env.KRYPTON_MANAGED_ONLY = String(managedOnly);
+    process.env.K8STON_MANAGED_ONLY = String(managedOnly);
   });
 
   it.each(actions)('$label denies a revoked live ACL and hides directly addressed historical ACLs', async (action) => {
@@ -178,7 +178,7 @@ describe.each([true, false])('shared live-object boundary with managedOnly=%s', 
       ...live,
       metadata: {
         ...live.metadata,
-        annotations: { ...live.metadata?.annotations, 'krypton.io/allowed-users': 'bob@example.test' },
+        annotations: { ...live.metadata?.annotations, 'k8ston.io/allowed-users': 'bob@example.test' },
       },
     };
     mock.core.readNamespacedSecret.mockResolvedValueOnce(revokedLive);
@@ -192,7 +192,7 @@ describe.each([true, false])('shared live-object boundary with managedOnly=%s', 
       snapshot.metadata?.annotations,
       {
         ...snapshot.metadata?.annotations,
-        'krypton.io/managed-by': 'krypton',
+        'k8ston.io/managed-by': 'k8ston',
       },
     ]) {
       mock.core.readNamespacedSecret.mockResolvedValueOnce({
@@ -221,7 +221,7 @@ describe.each([true, false])('shared live-object boundary with managedOnly=%s', 
       ...snapshot,
       metadata: {
         ...snapshot.metadata,
-        annotations: { ...snapshot.metadata?.annotations, 'krypton.io/managed-by': 'krypton' },
+        annotations: { ...snapshot.metadata?.annotations, 'k8ston.io/managed-by': 'k8ston' },
       },
     });
     const response = await invoke(action, 'credentials-v1');
@@ -283,7 +283,7 @@ describe.each([true, false])('shared live-object boundary with managedOnly=%s', 
       ...live,
       metadata: {
         ...live.metadata,
-        annotations: { 'krypton.io/allowed-users': user.email, 'krypton.io/version': '2' },
+        annotations: { 'k8ston.io/allowed-users': user.email, 'k8ston.io/version': '2' },
       },
     });
     await signIn();
@@ -299,14 +299,14 @@ describe.each([true, false])('shared live-object boundary with managedOnly=%s', 
     core.readNamespacedConfigMap.mockResolvedValue({ data: { 'access.json': '{}' } });
     const unmanaged = {
       ...live,
-      metadata: { ...live.metadata, name: 'external', annotations: { 'krypton.io/allowed-users': user.email } },
+      metadata: { ...live.metadata, name: 'external', annotations: { 'k8ston.io/allowed-users': user.email } },
     };
     const deniedLive = {
       ...live,
       metadata: {
         ...live.metadata,
         name: 'denied',
-        annotations: { ...live.metadata?.annotations, 'krypton.io/allowed-users': 'bob@example.test' },
+        annotations: { ...live.metadata?.annotations, 'k8ston.io/allowed-users': 'bob@example.test' },
       },
     };
     core.listNamespacedSecret.mockResolvedValue({
@@ -317,7 +317,7 @@ describe.each([true, false])('shared live-object boundary with managedOnly=%s', 
           metadata: {
             ...snapshot.metadata,
             name: 'credentials-v0',
-            annotations: { 'krypton.io/managed-by': 'krypton' },
+            annotations: { 'k8ston.io/managed-by': 'k8ston' },
           },
         },
         live,
@@ -367,7 +367,7 @@ describe('route authentication, namespace, and fallback-policy enforcement', () 
     await signIn();
     mock.core.readNamespacedSecret.mockResolvedValue({
       ...live,
-      metadata: { ...live.metadata, annotations: { 'krypton.io/managed-by': 'krypton' } },
+      metadata: { ...live.metadata, annotations: { 'k8ston.io/managed-by': 'k8ston' } },
     });
     mock.core.readNamespacedConfigMap.mockRejectedValue(new ApiException(403, 'synthetic-private-error', {}, {}));
     const response = await invoke(action);
@@ -377,7 +377,7 @@ describe('route authentication, namespace, and fallback-policy enforcement', () 
   });
 
   it('keeps restart opt-in even for admins', async () => {
-    process.env.KRYPTON_RESTART_ENABLED = 'false';
+    process.env.K8STON_RESTART_ENABLED = 'false';
     const mock = await mockKubernetes();
     await signIn(true);
     const response = await invoke(actions[5]);

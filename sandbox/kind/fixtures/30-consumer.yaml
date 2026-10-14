@@ -1,14 +1,14 @@
 # Sample consumer for the "Restart consumers" flow: env-var injection
 # (needs a rollout to pick up changes) + a volume mount (kubelet syncs it).
-# Edit database-credentials in Krypton, hit Restart consumers, then:
-#   kubectl rollout history deploy/api-server -n krypton-test
+# Edit database-credentials in K8ston, hit Restart consumers, then:
+#   kubectl rollout history deploy/api-server -n k8ston-test
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-server
-  namespace: krypton-test
+  namespace: k8ston-test
   labels:
-    app.kubernetes.io/part-of: krypton-sandbox
+    app.kubernetes.io/part-of: k8ston-sandbox
 spec:
   replicas: 1
   selector:

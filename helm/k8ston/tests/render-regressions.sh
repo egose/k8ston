@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Rendered-object regression assertions for the krypton chart (KRY-11).
+# Rendered-object regression assertions for the k8ston chart (KRY-11).
 #
 # Verifies that the single effective configuration in
-# helm/krypton/templates/_helpers.tpl ("krypton.effectiveConfig") keeps the
+# helm/k8ston/templates/_helpers.tpl ("k8ston.effectiveConfig") keeps the
 # rendered Deployment env, Role/ClusterRole scope, subjects, and apps
 # permissions in agreement for every supported scenario, and that
 # contradictory explicit settings fail with actionable guidance.
@@ -113,11 +113,11 @@ count_matches() {
 # S1: defaults — namespace scope, restart off, no access ConfigMap.
 # ---------------------------------------------------------------------------
 if render "S1 render defaults" "$WORK/s1-deploy.yaml" --show-only templates/deployment.yaml; then
-  env_has "S1 scope defaults to namespace" "$WORK/s1-deploy.yaml" "KRYPTON_SCOPE" "namespace"
-  env_has "S1 restart defaults to false" "$WORK/s1-deploy.yaml" "KRYPTON_RESTART_ENABLED" "false"
-  env_missing "S1 no namespaces allowlist by default" "$WORK/s1-deploy.yaml" "KRYPTON_NAMESPACES"
-  env_missing "S1 no access configmap by default" "$WORK/s1-deploy.yaml" "KRYPTON_ACCESS_CONFIGMAP"
-  env_count "S1 scope rendered exactly once" "$WORK/s1-deploy.yaml" "KRYPTON_SCOPE" "1"
+  env_has "S1 scope defaults to namespace" "$WORK/s1-deploy.yaml" "K8STON_SCOPE" "namespace"
+  env_has "S1 restart defaults to false" "$WORK/s1-deploy.yaml" "K8STON_RESTART_ENABLED" "false"
+  env_missing "S1 no namespaces allowlist by default" "$WORK/s1-deploy.yaml" "K8STON_NAMESPACES"
+  env_missing "S1 no access configmap by default" "$WORK/s1-deploy.yaml" "K8STON_ACCESS_CONFIGMAP"
+  env_count "S1 scope rendered exactly once" "$WORK/s1-deploy.yaml" "K8STON_SCOPE" "1"
 fi
 if render "S1 render default RBAC" "$WORK/s1-rbac.yaml" --show-only templates/rbac.yaml; then
   kind_count "S1 exactly one Role" "$WORK/s1-rbac.yaml" "Role" "1"
@@ -136,9 +136,9 @@ fi
 # ---------------------------------------------------------------------------
 if render "S2 render cluster" "$WORK/s2-deploy.yaml" --show-only templates/deployment.yaml \
   --set rbac.scope=cluster --set restartEnabled=true; then
-  env_has "S2 scope is cluster" "$WORK/s2-deploy.yaml" "KRYPTON_SCOPE" "cluster"
-  env_has "S2 restart is true" "$WORK/s2-deploy.yaml" "KRYPTON_RESTART_ENABLED" "true"
-  env_missing "S2 no namespaces without an explicit allowlist" "$WORK/s2-deploy.yaml" "KRYPTON_NAMESPACES"
+  env_has "S2 scope is cluster" "$WORK/s2-deploy.yaml" "K8STON_SCOPE" "cluster"
+  env_has "S2 restart is true" "$WORK/s2-deploy.yaml" "K8STON_RESTART_ENABLED" "true"
+  env_missing "S2 no namespaces without an explicit allowlist" "$WORK/s2-deploy.yaml" "K8STON_NAMESPACES"
 fi
 if render "S2 render cluster RBAC" "$WORK/s2-rbac.yaml" --show-only templates/rbac.yaml \
   --set rbac.scope=cluster --set restartEnabled=true; then
@@ -151,15 +151,15 @@ if render "S2 render cluster RBAC" "$WORK/s2-rbac.yaml" --show-only templates/rb
 fi
 
 # ---------------------------------------------------------------------------
-# S3: cluster scope with an explicit KRYPTON_NAMESPACES allowlist.
+# S3: cluster scope with an explicit K8STON_NAMESPACES allowlist.
 # ---------------------------------------------------------------------------
 if render "S3 render cluster allowlist" "$WORK/s3-deploy.yaml" --show-only templates/deployment.yaml \
-  --set rbac.scope=cluster --set-string 'env.KRYPTON_NAMESPACES=team-a\,team-b'; then
-  env_has "S3 scope is cluster" "$WORK/s3-deploy.yaml" "KRYPTON_SCOPE" "cluster"
-  env_has "S3 explicit allowlist passes through" "$WORK/s3-deploy.yaml" "KRYPTON_NAMESPACES" "team-a,team-b"
+  --set rbac.scope=cluster --set-string 'env.K8STON_NAMESPACES=team-a\,team-b'; then
+  env_has "S3 scope is cluster" "$WORK/s3-deploy.yaml" "K8STON_SCOPE" "cluster"
+  env_has "S3 explicit allowlist passes through" "$WORK/s3-deploy.yaml" "K8STON_NAMESPACES" "team-a,team-b"
 fi
 if render "S3 render cluster allowlist RBAC" "$WORK/s3-rbac.yaml" --show-only templates/rbac.yaml \
-  --set rbac.scope=cluster --set-string 'env.KRYPTON_NAMESPACES=team-a\,team-b'; then
+  --set rbac.scope=cluster --set-string 'env.K8STON_NAMESPACES=team-a\,team-b'; then
   kind_count "S3 ClusterRole still rendered (runtime narrows)" "$WORK/s3-rbac.yaml" "ClusterRole" "1"
 fi
 
@@ -168,9 +168,9 @@ fi
 # ---------------------------------------------------------------------------
 if render "S4 render curated" "$WORK/s4-deploy.yaml" --show-only templates/deployment.yaml \
   --set 'rbac.extraNamespaces={team-a,team-b}'; then
-  env_has "S4 curated scope is cluster" "$WORK/s4-deploy.yaml" "KRYPTON_SCOPE" "cluster"
-  env_has "S4 allowlist is release plus extras" "$WORK/s4-deploy.yaml" "KRYPTON_NAMESPACES" "app-ns,team-a,team-b"
-  env_has "S4 restart stays off" "$WORK/s4-deploy.yaml" "KRYPTON_RESTART_ENABLED" "false"
+  env_has "S4 curated scope is cluster" "$WORK/s4-deploy.yaml" "K8STON_SCOPE" "cluster"
+  env_has "S4 allowlist is release plus extras" "$WORK/s4-deploy.yaml" "K8STON_NAMESPACES" "app-ns,team-a,team-b"
+  env_has "S4 restart stays off" "$WORK/s4-deploy.yaml" "K8STON_RESTART_ENABLED" "false"
 fi
 if render "S4 render curated RBAC" "$WORK/s4-rbac.yaml" --show-only templates/rbac.yaml \
   --set 'rbac.extraNamespaces={team-a,team-b}'; then
@@ -193,16 +193,16 @@ if render "S5 render curated restart RBAC" "$WORK/s5-rbac.yaml" --show-only temp
 fi
 if render "S5 render curated restart env" "$WORK/s5-deploy.yaml" --show-only templates/deployment.yaml \
   --set 'rbac.extraNamespaces={team-a,team-b}' --set restartEnabled=true; then
-  env_has "S5 runtime flag agrees with RBAC" "$WORK/s5-deploy.yaml" "KRYPTON_RESTART_ENABLED" "true"
+  env_has "S5 runtime flag agrees with RBAC" "$WORK/s5-deploy.yaml" "K8STON_RESTART_ENABLED" "true"
 fi
 
 # ---------------------------------------------------------------------------
 # S6: local env wins over global env per key (value and validation).
 # ---------------------------------------------------------------------------
 if render "S6 render local-over-global" "$WORK/s6-deploy.yaml" --show-only templates/deployment.yaml \
-  --set-json 'global.env={"KRYPTON_SCOPE":"cluster","FOO":"global"}' \
-  --set-json 'env={"KRYPTON_SCOPE":"namespace","FOO":"local"}'; then
-  env_has "S6 local scope wins (and validates)" "$WORK/s6-deploy.yaml" "KRYPTON_SCOPE" "namespace"
+  --set-json 'global.env={"K8STON_SCOPE":"cluster","FOO":"global"}' \
+  --set-json 'env={"K8STON_SCOPE":"namespace","FOO":"local"}'; then
+  env_has "S6 local scope wins (and validates)" "$WORK/s6-deploy.yaml" "K8STON_SCOPE" "namespace"
   env_has "S6 local value wins for custom keys" "$WORK/s6-deploy.yaml" '"FOO"' "local"
   count_matches "S6 global value fully shadowed" "$WORK/s6-deploy.yaml" 'value: "global"' "0"
 fi
@@ -211,19 +211,19 @@ fi
 # S7: explicit restart values that agree render canonically.
 # ---------------------------------------------------------------------------
 if render "S7 render explicit false" "$WORK/s7-deploy.yaml" --show-only templates/deployment.yaml \
-  --set restartEnabled=false --set-string 'env.KRYPTON_RESTART_ENABLED=false'; then
-  env_has "S7 explicit false renders false" "$WORK/s7-deploy.yaml" "KRYPTON_RESTART_ENABLED" "false"
+  --set restartEnabled=false --set-string 'env.K8STON_RESTART_ENABLED=false'; then
+  env_has "S7 explicit false renders false" "$WORK/s7-deploy.yaml" "K8STON_RESTART_ENABLED" "false"
 fi
 if render "S7 render explicit false RBAC" "$WORK/s7-rbac.yaml" --show-only templates/rbac.yaml \
-  --set restartEnabled=false --set-string 'env.KRYPTON_RESTART_ENABLED=false'; then
+  --set restartEnabled=false --set-string 'env.K8STON_RESTART_ENABLED=false'; then
   count_matches "S7 no apps rule for explicit false" "$WORK/s7-rbac.yaml" 'apiGroups: \[apps\]' "0"
 fi
 if render "S7 render truthy alias" "$WORK/s7b-deploy.yaml" --show-only templates/deployment.yaml \
-  --set restartEnabled=true --set-string 'env.KRYPTON_RESTART_ENABLED=yes'; then
-  env_has "S7 truthy alias renders canonical true" "$WORK/s7b-deploy.yaml" "KRYPTON_RESTART_ENABLED" "true"
+  --set restartEnabled=true --set-string 'env.K8STON_RESTART_ENABLED=yes'; then
+  env_has "S7 truthy alias renders canonical true" "$WORK/s7b-deploy.yaml" "K8STON_RESTART_ENABLED" "true"
 fi
 if render "S7 render truthy alias RBAC" "$WORK/s7b-rbac.yaml" --show-only templates/rbac.yaml \
-  --set restartEnabled=true --set-string 'env.KRYPTON_RESTART_ENABLED=yes'; then
+  --set restartEnabled=true --set-string 'env.K8STON_RESTART_ENABLED=yes'; then
   count_matches "S7 apps rule for truthy alias" "$WORK/s7b-rbac.yaml" 'apiGroups: \[apps\]' "1"
 fi
 
@@ -232,19 +232,19 @@ fi
 # ---------------------------------------------------------------------------
 if render "S8 render external RBAC" "$WORK/s8-full.yaml" \
   --set rbac.create=false \
-  --set-json 'env={"KRYPTON_SCOPE":"cluster","KRYPTON_NAMESPACES":"team-a,team-b"}'; then
+  --set-json 'env={"K8STON_SCOPE":"cluster","K8STON_NAMESPACES":"team-a,team-b"}'; then
   kind_count "S8 no Role" "$WORK/s8-full.yaml" "Role" "0"
   kind_count "S8 no RoleBinding" "$WORK/s8-full.yaml" "RoleBinding" "0"
   kind_count "S8 no ClusterRole" "$WORK/s8-full.yaml" "ClusterRole" "0"
   kind_count "S8 no ClusterRoleBinding" "$WORK/s8-full.yaml" "ClusterRoleBinding" "0"
   kind_count "S8 ServiceAccount still rendered" "$WORK/s8-full.yaml" "ServiceAccount" "1"
-  env_has "S8 explicit scope passes through" "$WORK/s8-full.yaml" "KRYPTON_SCOPE" "cluster"
-  env_has "S8 explicit allowlist passes through" "$WORK/s8-full.yaml" "KRYPTON_NAMESPACES" "team-a,team-b"
-  env_has "S8 restart default still injected" "$WORK/s8-full.yaml" "KRYPTON_RESTART_ENABLED" "false"
+  env_has "S8 explicit scope passes through" "$WORK/s8-full.yaml" "K8STON_SCOPE" "cluster"
+  env_has "S8 explicit allowlist passes through" "$WORK/s8-full.yaml" "K8STON_NAMESPACES" "team-a,team-b"
+  env_has "S8 restart default still injected" "$WORK/s8-full.yaml" "K8STON_RESTART_ENABLED" "false"
 fi
 if render "S8 stale scope ignored when external" "$WORK/s8b-deploy.yaml" --show-only templates/deployment.yaml \
-  --set rbac.create=false --set rbac.scope=namespace --set-string 'env.KRYPTON_SCOPE=cluster'; then
-  env_has "S8 unrendered scope does not constrain env" "$WORK/s8b-deploy.yaml" "KRYPTON_SCOPE" "cluster"
+  --set rbac.create=false --set rbac.scope=namespace --set-string 'env.K8STON_SCOPE=cluster'; then
+  env_has "S8 unrendered scope does not constrain env" "$WORK/s8b-deploy.yaml" "K8STON_SCOPE" "cluster"
 fi
 
 # ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ fi
 # ---------------------------------------------------------------------------
 if render "S9 render custom access" "$WORK/s9-deploy.yaml" --show-only templates/deployment.yaml \
   --set accessConfig.enabled=true --set accessConfig.name=custom-access; then
-  env_has "S9 access name derived into env" "$WORK/s9-deploy.yaml" "KRYPTON_ACCESS_CONFIGMAP" "custom-access"
+  env_has "S9 access name derived into env" "$WORK/s9-deploy.yaml" "K8STON_ACCESS_CONFIGMAP" "custom-access"
 fi
 if render "S9 render custom access object" "$WORK/s9-cm.yaml" --show-only templates/access-configmap.yaml \
   --set accessConfig.enabled=true --set accessConfig.name=custom-access \
@@ -261,8 +261,8 @@ if render "S9 render custom access object" "$WORK/s9-cm.yaml" --show-only templa
   count_matches "S9 ConfigMap uses the runtime key" "$WORK/s9-cm.yaml" '^  access.json:' "1"
 fi
 if render "S9 render external access passthrough" "$WORK/s9b-deploy.yaml" --show-only templates/deployment.yaml \
-  --set accessConfig.enabled=false --set-string 'env.KRYPTON_ACCESS_CONFIGMAP=external-access'; then
-  env_has "S9 external access name passes through" "$WORK/s9b-deploy.yaml" "KRYPTON_ACCESS_CONFIGMAP" "external-access"
+  --set accessConfig.enabled=false --set-string 'env.K8STON_ACCESS_CONFIGMAP=external-access'; then
+  env_has "S9 external access name passes through" "$WORK/s9b-deploy.yaml" "K8STON_ACCESS_CONFIGMAP" "external-access"
 fi
 
 # ---------------------------------------------------------------------------
@@ -270,11 +270,11 @@ fi
 # ---------------------------------------------------------------------------
 if render "S10 render explicit matches" "$WORK/s10-deploy.yaml" --show-only templates/deployment.yaml \
   --set rbac.scope=cluster --set restartEnabled=true \
-  --set-string 'env.KRYPTON_SCOPE=cluster' --set-string 'env.KRYPTON_RESTART_ENABLED=true'; then
-  env_count "S10 scope rendered exactly once" "$WORK/s10-deploy.yaml" "KRYPTON_SCOPE" "1"
-  env_count "S10 restart rendered exactly once" "$WORK/s10-deploy.yaml" "KRYPTON_RESTART_ENABLED" "1"
-  env_has "S10 scope value agrees" "$WORK/s10-deploy.yaml" "KRYPTON_SCOPE" "cluster"
-  env_has "S10 restart value agrees" "$WORK/s10-deploy.yaml" "KRYPTON_RESTART_ENABLED" "true"
+  --set-string 'env.K8STON_SCOPE=cluster' --set-string 'env.K8STON_RESTART_ENABLED=true'; then
+  env_count "S10 scope rendered exactly once" "$WORK/s10-deploy.yaml" "K8STON_SCOPE" "1"
+  env_count "S10 restart rendered exactly once" "$WORK/s10-deploy.yaml" "K8STON_RESTART_ENABLED" "1"
+  env_has "S10 scope value agrees" "$WORK/s10-deploy.yaml" "K8STON_SCOPE" "cluster"
+  env_has "S10 restart value agrees" "$WORK/s10-deploy.yaml" "K8STON_RESTART_ENABLED" "true"
 fi
 
 # ---------------------------------------------------------------------------
@@ -282,46 +282,46 @@ fi
 # ---------------------------------------------------------------------------
 if render "S11 render deduped extras" "$WORK/s11-deploy.yaml" --show-only templates/deployment.yaml \
   --set 'rbac.extraNamespaces={app-ns,team-a}'; then
-  env_has "S11 allowlist deduplicates the release namespace" "$WORK/s11-deploy.yaml" "KRYPTON_NAMESPACES" "app-ns,team-a"
+  env_has "S11 allowlist deduplicates the release namespace" "$WORK/s11-deploy.yaml" "K8STON_NAMESPACES" "app-ns,team-a"
 fi
 
 # ---------------------------------------------------------------------------
 # F: contradictory explicit settings fail with actionable guidance.
 # ---------------------------------------------------------------------------
 render_fail "F1 scope cluster vs namespace RBAC" \
-  'env KRYPTON_SCOPE="cluster" contradicts rbac.scope=namespace' \
-  --set-string 'env.KRYPTON_SCOPE=cluster'
+  'env K8STON_SCOPE="cluster" contradicts rbac.scope=namespace' \
+  --set-string 'env.K8STON_SCOPE=cluster'
 render_fail "F2 scope namespace vs cluster RBAC" \
-  'env KRYPTON_SCOPE="namespace" contradicts rbac.scope=cluster' \
-  --set rbac.scope=cluster --set-string 'env.KRYPTON_SCOPE=namespace'
+  'env K8STON_SCOPE="namespace" contradicts rbac.scope=cluster' \
+  --set rbac.scope=cluster --set-string 'env.K8STON_SCOPE=namespace'
 render_fail "F3 allowlist ignored in namespace scope" \
-  'KRYPTON_NAMESPACES in env is ignored by the namespace runtime scope' \
-  --set-string 'env.KRYPTON_NAMESPACES=team-a'
+  'K8STON_NAMESPACES in env is ignored by the namespace runtime scope' \
+  --set-string 'env.K8STON_NAMESPACES=team-a'
 render_fail "F4 extras with cluster scope" \
   'rbac.extraNamespaces is only used with rbac.scope=namespace' \
   --set rbac.scope=cluster --set 'rbac.extraNamespaces={team-a}'
 render_fail "F5 allowlist contradicts extras" \
-  'KRYPTON_NAMESPACES in env contradicts rbac.extraNamespaces' \
-  --set 'rbac.extraNamespaces={team-a}' --set-string 'env.KRYPTON_NAMESPACES=team-a'
+  'K8STON_NAMESPACES in env contradicts rbac.extraNamespaces' \
+  --set 'rbac.extraNamespaces={team-a}' --set-string 'env.K8STON_NAMESPACES=team-a'
 render_fail "F6 namespace scope contradicts extras" \
   'rbac.extraNamespaces renders curated multi-namespace access' \
-  --set 'rbac.extraNamespaces={team-a}' --set-string 'env.KRYPTON_SCOPE=namespace'
+  --set 'rbac.extraNamespaces={team-a}' --set-string 'env.K8STON_SCOPE=namespace'
 render_fail "F7 env false contradicts restartEnabled=true" \
-  'env KRYPTON_RESTART_ENABLED="false" contradicts restartEnabled=true' \
-  --set restartEnabled=true --set-string 'env.KRYPTON_RESTART_ENABLED=false'
+  'env K8STON_RESTART_ENABLED="false" contradicts restartEnabled=true' \
+  --set restartEnabled=true --set-string 'env.K8STON_RESTART_ENABLED=false'
 render_fail "F8 env true contradicts restartEnabled=false" \
-  'env KRYPTON_RESTART_ENABLED="true" contradicts restartEnabled=false' \
-  --set restartEnabled=false --set-string 'env.KRYPTON_RESTART_ENABLED=true'
+  'env K8STON_RESTART_ENABLED="true" contradicts restartEnabled=false' \
+  --set restartEnabled=false --set-string 'env.K8STON_RESTART_ENABLED=true'
 render_fail "F9 access key must be access.json" \
   'accessConfig.key must be "access.json"' \
   --set accessConfig.enabled=true --set accessConfig.key=other.json
 render_fail "F10 access env contradicts accessConfig.name" \
-  'env KRYPTON_ACCESS_CONFIGMAP="other" contradicts accessConfig.name="custom-access"' \
+  'env K8STON_ACCESS_CONFIGMAP="other" contradicts accessConfig.name="custom-access"' \
   --set accessConfig.enabled=true --set accessConfig.name=custom-access \
-  --set-string 'env.KRYPTON_ACCESS_CONFIGMAP=other'
+  --set-string 'env.K8STON_ACCESS_CONFIGMAP=other'
 render_fail "F11 extraEnv must not set managed keys" \
-  'extraEnv[0].name "KRYPTON_SCOPE" is managed by the chart' \
-  --set 'extraEnv[0].name=KRYPTON_SCOPE' --set 'extraEnv[0].value=cluster'
+  'extraEnv[0].name "K8STON_SCOPE" is managed by the chart' \
+  --set 'extraEnv[0].name=K8STON_SCOPE' --set 'extraEnv[0].value=cluster'
 render_fail "F12 invalid rbac.scope" \
   'rbac.scope must be "namespace" or "cluster"' \
   --set rbac.scope=bogus
@@ -329,15 +329,15 @@ render_fail "F13 blank extraNamespaces entry" \
   'rbac.extraNamespaces entries must be non-empty namespace names' \
   --set-json 'rbac.extraNamespaces=[""]'
 render_fail "F14 local value drives scope validation" \
-  'env KRYPTON_SCOPE="cluster" contradicts rbac.scope=namespace' \
-  --set-json 'global.env={"KRYPTON_SCOPE":"namespace"}' \
-  --set-json 'env={"KRYPTON_SCOPE":"cluster"}'
+  'env K8STON_SCOPE="cluster" contradicts rbac.scope=namespace' \
+  --set-json 'global.env={"K8STON_SCOPE":"namespace"}' \
+  --set-json 'env={"K8STON_SCOPE":"cluster"}'
 render_fail "F15 comma in extraNamespaces entry" \
-  'contains a comma, which would corrupt the derived KRYPTON_NAMESPACES allowlist' \
+  'contains a comma, which would corrupt the derived K8STON_NAMESPACES allowlist' \
   --set-json 'rbac.extraNamespaces=["a,b"]'
 render_fail "F16 invalid scope with external RBAC" \
   'is not a valid scope' \
-  --set rbac.create=false --set-string 'env.KRYPTON_SCOPE=bogus'
+  --set rbac.create=false --set-string 'env.K8STON_SCOPE=bogus'
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 if [ "$FAIL" -gt 0 ]; then

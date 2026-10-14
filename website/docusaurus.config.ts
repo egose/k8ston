@@ -6,7 +6,7 @@ import npm2yarn from '@docusaurus/remark-plugin-npm2yarn';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Krypton',
+  title: 'K8ston',
   tagline:
     'Kubernetes-native secret manager backed directly by Kubernetes Secret objects. No database, no secret sprawl: SSO login, hybrid authorization, versioned history, and one-click rollbacks.',
   favicon: 'img/favicon.svg',
@@ -17,7 +17,7 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://krypton.pages.dev/',
+  url: 'https://k8ston.pages.dev/',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
@@ -26,7 +26,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'egose', // Usually your GitHub org/user name.
-  projectName: 'krypton', // Usually your repo name.
+  projectName: 'k8ston', // Usually your repo name.
 
   onBrokenLinks: 'throw',
   markdown: {
@@ -63,11 +63,11 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/social-card.png',
     navbar: {
-      title: 'Krypton',
+      title: 'K8ston',
       logo: {
-        alt: 'Krypton logo',
-        src: 'img/krypton-mark.svg',
-        srcDark: 'img/krypton-mark.svg',
+        alt: 'K8ston logo',
+        src: 'img/k8ston-mark.svg',
+        srcDark: 'img/k8ston-mark.svg',
       },
       items: [
         {
@@ -89,7 +89,7 @@ const config: Config = {
           label: 'API',
         },
         {
-          href: 'https://github.com/egose/krypton',
+          href: 'https://github.com/egose/k8ston',
           label: 'GitHub',
           position: 'right',
         },
@@ -109,7 +109,7 @@ const config: Config = {
         {
           title: 'Project',
           items: [
-            { label: 'GitHub', href: 'https://github.com/egose/krypton' },
+            { label: 'GitHub', href: 'https://github.com/egose/k8ston' },
             { label: 'Security Model', to: '/about/security-model/' },
             { label: 'Architecture', to: '/about/architecture/' },
           ],

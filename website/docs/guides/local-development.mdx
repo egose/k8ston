@@ -6,7 +6,7 @@ sidebar_position: 0
 # Local Development
 
 Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster
-(Krypton uses `~/.kube/config` when not running in-cluster).
+(K8ston uses `~/.kube/config` when not running in-cluster).
 
 ## Mock-admin loop (no IdP)
 
@@ -17,8 +17,8 @@ pnpm install
 pnpm dev               # http://localhost:3000
 ```
 
-`AUTH_DISABLED=true` signs every request in as `dev@krypton.local`
-(`krypton-admin` group) — the fastest way to iterate on UI, forms, and K8s
+`AUTH_DISABLED=true` signs every request in as `dev@k8ston.local`
+(`k8ston-admin` group) — the fastest way to iterate on UI, forms, and K8s
 wiring against any cluster your kubeconfig can reach.
 
 ## Real-SSO loop (local app, real IdP)

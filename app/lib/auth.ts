@@ -10,10 +10,10 @@ export interface SessionUser {
   groups: string[];
 }
 
-const SESSION_COOKIE = 'krypton_session';
-const PKCE_COOKIE = 'krypton_pkce';
-const NONCE_COOKIE = 'krypton_nonce';
-const STATE_COOKIE = 'krypton_state';
+const SESSION_COOKIE = 'k8ston_session';
+const PKCE_COOKIE = 'k8ston_pkce';
+const NONCE_COOKIE = 'k8ston_nonce';
+const STATE_COOKIE = 'k8ston_state';
 
 function sessionKey(): Uint8Array {
   // Validate at use time, not module import: the same image can be built
@@ -27,9 +27,9 @@ function sessionKey(): Uint8Array {
 
 export const DEV_USER: SessionUser = {
   sub: 'dev',
-  email: 'dev@krypton.local',
+  email: 'dev@k8ston.local',
   name: 'Local Developer',
-  groups: ['krypton-admin'],
+  groups: ['k8ston-admin'],
 };
 
 // ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
   return new jose.SignJWT({ ...user })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setIssuer('krypton')
+    .setIssuer('k8ston')
     .setExpirationTime(`${config.sessionMaxAgeSec}s`)
     .sign(sessionKey());
 }
@@ -48,7 +48,7 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
 export async function verifySessionToken(token: string): Promise<SessionUser | null> {
   try {
     const { payload } = await jose.jwtVerify(token, sessionKey(), {
-      issuer: 'krypton',
+      issuer: 'k8ston',
       algorithms: ['HS256'],
       requiredClaims: ['sub', 'email', 'iat', 'exp'],
     });

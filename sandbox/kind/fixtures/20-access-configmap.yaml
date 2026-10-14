@@ -1,13 +1,13 @@
 # Namespace-level access fallback. Lives in the app's own namespace
-# (KRYPTON_NAMESPACE=krypton-test in sandbox mode); per-secret annotations
-# override these rules. krypton-test is deliberately absent (open by default).
+# (K8STON_NAMESPACE=k8ston-test in sandbox mode); per-secret annotations
+# override these rules. k8ston-test is deliberately absent (open by default).
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: krypton-access
-  namespace: krypton-test
+  name: k8ston-access
+  namespace: k8ston-test
   labels:
-    app.kubernetes.io/part-of: krypton-sandbox
+    app.kubernetes.io/part-of: k8ston-sandbox
 data:
   access.json: |
     {

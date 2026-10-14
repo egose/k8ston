@@ -184,7 +184,7 @@ const teamAccessSchema = z
   })
   .strict();
 
-/** Namespace-level access rules stored in the krypton-access ConfigMap. */
+/** Namespace-level access rules stored in the k8ston-access ConfigMap. */
 export const namespaceAccessSchema = z.record(
   z.string(),
   z
@@ -217,7 +217,7 @@ export function auditLog(event: {
   console.log(
     JSON.stringify({
       ts: new Date().toISOString(),
-      app: 'krypton',
+      app: 'k8ston',
       ...event,
     }),
   );

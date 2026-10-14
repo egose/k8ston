@@ -50,7 +50,7 @@ describe('inspected-revision binding', () => {
       const uid = ops.find((op) => op.path === '/metadata/uid')?.value;
       const rv = ops.find((op) => op.path === '/metadata/resourceVersion')?.value;
       if (uid !== current.uid || rv !== current.resourceVersion) throw consumerApiError(409);
-      current.annotations['krypton.io/restarted-at'] = 'applied';
+      current.annotations['k8ston.io/restarted-at'] = 'applied';
       return {};
     });
     const result = await restart();
@@ -88,7 +88,7 @@ describe('inspected-revision binding', () => {
       if (ops.find((op) => op.path === '/metadata/resourceVersion')?.value !== current.resourceVersion) {
         throw consumerApiError(409);
       }
-      current.annotations['krypton.io/restarted-at'] = 'applied';
+      current.annotations['k8ston.io/restarted-at'] = 'applied';
       return {};
     });
     const result = await restart();
@@ -195,7 +195,7 @@ describe('inspected-revision binding', () => {
         consumerWorkload('meta-no-ann', { ...consumerTemplate(secretSpec), metadata: { labels: { keep: 'me' } } }),
         consumerWorkload('with-ann', {
           ...consumerTemplate(secretSpec),
-          metadata: { annotations: { existing: 'keep', 'krypton.io/restarted-at': 'old' } },
+          metadata: { annotations: { existing: 'keep', 'k8ston.io/restarted-at': 'old' } },
         }),
       ],
     });
@@ -213,7 +213,7 @@ describe('inspected-revision binding', () => {
       path: '/spec/template/metadata',
       value: {
         annotations: {
-          'krypton.io/restarted-at': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+          'k8ston.io/restarted-at': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
         },
       },
     });
@@ -221,12 +221,12 @@ describe('inspected-revision binding', () => {
       op: 'add',
       path: '/spec/template/metadata/annotations',
       value: {
-        'krypton.io/restarted-at': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        'k8ston.io/restarted-at': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       },
     });
     expect(byName.get('with-ann')![2]).toEqual({
       op: 'add',
-      path: '/spec/template/metadata/annotations/krypton.io~1restarted-at',
+      path: '/spec/template/metadata/annotations/k8ston.io~1restarted-at',
       value: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
     });
   });

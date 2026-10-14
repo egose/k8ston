@@ -13,7 +13,7 @@ Editing a Secret does not automatically update the pods that consume it:
   need a rollout to see new values.
 
 _Restart apps_ finds explicit consumers and **requests a rollout** by patching
-their pod template with a `krypton.io/restarted-at` annotation. An acknowledged
+their pod template with a `k8ston.io/restarted-at` annotation. An acknowledged
 patch does not prove a rollout completed, that pods are healthy, or that an
 application is using the new credential.
 
@@ -21,7 +21,7 @@ application is using the new credential.
 
 Disabled by default (least privilege). Enabling takes **both** steps:
 
-1. Set `KRYPTON_RESTART_ENABLED=true` (or `krypton.restartEnabled: true` in Helm,
+1. Set `K8STON_RESTART_ENABLED=true` (or `k8ston.restartEnabled: true` in Helm,
    which also renders the RBAC rule).
 2. Grant the `apps` rule in `role.yaml` / `clusterrole.yaml` (ships commented out):
 
@@ -39,7 +39,7 @@ ServiceAccount needs impersonation grants and the human needs workload RBAC.
 
 ## What it scans
 
-In the secret's namespace, Krypton inspects Deployments, StatefulSets, and
+In the secret's namespace, K8ston inspects Deployments, StatefulSets, and
 DaemonSets for references to the secret name across:
 
 - `env[].valueFrom.secretKeyRef.name` and `envFrom[].secretRef.name` across normal,
@@ -102,17 +102,17 @@ A conflict or rejected patch means the workload was replaced or edited after
 discovery: inspect its current revision and references, then retry only if the
 rollout is still wanted. A transport failure may follow an applied patch;
 retrying scans all kinds again and can request another rollout for earlier
-successes. Krypton adds no watcher, transaction, or background retry. The cap
+successes. K8ston adds no watcher, transaction, or background retry. The cap
 is per request, not a cluster-wide limit.
 
 ## Trying it in the sandbox
 
-The sandbox sets `KRYPTON_RESTART_ENABLED=true` and ships an `api-server`
+The sandbox sets `K8STON_RESTART_ENABLED=true` and ships an `api-server`
 Deployment consuming `database-credentials` via env and `feature-flags` via volume:
 
 1. Edit `database-credentials` in the UI and hit _Restart apps_.
 2. The UI reports the acknowledged rollout request. Inspect
-   `kubectl rollout status deploy/api-server -n krypton-test` and rollout history
+   `kubectl rollout status deploy/api-server -n k8ston-test` and rollout history
    for progress/revision changes; history alone does not verify env values.
 3. Verify application behavior using the rotated credential without printing it.
 

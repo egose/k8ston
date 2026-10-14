@@ -1,6 +1,6 @@
 dependencies:
-- name: krypton
-  repository: file://../krypton
+- name: k8ston
+  repository: file://../k8ston
   version: 0.1.0
-digest: sha256:36b3b4912afee19750761223f96532d8ed4e5fb50d99f4428570f8787cc5a920
-generated: "2026-10-12T10:37:13.80681936-07:00"
+digest: sha256:ff123eeac90c64f4ad7ddbc03bacbb213a8556d995ceaf74abd2f3f074047292
+generated: "2026-10-13T18:55:30.240760884-07:00"

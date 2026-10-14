@@ -352,7 +352,7 @@ describe('authenticated API cache policy', () => {
     'delete',
     'restart',
   ])('uses no-store for %s success', async (action) => {
-    process.env.KRYPTON_RESTART_ENABLED = 'true';
+    process.env.K8STON_RESTART_ENABLED = 'true';
     const live = nativeSecret({ data: { key: Buffer.from('synthetic').toString('base64') } });
     delete live.metadata!.finalizers;
     const store = await mockHistoryStore([live, boundSnapshot(live, 1)]);
@@ -372,7 +372,7 @@ describe('authenticated API cache policy', () => {
     'uses no-store for unauthenticated %s',
     async (action) => {
       const mock = await mockKubernetes();
-      expect((await cookies()).get('krypton_session')).toBeUndefined();
+      expect((await cookies()).get('k8ston_session')).toBeUndefined();
       const response = await invoke(action);
       expect(response.status).toBe(401);
       expectNoStore(response);

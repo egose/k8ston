@@ -16,7 +16,7 @@ function currentSecret() {
   const live = nativeSecret({ data: { current: 'Y3VycmVudA==' } });
   live.metadata!.resourceVersion = revision;
   live.metadata!.finalizers = [];
-  Object.assign(live.metadata!.annotations!, { 'krypton.io/version': '3', 'krypton.io/allowed-users': user.email });
+  Object.assign(live.metadata!.annotations!, { 'k8ston.io/version': '3', 'k8ston.io/allowed-users': user.email });
   return live;
 }
 
@@ -53,7 +53,7 @@ function changed(live: V1Secret, change: 'data' | 'ACL' | 'UID' | 'UID only') {
   const next = structuredClone(live);
   if (change !== 'UID only') next.metadata!.resourceVersion = 'concurrent-revision';
   if (change === 'data') next.data = { external: 'ZXh0ZXJuYWw=' };
-  if (change === 'ACL') next.metadata!.annotations!['krypton.io/allowed-users'] = 'other-owner@example.test';
+  if (change === 'ACL') next.metadata!.annotations!['k8ston.io/allowed-users'] = 'other-owner@example.test';
   if (change === 'UID' || change === 'UID only') next.metadata!.uid = 'replacement-uid';
   return next;
 }

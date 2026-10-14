@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     console.log(
       JSON.stringify({
         ts: new Date().toISOString(),
-        app: 'krypton',
+        app: 'k8ston',
         action: 'auth.login',
         user: user.email,
         result: 'allow',
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     console.error(
       JSON.stringify({
         ts: new Date().toISOString(),
-        app: 'krypton',
+        app: 'k8ston',
         action: 'auth.callback',
         result: 'error',
         ...details,

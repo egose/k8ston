@@ -19,7 +19,7 @@ export const IMMUTABLE_EDIT_GUIDANCE =
 
 export function unsupportedSecretTypeReason(type: string): string | null {
   return type === 'kubernetes.io/service-account-token'
-    ? 'Service-account token Secrets are controller-owned. Krypton cannot create, update, or restore them. Use the Kubernetes TokenRequest API or the service-account controller to manage tokens.'
+    ? 'Service-account token Secrets are controller-owned. K8ston cannot create, update, or restore them. Use the Kubernetes TokenRequest API or the service-account controller to manage tokens.'
     : null;
 }
 

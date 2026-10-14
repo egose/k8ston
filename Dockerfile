@@ -1,6 +1,6 @@
-# Production image for the Krypton Next.js app (secret manager UI + API).
-# Context: repository root (pnpm workspace). Produces ghcr.io/egose/krypton:<tag>.
-# Run: docker build -t krypton:sandbox -f Dockerfile .
+# Production image for the K8ston Next.js app (secret manager UI + API).
+# Context: repository root (pnpm workspace). Produces ghcr.io/egose/k8ston:<tag>.
+# Run: docker build -t k8ston:sandbox -f Dockerfile .
 # Matches app/k8s/deployment.yaml: PORT 3000, USER 65532, readOnlyRootFilesystem.
 FROM node:22.22.0-alpine3.23 AS build
 RUN corepack enable && corepack prepare pnpm@11.24.0 --activate

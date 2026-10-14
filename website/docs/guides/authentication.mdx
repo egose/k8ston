@@ -12,13 +12,13 @@ the app's ServiceAccount executes the K8s calls.
 ## How login works
 
 ```text
-Browser ──GET /api/auth/login──▶ Krypton ──discovery──▶ OIDC issuer
+Browser ──GET /api/auth/login──▶ K8ston ──discovery──▶ OIDC issuer
    │                                  │ PKCE + nonce + state cookies
    │◀──────── redirect to IdP ────────┘
    │── user authenticates ──▶ IdP ──code──▶ /api/auth/callback
                                                    │ code exchange, claim mapping
                                                    ▼
-                                          krypton_session cookie (HS256 JWT, 8h)
+                                          k8ston_session cookie (HS256 JWT, 8h)
 ```
 
 1. `GET /api/auth/login` builds the authorization URL (PKCE `S256`, nonce,
@@ -35,7 +35,7 @@ Browser ──GET /api/auth/login──▶ Krypton ──discovery──▶ OIDC
 See the [Auth API](/api/auth/) for exact shapes.
 
 An incomplete or failed transaction requires a new login. The IdP enforces
-single-use authorization codes; Krypton keeps no server-side transaction store.
+single-use authorization codes; K8ston keeps no server-side transaction store.
 When UserInfo is available, its `sub` must match the validated ID-token `sub`
 before any claims are merged. A subject mismatch rejects login. Providers with
 no UserInfo endpoint, or unavailable optional UserInfo, can still authenticate
@@ -55,7 +55,7 @@ sessions; users sign in again. Key validation happens when auth is used, allowin
 builds without runtime secrets and explicit `AUTH_DISABLED=true` local bypass
 without a JWT.
 
-Only HS256 session JWTs with issuer `krypton`, nonempty string `sub` and `email`,
+Only HS256 session JWTs with issuer `k8ston`, nonempty string `sub` and `email`,
 numeric `iat`/`exp`, and an unexpired lifetime are accepted. Future-issued sessions
 and malformed name/group claims are rejected. Omitted names and groups keep the
 email/empty-list defaults.
@@ -97,7 +97,7 @@ provider claims.
 
 ## Dev bypass and headless sessions
 
-- `AUTH_DISABLED=true` returns a mock admin (`dev@krypton.local`) for every
+- `AUTH_DISABLED=true` returns a mock admin (`dev@k8ston.local`) for every
   request; login redirects to `/` without minting a session token or requiring
   a signing key. Local development only — assert `authDisabled: false` via
   [`GET /api/config`](/api/config/) in real environments.
@@ -106,5 +106,5 @@ provider claims.
 
 ```bash
 ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)
-curl --cookie "krypton_session=$ALICE" localhost:3000/api/auth/me
+curl --cookie "k8ston_session=$ALICE" localhost:3000/api/auth/me
 ```

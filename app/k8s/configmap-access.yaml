@@ -1,15 +1,15 @@
 # Namespace-level ownership fallback for SSO users that have no cluster identity.
-# Per-secret annotations (krypton.io/allowed-groups / allowed-users) override these.
+# Per-secret annotations (k8ston.io/allowed-groups / allowed-users) override these.
 # Namespace groups/users see ALL secrets; team members see only their team's
-# secrets (krypton.io/team annotation; unassigned uses namespace rules only).
+# secrets (k8ston.io/team annotation; unassigned uses namespace rules only).
 # Namespaces absent from this map are open to all authenticated users until restricted.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: krypton-access
-  namespace: krypton
+  name: k8ston-access
+  namespace: k8ston
   labels:
-    app.kubernetes.io/name: krypton
+    app.kubernetes.io/name: k8ston
 data:
   access.json: |
     {

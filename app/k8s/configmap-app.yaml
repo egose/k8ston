@@ -1,29 +1,29 @@
-# Non-sensitive Krypton configuration. Secrets (OIDC client secret,
-# session key) go in the krypton-oidc Secret — see the README.
+# Non-sensitive K8ston configuration. Secrets (OIDC client secret,
+# session key) go in the k8ston-oidc Secret — see the README.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: krypton-config
-  namespace: krypton
+  name: k8ston-config
+  namespace: k8ston
   labels:
-    app.kubernetes.io/name: krypton
+    app.kubernetes.io/name: k8ston
 data:
-  KRYPTON_SCOPE: namespace   # or 'cluster' with clusterrole.yaml applied
-  KRYPTON_NAMESPACES: '' # comma allowlist for cluster scope; empty = all
-  KRYPTON_HISTORY_LIMIT: '20'
-  KRYPTON_MANAGED_ONLY: 'true' # hide secrets without krypton.io/managed-by=krypton (excluded from lists, 404 on access)
-  KRYPTON_ETCD_ENCRYPTED: 'false' # set true once apiserver encryption (aescbc) is on
-  KRYPTON_IMPERSONATION: 'false' # true only if the API server trusts the same OIDC issuer
-  KRYPTON_RESTART_ENABLED: 'false' # set true to enable "Restart apps" (button + API); then also uncomment the apps rule in role.yaml
-  KRYPTON_ADMIN_GROUPS: krypton-admin
-  KRYPTON_ADMIN_USERS: ''
-  KRYPTON_ANNOTATION_PREFIX: krypton.io
-  KRYPTON_ACCESS_CONFIGMAP: krypton-access
+  K8STON_SCOPE: namespace   # or 'cluster' with clusterrole.yaml applied
+  K8STON_NAMESPACES: '' # comma allowlist for cluster scope; empty = all
+  K8STON_HISTORY_LIMIT: '20'
+  K8STON_MANAGED_ONLY: 'true' # hide secrets without k8ston.io/managed-by=k8ston (excluded from lists, 404 on access)
+  K8STON_ETCD_ENCRYPTED: 'false' # set true once apiserver encryption (aescbc) is on
+  K8STON_IMPERSONATION: 'false' # true only if the API server trusts the same OIDC issuer
+  K8STON_RESTART_ENABLED: 'false' # set true to enable "Restart apps" (button + API); then also uncomment the apps rule in role.yaml
+  K8STON_ADMIN_GROUPS: k8ston-admin
+  K8STON_ADMIN_USERS: ''
+  K8STON_ANNOTATION_PREFIX: k8ston.io
+  K8STON_ACCESS_CONFIGMAP: k8ston-access
   OIDC_ISSUER: https://keycloak.example.com/realms/company
   OIDC_ALLOW_HTTP: 'false'
-  OIDC_CLIENT_ID: krypton
+  OIDC_CLIENT_ID: k8ston
   OIDC_SCOPES: openid profile email groups
   OIDC_GROUPS_CLAIM: groups
   OIDC_USERNAME_CLAIM: email
   OIDC_NAME_CLAIM: name
-  NEXT_PUBLIC_APP_URL: https://krypton.example.com
+  NEXT_PUBLIC_APP_URL: https://k8ston.example.com

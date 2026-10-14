@@ -184,7 +184,7 @@ describe('complete bounded Kubernetes collections', () => {
 
 describe('namespace scopes and own-property policy', () => {
   it('resolves/checks a configured allowlist without any Kubernetes client or namespace request', async () => {
-    Object.assign(process.env, { KRYPTON_SCOPE: 'cluster', KRYPTON_NAMESPACES: 'unit-test, constructor, unit-test' });
+    Object.assign(process.env, { K8STON_SCOPE: 'cluster', K8STON_NAMESPACES: 'unit-test, constructor, unit-test' });
     const mock = await mockKubernetes();
     const { listAllowedNamespaces, assertNamespaceAllowed } = await import('@/lib/namespaces');
     expect(await listAllowedNamespaces(dataUser)).toEqual(['constructor', 'unit-test']);
@@ -195,7 +195,7 @@ describe('namespace scopes and own-property policy', () => {
   });
 
   it('keeps own-namespace scope ahead of a configured cluster allowlist', async () => {
-    process.env.KRYPTON_NAMESPACES = 'outside';
+    process.env.K8STON_NAMESPACES = 'outside';
     const mock = await mockKubernetes();
     const { listAllowedNamespaces, assertNamespaceAllowed } = await import('@/lib/namespaces');
     expect(await listAllowedNamespaces(dataUser)).toEqual(['unit-test']);
@@ -204,7 +204,7 @@ describe('namespace scopes and own-property policy', () => {
   });
 
   it('lists unrestricted cluster namespaces completely, carrying the same request options on every page', async () => {
-    Object.assign(process.env, { KRYPTON_SCOPE: 'cluster', KRYPTON_IMPERSONATION: 'true' });
+    Object.assign(process.env, { K8STON_SCOPE: 'cluster', K8STON_IMPERSONATION: 'true' });
     const mock = await mockKubernetes();
     mock.core.listNamespace
       .mockResolvedValueOnce({ items: [{ metadata: { name: 'z' } }], metadata: { _continue: 'next' } })
@@ -218,7 +218,7 @@ describe('namespace scopes and own-property policy', () => {
   });
 
   it('does not replace failed unrestricted discovery with a successful own-namespace subset', async () => {
-    process.env.KRYPTON_SCOPE = 'cluster';
+    process.env.K8STON_SCOPE = 'cluster';
     const mock = await mockKubernetes();
     mock.core.listNamespace
       .mockResolvedValueOnce({ items: [{ metadata: { name: 'a' } }], metadata: { _continue: 'next' } })
@@ -264,14 +264,14 @@ describe('namespace scopes and own-property policy', () => {
 
 function historyLive(version: number): V1Secret {
   const live = nativeSecret();
-  live.metadata!.annotations!['krypton.io/version'] = String(version);
+  live.metadata!.annotations!['k8ston.io/version'] = String(version);
   live.metadata!.resourceVersion = `live-${version}`;
   return live;
 }
 
 describe('UID-bound history and workload callers', () => {
   it('uses complete UID-scoped pages for list, raw restore lookup, deletion, and final cleanup confirmation', async () => {
-    process.env.KRYPTON_IMPERSONATION = 'true';
+    process.env.K8STON_IMPERSONATION = 'true';
     const live = historyLive(206);
     const snapshots = Array.from({ length: 205 }, (_, i) => boundSnapshot(historyLive(i + 1), i + 1));
     const store = await mockHistoryStore(snapshots);
@@ -290,7 +290,7 @@ describe('UID-bound history and workload callers', () => {
       expect(args).toMatchObject({
         namespace: 'unit-test',
         limit: 100,
-        labelSelector: `krypton.io/source-uid=${historyHash(live.metadata!.uid!)},krypton.io/kind=history`,
+        labelSelector: `k8ston.io/source-uid=${historyHash(live.metadata!.uid!)},k8ston.io/kind=history`,
       });
       expect(opts?.httpApi).toBeDefined();
     }
@@ -298,7 +298,7 @@ describe('UID-bound history and workload callers', () => {
   });
 
   it('prunes beyond the first page using metadata and keeps the newest configured 100', async () => {
-    Object.assign(process.env, { KRYPTON_HISTORY_LIMIT: '100', KRYPTON_IMPERSONATION: 'true' });
+    Object.assign(process.env, { K8STON_HISTORY_LIMIT: '100', K8STON_IMPERSONATION: 'true' });
     const live = historyLive(150);
     const store = await mockHistoryStore(
       Array.from({ length: 149 }, (_, i) => boundSnapshot(historyLive(i + 1), i + 1)),
@@ -337,7 +337,7 @@ describe('UID-bound history and workload callers', () => {
   );
 
   it('keeps complete per-kind workload pages and per-user list/patch options', async () => {
-    process.env.KRYPTON_IMPERSONATION = 'true';
+    process.env.K8STON_IMPERSONATION = 'true';
     const mock = await mockConsumers();
     for (const list of [mock.apps.listNamespacedDeployment, mock.apps.listNamespacedDaemonSet]) {
       list

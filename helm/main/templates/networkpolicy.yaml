@@ -14,16 +14,16 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "_.fullname" . }}-krypton-ingress
+  name: {{ include "_.fullname" . }}-k8ston-ingress
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: {{ .Values.krypton.nameOverride | default "krypton" }}
+      app.kubernetes.io/name: {{ .Values.k8ston.nameOverride | default "k8ston" }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   ingress:
     - ports:
         - protocol: TCP
-          port: {{ dig "service" "port" 3000 .Values.krypton }}
+          port: {{ dig "service" "port" 3000 .Values.k8ston }}
       from:
         {{- if .Values.networkPolicy.allowSameNamespace }}
         - podSelector:
@@ -35,7 +35,7 @@ spec:
             matchLabels:
               network.openshift.io/policy-group: ingress
         {{- end }}
-        {{- with .Values.networkPolicy.krypton.ingressFrom }}
+        {{- with .Values.networkPolicy.k8ston.ingressFrom }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
   policyTypes:
@@ -44,11 +44,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "_.fullname" . }}-krypton-egress
+  name: {{ include "_.fullname" . }}-k8ston-egress
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: {{ .Values.krypton.nameOverride | default "krypton" }}
+      app.kubernetes.io/name: {{ .Values.k8ston.nameOverride | default "k8ston" }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   egress:
     - to:
@@ -61,7 +61,7 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    {{- if .Values.networkPolicy.krypton.allowKubeApiEgress }}
+    {{- if .Values.networkPolicy.k8ston.allowKubeApiEgress }}
     # Kubernetes API server (https://kubernetes.default.svc ClusterIP, not
     # pod-selectable). Set allowKubeApiEgress: false and use extraEgress with
     # the API server CIDRs for tighter rules.
@@ -71,12 +71,12 @@ spec:
         - ipBlock:
             cidr: ::/0
       ports:
-        {{- range .Values.networkPolicy.krypton.kubeApiPorts }}
+        {{- range .Values.networkPolicy.k8ston.kubeApiPorts }}
         - protocol: TCP
           port: {{ . }}
         {{- end }}
     {{- end }}
-    {{- range .Values.networkPolicy.krypton.idpEgressIpBlocks }}
+    {{- range .Values.networkPolicy.k8ston.idpEgressIpBlocks }}
     - to:
         - ipBlock:
             {{- toYaml . | nindent 12 }}
@@ -84,7 +84,7 @@ spec:
         - protocol: TCP
           port: 443
     {{- end }}
-    {{- with .Values.networkPolicy.krypton.extraEgress }}
+    {{- with .Values.networkPolicy.k8ston.extraEgress }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
   policyTypes:

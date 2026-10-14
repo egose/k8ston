@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: help up down destroy reset logs logs-follow ps kind-up kind-down seed verify-sandbox
 
 COMPOSE := docker compose -f ./sandbox/docker-compose.yml
-KIND_CLUSTER ?= krypton-sandbox
+KIND_CLUSTER ?= k8ston-sandbox
 KIND_CONTEXT := kind-$(KIND_CLUSTER)
 
 help: ## Show this help

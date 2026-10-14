@@ -4,10 +4,10 @@ import { headerValues, loopbackKubernetes, SERVICE_TOKEN } from './helpers/kuber
 
 const alice = { sub: 'alice-id', email: 'alice@example.test', name: 'Alice', groups: ['developers', 'operators'] };
 const secretRequest = { namespace: 'unit-test', name: 'credentials' };
-const patch = { spec: { template: { metadata: { annotations: { 'krypton.io/restarted-at': 'synthetic-time' } } } } };
+const patch = { spec: { template: { metadata: { annotations: { 'k8ston.io/restarted-at': 'synthetic-time' } } } } };
 
 beforeEach(() => {
-  process.env.KRYPTON_IMPERSONATION = 'true';
+  process.env.K8STON_IMPERSONATION = 'true';
   vi.stubEnv('NODE_TLS_REJECT_UNAUTHORIZED', '1');
 });
 afterEach(() => {
@@ -55,7 +55,7 @@ describe('generated SDK transport at the outbound wire boundary', () => {
       server.apps.patchNamespacedDeployment({ namespace: 'unit-test', name: 'alice', body: patch }, aliceOptions),
       server.apps.patchNamespacedDeployment({ namespace: 'unit-test', name: 'bob', body: patch }, bobOptions),
     ]);
-    await server.core.readNamespacedConfigMap({ namespace: 'unit-test', name: 'krypton-access' });
+    await server.core.readNamespacedConfigMap({ namespace: 'unit-test', name: 'k8ston-access' });
     expect(server.requests).toHaveLength(3);
     for (const user of [alice, bob]) {
       const request = server.requests.find((req) => req.url.endsWith(`/${user === alice ? 'alice' : 'bob'}`))!;
@@ -151,7 +151,7 @@ describe('explicit service-identity modes', () => {
   ])(
     '$mode retains ServiceAccount auth and patch content type without impersonation',
     async ({ impersonation, authDisabled, user }) => {
-      process.env.KRYPTON_IMPERSONATION = String(impersonation);
+      process.env.K8STON_IMPERSONATION = String(impersonation);
       process.env.AUTH_DISABLED = String(authDisabled);
       const { requestOptions, patchOptions } = await import('@/lib/k8s');
       const server = await loopbackKubernetes();

@@ -32,7 +32,7 @@ GET /api/auth/callback?code=…&state=…
 ```
 
 Exchanges the code, maps claims (`email` identity, `groups` authz input,
-`name` display), sets the `krypton_session` cookie (`HttpOnly`,
+`name` display), sets the `k8ston_session` cookie (`HttpOnly`,
 `Secure` in production, `SameSite=Lax`, 8h default), and redirects to `/`.
 
 All state, nonce, and PKCE cookies must be present and nonempty before any token

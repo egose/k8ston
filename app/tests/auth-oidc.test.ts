@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TEST_APP_URL, TEST_ISSUER } from './helpers/environment';
 import { createOidcProvider, IDENTITY } from './helpers/oidc';
 
-const transactionCookies = ['krypton_state', 'krypton_nonce', 'krypton_pkce'];
+const transactionCookies = ['k8ston_state', 'k8ston_nonce', 'k8ston_pkce'];
 let provider: ReturnType<typeof createOidcProvider>;
 
 beforeEach(() => {
@@ -125,7 +125,7 @@ describe('OIDC transactions', () => {
 
   it("cannot exchange a code using another transaction's PKCE verifier", async () => {
     const { auth, callback } = await startLogin();
-    (await cookies()).set('krypton_pkce', 'another-valid-length-verifier-from-a-different-transaction');
+    (await cookies()).set('k8ston_pkce', 'another-valid-length-verifier-from-a-different-transaction');
     await expect(auth.handleOidcCallback(callback)).rejects.toThrow();
     expect(provider.tokenRequests).toHaveLength(1);
     expect(provider.userInfoRequests).toBe(0);
@@ -176,7 +176,7 @@ describe('OIDC identity and group mapping', () => {
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(`${TEST_APP_URL}/`);
     expect(response.headers.get('cache-control')).toBe('no-store');
-    const token = (await cookies()).get('krypton_session')?.value;
+    const token = (await cookies()).get('k8ston_session')?.value;
     expect(token).toBeDefined();
     expect(await auth.verifySessionToken(token!)).toEqual({ ...IDENTITY, email: IDENTITY.email.toLowerCase() });
     await expectConsumed();
@@ -189,7 +189,7 @@ describe('OIDC identity and group mapping', () => {
     const { GET } = await import('@/app/api/auth/callback/route');
     const response = await GET(new Request(callback));
     expect(response.headers.get('location')).toBe(`${TEST_APP_URL}/login?auth=error`);
-    expect((await cookies()).get('krypton_session')).toBeUndefined();
+    expect((await cookies()).get('k8ston_session')).toBeUndefined();
     expect(JSON.stringify(log.mock.calls)).not.toMatch(
       /other-subject|admin@example\.test|unit-test-admins|synthetic-access-token/,
     );

@@ -207,7 +207,7 @@ it('patches each kind once per workload despite multiple references and duplicat
           path: '/spec/template/metadata',
           value: {
             annotations: {
-              'krypton.io/restarted-at': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+              'k8ston.io/restarted-at': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
             },
           },
         },

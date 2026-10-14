@@ -9,7 +9,7 @@ type Ctx = RouteContext<'/api/namespaces/[namespace]/secrets/[name]/restart-cons
 
 /**
  * Request pod-template rollouts; completion/readiness/credential uptake is not checked.
- * Disabled entirely when KRYPTON_RESTART_ENABLED=false (403).
+ * Disabled entirely when K8STON_RESTART_ENABLED=false (403).
  */
 export async function POST(_req: Request, ctx: Ctx) {
   try {

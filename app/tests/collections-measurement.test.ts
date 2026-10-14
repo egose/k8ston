@@ -8,7 +8,7 @@ import { dataUser, nativeSecret } from './helpers/secret-data';
 
 /** Deterministic byte/request comparison, deliberately no timing/speed assertion. */
 it('measures transferred synthetic JSON for the original full list versus history-excluding pages', async () => {
-  Object.assign(process.env, { KRYPTON_SCOPE: 'cluster', KRYPTON_NAMESPACES: 'unit-test' });
+  Object.assign(process.env, { K8STON_SCOPE: 'cluster', K8STON_NAMESPACES: 'unit-test' });
   const mock = await mockKubernetes();
   const objects: V1Secret[] = [];
   const payload = Buffer.from('synthetic-configuration-line=fixture-only\n'.repeat(220)).subarray(0, 8192);
@@ -23,7 +23,7 @@ it('measures transferred synthetic JSON for the original full list versus histor
     live.metadata!.name = `application-${String(i).padStart(3, '0')}-credentials`;
     live.metadata!.uid = `synthetic-source-${i}`;
     live.metadata!.resourceVersion = `revision-${i}-21`;
-    live.metadata!.annotations!['krypton.io/version'] = '21';
+    live.metadata!.annotations!['k8ston.io/version'] = '21';
     objects.push(live);
     for (let version = 1; version <= 20; version++) {
       const source = { ...live, metadata: { ...live.metadata, resourceVersion: `revision-${i}-${version}` } };
@@ -36,10 +36,10 @@ it('measures transferred synthetic JSON for the original full list versus histor
     // No access policy ConfigMap in this fixture: the teams lookup 404s (open),
     // like a cluster without namespace restrictions. Not a secrets page.
     if (url.pathname.includes('/configmaps/')) {
-      return { status: 404, body: { kind: 'Status', code: 404, message: 'configmaps "krypton-access" not found' } };
+      return { status: 404, body: { kind: 'Status', code: 404, message: 'configmaps "k8ston-access" not found' } };
     }
     const selected = url.searchParams.has('labelSelector')
-      ? objects.filter((secret) => secret.metadata?.labels?.['krypton.io/kind'] !== 'history')
+      ? objects.filter((secret) => secret.metadata?.labels?.['k8ston.io/kind'] !== 'history')
       : objects;
     const start = Number(url.searchParams.get('continue') ?? '0');
     const end = start + Number(url.searchParams.get('limit') ?? selected.length);

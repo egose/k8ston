@@ -7,7 +7,7 @@ import CodeBlock from '@theme/CodeBlock';
 
 # Deploy with Helm
 
-The `helm/main` chart deploys Krypton via the `helm/krypton` subchart, with
+The `helm/main` chart deploys K8ston via the `helm/k8ston` subchart, with
 templated RBAC scope, restart wiring, access config, and NetworkPolicy.
 
 ## Minimal values
@@ -21,7 +21,7 @@ import HelmValues from '!!raw-loader!../../.samples/values-helm.yaml';
 Create the referenced Secret out-of-band (never commit values):
 
 ```bash
-kubectl create secret generic krypton-oidc -n krypton \
+kubectl create secret generic k8ston-oidc -n k8ston \
   --from-literal=OIDC_CLIENT_SECRET='...' \
   --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
 ```
@@ -30,14 +30,14 @@ kubectl create secret generic krypton-oidc -n krypton \
 
 | Value                         | Purpose                                                                 |
 | ----------------------------- | ----------------------------------------------------------------------- |
-| `krypton.env`                     | Non-secret Krypton config (full reference: `app/.env.example`)          |
-| `krypton.envSecretName`           | K8s Secret with `OIDC_CLIENT_SECRET` + `SESSION_SECRET`                 |
-| `krypton.rbac.scope`              | `namespace` (default) or `cluster` — the chart derives `KRYPTON_SCOPE` from it (explicit entries must match) |
-| `krypton.rbac.extraNamespaces`    | Curated extra namespaces (namespace scope): Roles plus a derived `KRYPTON_NAMESPACES` allowlist, no ClusterRole |
-| `krypton.restartEnabled`          | Single effective value wiring `KRYPTON_RESTART_ENABLED` **and** the `apps` RBAC rule together |
-| `krypton.accessConfig.enabled`    | Renders the access ConfigMap **and** derives `KRYPTON_ACCESS_CONFIGMAP` from its name (`access.json` key) |
-| `krypton.replicaCount`            | Stateless — more than one replica is always safe (default 2)            |
-| `krypton.ingress.enabled` / `route.enabled` / `httpRoute.enabled` | Expose via Ingress / OpenShift Route / Gateway API HTTPRoute |
+| `k8ston.env`                     | Non-secret K8ston config (full reference: `app/.env.example`)          |
+| `k8ston.envSecretName`           | K8s Secret with `OIDC_CLIENT_SECRET` + `SESSION_SECRET`                 |
+| `k8ston.rbac.scope`              | `namespace` (default) or `cluster` — the chart derives `K8STON_SCOPE` from it (explicit entries must match) |
+| `k8ston.rbac.extraNamespaces`    | Curated extra namespaces (namespace scope): Roles plus a derived `K8STON_NAMESPACES` allowlist, no ClusterRole |
+| `k8ston.restartEnabled`          | Single effective value wiring `K8STON_RESTART_ENABLED` **and** the `apps` RBAC rule together |
+| `k8ston.accessConfig.enabled`    | Renders the access ConfigMap **and** derives `K8STON_ACCESS_CONFIGMAP` from its name (`access.json` key) |
+| `k8ston.replicaCount`            | Stateless — more than one replica is always safe (default 2)            |
+| `k8ston.ingress.enabled` / `route.enabled` / `httpRoute.enabled` | Expose via Ingress / OpenShift Route / Gateway API HTTPRoute |
 | `networkPolicy.enabled`       | Locks down pod traffic (DNS + K8s API egress allowed)                   |
 | `networkPolicy.allowOpenShiftIngress` | **Must be `true` on OpenShift** (routes arrive from `openshift-ingress`) |
 
@@ -46,44 +46,44 @@ for fuller examples, including topology spread and IdP egress CIDRs.
 
 ## RBAC scope
 
-One effective configuration (`krypton.effectiveConfig` in the subchart) derives
+One effective configuration (`k8ston.effectiveConfig` in the subchart) derives
 the chart-managed runtime env from the RBAC/feature values, so the rendered
 Deployment env, Role/ClusterRole scope, subjects, and `apps` permissions always
-agree. Local `krypton.env` wins over `global.env` per key. Omit the managed keys
-(`KRYPTON_SCOPE`, `KRYPTON_NAMESPACES`, `KRYPTON_RESTART_ENABLED`,
-`KRYPTON_ACCESS_CONFIGMAP`) to use the derived defaults; an explicit entry must
+agree. Local `k8ston.env` wins over `global.env` per key. Omit the managed keys
+(`K8STON_SCOPE`, `K8STON_NAMESPACES`, `K8STON_RESTART_ENABLED`,
+`K8STON_ACCESS_CONFIGMAP`) to use the derived defaults; an explicit entry must
 equal the derived effective value, otherwise rendering fails with actionable
 guidance instead of deploying disagreeing runtime/RBAC behavior.
 
 - `namespace`: own namespace only (least privilege, the default). The chart
-  derives `KRYPTON_SCOPE=namespace` and renders a Role + RoleBinding.
-- `namespace` + `krypton.rbac.extraNamespaces: [team-a]`: curated
+  derives `K8STON_SCOPE=namespace` and renders a Role + RoleBinding.
+- `namespace` + `k8ston.rbac.extraNamespaces: [team-a]`: curated
   multi-namespace access. The chart renders a Role + RoleBinding pair per entry
   (subject stays this release's ServiceAccount) and derives
-  `KRYPTON_SCOPE=cluster` with the bounded allowlist
-  `KRYPTON_NAMESPACES=<release-namespace>,team-a` — served by these namespaced
+  `K8STON_SCOPE=cluster` with the bounded allowlist
+  `K8STON_NAMESPACES=<release-namespace>,team-a` — served by these namespaced
   Roles only, no ClusterRole is rendered. Previously the extra Roles were
   unusable because the namespace runtime scope only exposed the pod namespace.
-- `cluster`: centralized dashboard (`KRYPTON_SCOPE=cluster`); narrow with
-  `KRYPTON_NAMESPACES="team-a,team-b"` in `krypton.env`. `extraNamespaces` is
+- `cluster`: centralized dashboard (`K8STON_SCOPE=cluster`); narrow with
+  `K8STON_NAMESPACES="team-a,team-b"` in `k8ston.env`. `extraNamespaces` is
   rejected with cluster scope.
-- `rbac.create: false`: RBAC is managed out-of-band. Set `KRYPTON_SCOPE` /
-  `KRYPTON_NAMESPACES` in `krypton.env` yourself to match your external grants
+- `rbac.create: false`: RBAC is managed out-of-band. Set `K8STON_SCOPE` /
+  `K8STON_NAMESPACES` in `k8ston.env` yourself to match your external grants
   (`rbac.scope`/`extraNamespaces` are then ignored), and grant the `apps`
-  permissions yourself to match `krypton.restartEnabled`.
+  permissions yourself to match `k8ston.restartEnabled`.
 
 ## Restart + access config in one place
 
 Unlike the raw manifests (where the flag and the RBAC rule are separate manual
-steps), the chart wires them together: `krypton.restartEnabled` is the single
-effective value driving **both** the `KRYPTON_RESTART_ENABLED` runtime flag
+steps), the chart wires them together: `k8ston.restartEnabled` is the single
+effective value driving **both** the `K8STON_RESTART_ENABLED` runtime flag
 **and** the `apps` RBAC rule (an explicit env entry must parse to the same
 value — runtime truthy strings are `1/true/yes/on` — or rendering fails).
-Similarly, `krypton.accessConfig.enabled` renders the namespace fallback
+Similarly, `k8ston.accessConfig.enabled` renders the namespace fallback
 ConfigMap instead of applying `app/k8s/configmap-access.yaml` by hand, **and**
-derives `KRYPTON_ACCESS_CONFIGMAP` from `accessConfig.name` so the runtime
+derives `K8STON_ACCESS_CONFIGMAP` from `accessConfig.name` so the runtime
 policy reader finds it. The key must stay `access.json` (hardcoded by the
-reader); with `accessConfig.enabled: false`, point `KRYPTON_ACCESS_CONFIGMAP`
+reader); with `accessConfig.enabled: false`, point `K8STON_ACCESS_CONFIGMAP`
 at an externally managed ConfigMap. Each namespace entry accepts `groups`,
 `users`, and an optional `teams` array (see
 [Authorization](/guides/authorization/#teams)); deploy the app before adding
@@ -97,7 +97,7 @@ not set managed keys (they render last and would shadow the derived values).
 - Egress to the Kubernetes API (`https://kubernetes.default.svc`, a ClusterIP)
   is allowed on ports 443/6443 via `allowKubeApiEgress`.
 - Standard NetworkPolicy cannot match DNS names: add your IdP's CIDR ranges
-  under `networkPolicy.krypton.idpEgressIpBlocks` when you tighten API egress.
+  under `networkPolicy.k8ston.idpEgressIpBlocks` when you tighten API egress.
 - On OpenShift, `allowOpenShiftIngress` must be `true` or all ingress is denied.
 
 ## Installing with the chart Makefile
@@ -108,28 +108,28 @@ shape; never commit real ones):
 
 ```bash
 cd helm/main
-make upgrade NAMESPACE=krypton IMAGE_TAG=0.1.0   # helm dependency update + upgrade --install
-make lint NAMESPACE=krypton IMAGE_TAG=0.1.0      # render + validate
-make template NAMESPACE=krypton IMAGE_TAG=0.1.0  # render to template.yaml
+make upgrade NAMESPACE=k8ston IMAGE_TAG=0.1.0   # helm dependency update + upgrade --install
+make lint NAMESPACE=k8ston IMAGE_TAG=0.1.0      # render + validate
+make template NAMESPACE=k8ston IMAGE_TAG=0.1.0  # render to template.yaml
 ```
 
-The packaged subchart (`helm/main/charts/krypton-0.1.0.tgz`) is refreshed by the
+The packaged subchart (`helm/main/charts/k8ston-0.1.0.tgz`) is refreshed by the
 `helm-dep` step (`helm dependency update`) before every install, upgrade, lint,
 and template run.
 
 ## OCI chart releases
 
-Every `v*.*.*` tag publishes the `helm/krypton` chart to
-`oci://ghcr.io/egose/charts/krypton` (see the _Publish Helm chart_ workflow).
+Every `v*.*.*` tag publishes the `helm/k8ston` chart to
+`oci://ghcr.io/egose/charts/k8ston` (see the _Publish Helm chart_ workflow).
 Chart `version` and `appVersion` are both set from the release tag, so chart
-`1.2.3` deploys app `1.2.3` (`ghcr.io/egose/krypton:1.2.3` by default —
+`1.2.3` deploys app `1.2.3` (`ghcr.io/egose/k8ston:1.2.3` by default —
 override with `image.tag`).
 
 Install it directly, without the umbrella chart:
 
 ```bash
-helm install krypton oci://ghcr.io/egose/charts/krypton --version 1.2.3 \
-  --namespace krypton --create-namespace
+helm install k8ston oci://ghcr.io/egose/charts/k8ston --version 1.2.3 \
+  --namespace k8ston --create-namespace
 ```
 
 Or consume it as a dependency (`helm registry login ghcr.io` first if the
@@ -138,20 +138,20 @@ package is private):
 ```yaml
 # Chart.yaml
 dependencies:
-  - name: krypton
+  - name: k8ston
     version: '1.2.3'
     repository: oci://ghcr.io/egose/charts
 ```
 
 ```yaml
 # values.yaml
-krypton:
+k8ston:
   enabled: true
   env:
-    KRYPTON_SCOPE: namespace
+    K8STON_SCOPE: namespace
 ```
 
-See `helm/krypton/README.md` for the full values reference (image, exposure,
+See `helm/k8ston/README.md` for the full values reference (image, exposure,
 autoscaling, PDB, security contexts, extra volumes).
 
 ## Exposure and health
@@ -162,7 +162,7 @@ autoscaling, PDB, security contexts, extra volumes).
   K8s/OIDC-free, so it is safe to probe (the raw manifests in `app/k8s/`
   probe the same endpoint).
 - The ServiceAccount token **must** stay auto-mounted
-  (`serviceAccount.automount: true`) — Krypton talks to the Kubernetes API
+  (`serviceAccount.automount: true`) — K8ston talks to the Kubernetes API
   with its own token.
 
 ## Chart CI
@@ -171,7 +171,7 @@ The _Helm_ workflow lints both charts and templates them on every `helm/**`
 change, including a full-flag matrix for the subchart (cluster scope,
 restart, ingress + route + HTTPRoute, access config, autoscaling, PDB,
 external ServiceAccount) and both umbrella example values files. It also runs
-the rendered-object regressions in `helm/krypton/tests/render-regressions.sh`
+the rendered-object regressions in `helm/k8ston/tests/render-regressions.sh`
 (default, cluster, curated namespaces, local/global conflicts, false
 overrides, external RBAC, custom access config, and every contradiction
 error). Run the same locally with `helm lint` / `helm template` and the

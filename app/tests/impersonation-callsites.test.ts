@@ -10,7 +10,7 @@ const namespace = 'unit-test';
 // email happens to match the local development user's email.
 const human = {
   sub: 'real-oidc-subject',
-  email: 'dev@krypton.local',
+  email: 'dev@k8ston.local',
   name: 'SSO user',
   groups: [...Array.from({ length: 35 }, (_, i) => `team-${i}`), 'developers'],
 };
@@ -20,7 +20,7 @@ const live: V1Secret = {
     name: 'credentials',
     uid: 'synthetic-live-uid',
     resourceVersion: '17',
-    annotations: { 'krypton.io/managed-by': 'krypton', 'krypton.io/version': '3' },
+    annotations: { 'k8ston.io/managed-by': 'k8ston', 'k8ston.io/version': '3' },
   },
   data: { credential: Buffer.from('synthetic-live-value').toString('base64') },
 };
@@ -37,7 +37,7 @@ const snapshots = [2, 1].map((version) =>
 const corePath = `/api/v1/namespaces/${namespace}`;
 const secretPath = `${corePath}/secrets`;
 const appsPath = `/apis/apps/v1/namespaces/${namespace}`;
-const policyPath = `${corePath}/configmaps/krypton-access`;
+const policyPath = `${corePath}/configmaps/k8ston-access`;
 const kinds = ['deployments', 'statefulsets', 'daemonsets'];
 
 async function setupClients() {
@@ -58,7 +58,7 @@ async function setupClients() {
     if (url.pathname.startsWith(secretPath)) {
       if (request.method === 'POST') {
         const body = persistedSnapshot(JSON.parse(request.body));
-        if (body.metadata?.labels?.['krypton.io/kind'] === 'history') storedSnapshots.push(body);
+        if (body.metadata?.labels?.['k8ston.io/kind'] === 'history') storedSnapshots.push(body);
         return { status: 201, body };
       }
       if (request.method === 'PUT') return { body: JSON.parse(request.body) };
@@ -238,10 +238,10 @@ async function invoke(action: Action) {
 }
 
 beforeEach(() => {
-  process.env.KRYPTON_IMPERSONATION = 'true';
-  process.env.KRYPTON_RESTART_ENABLED = 'true';
-  process.env.KRYPTON_HISTORY_LIMIT = '1';
-  process.env.KRYPTON_SCOPE = 'cluster';
+  process.env.K8STON_IMPERSONATION = 'true';
+  process.env.K8STON_RESTART_ENABLED = 'true';
+  process.env.K8STON_HISTORY_LIMIT = '1';
+  process.env.K8STON_SCOPE = 'cluster';
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
@@ -276,7 +276,7 @@ describe('human-authorized callsites with a real signed development-email sessio
 
 it.each(['hybrid', 'auth-disabled'])('keeps all workload list/patch operations usable in %s mode', async (mode) => {
   process.env.AUTH_DISABLED = String(mode === 'auth-disabled');
-  process.env.KRYPTON_IMPERSONATION = String(mode !== 'hybrid');
+  process.env.K8STON_IMPERSONATION = String(mode !== 'hybrid');
   const server = await setupClients();
   if (mode === 'hybrid') await signIn();
   const response = await invoke(restartAction);

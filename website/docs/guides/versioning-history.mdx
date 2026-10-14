@@ -5,25 +5,25 @@ sidebar_position: 7
 
 # Versioning & History
 
-Kubernetes overwrites Secrets in place. Before an update or restore, Krypton
+Kubernetes overwrites Secrets in place. Before an update or restore, K8ston
 archives the previous data in an immutable Secret bound to that live object's
 UID and exact resourceVersion. Restores preserve the original bytes and current
 live access rules, with rollback available within the retained history.
 
 ## How snapshots work
 
-- Created Secrets start at `krypton.io/version=1`. An adopted Secret with no
+- Created Secrets start at `k8ston.io/version=1`. An adopted Secret with no
   counter (or the old `0` counter) is logically **v1**. Its first edit archives
   v1 and writes v2; its next archives v2 and writes v3. Snapshot vN is the state
   being replaced, not the new state. Invalid/exhausted counters are rejected.
-- Storage names are `krypton-h-<UID hash>-vN`, at most **60 characters** even for
+- Storage names are `k8ston-h-<UID hash>-vN`, at most **60 characters** even for
   253-character live names. Hashes are the first 32 lowercase hex characters of
   SHA-256. The live name is stored in an annotation, never a label value.
 - Each snapshot is an **Opaque** Secret with **`immutable: true`** and a copy of
   native base64 `data`. Live owner references, finalizers, managed fields, and
   controller annotations are not copied, so the archive does not acquire the
   source's controller lifecycle. Original type is retained for inspection.
-- Labels (using the configured annotation prefix) are `managed-by=krypton`,
+- Labels (using the configured annotation prefix) are `managed-by=k8ston`,
   `kind=history`, `source-uid=<UID hash>`, and
   `source-resource-version=<resourceVersion hash>`. Lists select by source UID
   and kind; returned objects must also pass full binding/format validation.
@@ -35,7 +35,7 @@ live access rules, with rollback available within the retained history.
 ### Verified retries and external changes
 
 A version slot is reserved for one exact source UID/resourceVersion. On snapshot
-create **409**, Krypton reads the occupied object and verifies full identity,
+create **409**, K8ston reads the occupied object and verifies full identity,
 immutable status, actual byte content and own keys, original type, and copied
 source description/ACLs. A mutable fingerprint annotation is not sufficient.
 The first successful snapshot's actor/time remain on exact-source retries.
@@ -48,8 +48,8 @@ live UID/resourceVersion replacement preconditions still admit only one write.
 There is no process-local counter or lock. ResourceVersions are treated as opaque
 strings, not sorted or parsed as version numbers.
 
-Krypton does not watch every native edit: it captures the state visible when an
-update/restore is attempted. Normal external changes after a successful Krypton
+K8ston does not watch every native edit: it captures the state visible when an
+update/restore is attempted. Normal external changes after a successful K8ston
 write are captured at their new resourceVersion. If a snapshot was saved but the
 live write failed, an external change can leave the **same app counter with a
 different resourceVersion**. This returns a source-conflict 409, even for a
@@ -58,12 +58,12 @@ See [recovery](#upgrade-and-operator-reviewed-recovery) below.
 
 ### Retention and partial operations
 
-`KRYPTON_HISTORY_LIMIT` must be a decimal integer **1–100**, default **20** when
+`K8STON_HISTORY_LIMIT` must be a decimal integer **1–100**, default **20** when
 unset. Empty, zero, negative, fractional, malformed (including whitespace/leading
 zeros), or out-of-range values produce 503 before history writes; `/api/config`
 also returns a configuration error. Zero is not a history-disable/unlimited mode.
 
-After saving or verifying a source snapshot, Krypton prunes the oldest eligible
+After saving or verifying a source snapshot, K8ston prunes the oldest eligible
 snapshots for that **live UID**, ordered by app counter. Cleanup reads only
 metadata from the native records; it never decodes values into text/DTOs. Deletes
 are serial, with each snapshot's UID and resourceVersion preconditions. A 404 is
@@ -83,13 +83,13 @@ copies and retained predecessor UIDs are outside that automatic retention policy
 Inspect them directly — they are ordinary Secrets:
 
 ```bash
-kubectl get secret -n krypton-test -l krypton.io/kind=history
+kubectl get secret -n k8ston-test -l k8ston.io/kind=history
 ```
 
-In Krypton's API, history is reached through the **live secret's** `/versions`
+In K8ston's API, history is reached through the **live secret's** `/versions`
 and `/restore` endpoints. Both authorize its current ACL before accessing any
 snapshot. Snapshot names themselves return 404 on all named-secret routes, even
-for admins and with `KRYPTON_MANAGED_ONLY=false`; historical ACLs do not grant
+for admins and with `K8STON_MANAGED_ONLY=false`; historical ACLs do not grant
 current access.
 
 The history panel distinguishes loading, a successfully empty history, permission
@@ -126,10 +126,10 @@ An operator with native Kubernetes access can recover reviewed data:
    Recover only the approved native base64 `data` into a reviewed live Secret.
    For an existing target, use current UID/resourceVersion preconditions and
    preserve its ACLs, owners, finalizers, type, and immutable rules. Binary base64
-   must not be submitted to Krypton's plaintext `data` input.
+   must not be submitted to K8ston's plaintext `data` input.
 3. Keep the original archive quarantined until explicit operator cleanup. Do not
    invent source-UID/revision annotations or relabel legacy objects to force the
-   app to accept them. Future Krypton edits create new bound snapshots of the
+   app to accept them. Future K8ston edits create new bound snapshots of the
    recovered live state; old app-version numbers are not automatically imported.
 
 For a **different-source slot conflict**, first reload and review the current live
@@ -178,7 +178,7 @@ UID/RV preconditions; deleting the current live name does not erase all such cop
 
 Restore requires both the target app `version` and the expected live
 `resourceVersion`. It snapshots the **current** state first, then replaces the live object
-with the target version's data (bumping `krypton.io/version` again). Rolling
+with the target version's data (bumping `k8ston.io/version` again). Rolling
 back never destroys the state you rolled back from — within the history limit.
 
 Data is restored from the snapshot's **original base64**, without a text
@@ -190,7 +190,7 @@ roll back ownership or access policy.
 Native type/immutable checks run **before** saving the current state. Immutable
 Secrets reject data changes (422) and have disabled UI restore controls;
 byte-identical API restores are allowed. Their metadata can still be edited.
-Service-account tokens cannot be created, edited, or restored through Krypton:
+Service-account tokens cannot be created, edited, or restored through K8ston:
 use Kubernetes TokenRequest or controller management instead of creating
 independent snapshots.
 
@@ -212,7 +212,7 @@ history, Raw, or Copy. See [Local value previews](/about/security-model/#local-v
 Live detail and history now separate lossless plaintext `data` from original
 base64 `binaryData`; `binaryKeys` names non-text entries and `keys` covers both.
 Binary values are masked and can be viewed/copied as base64. To edit a
-binary-containing Secret, update metadata in Krypton or use Kubernetes tooling
+binary-containing Secret, update metadata in K8ston or use Kubernetes tooling
 to change bytes. API metadata edits **omit `data`**, preserving the entire raw map.
 Do not round-trip a DTO by submitting only its text subset or treating base64 as
 plaintext. Re-fetch client caches after upgrading. The upgrade itself does not
@@ -220,11 +220,11 @@ rewrite stored data or repair bytes already lost by older lossy edits; recover
 those from an intact snapshot or external backup.
 
 ```bash
-curl --cookie "krypton_session=$ALICE" \
-  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/versions
-curl --cookie "krypton_session=$ALICE" -X POST \
+curl --cookie "k8ston_session=$ALICE" \
+  localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials/versions
+curl --cookie "k8ston_session=$ALICE" -X POST \
   -H 'Content-Type: application/json' -d '{"version":1,"resourceVersion":"123456"}' \
-  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore
+  localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials/restore
 ```
 
 ## Optimistic concurrency (409s)
@@ -258,7 +258,7 @@ contract.
 
 ## Size guard (1 MiB)
 
-K8s enforces ~1 MiB per Secret object. Krypton estimates conservatively
+K8s enforces ~1 MiB per Secret object. K8ston estimates conservatively
 (UTF-8 bytes × 1.4 for base64 inflation) and enforces the limit client-side
 (the form meter blocks) and server-side (`413 Secret is too large`). History
 snapshots count as separate objects and consume namespace storage/quota. Snapshot

@@ -130,7 +130,7 @@ function _createMdxContent(props) {
       }), " authz input,\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "name"
       }), " display), sets the ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton_session"
+        children: "k8ston_session"
       }), " cookie (", (0,jsx_runtime.jsx)(_components.code, {
         children: "HttpOnly"
       }), ",\n", (0,jsx_runtime.jsx)(_components.code, {

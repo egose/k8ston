@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 ;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-about-architecture-mdx-3e8.json
-var site_docs_about_architecture_mdx_3e8_namespaceObject = JSON.parse('{"id":"about/architecture","title":"Architecture","description":"Krypton is a stateless Next.js App Router service. All persistent state lives in","source":"@site/docs/about/architecture.mdx","sourceDirName":"about","slug":"/about/architecture","permalink":"/about/architecture","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":2,"frontMatter":{"sidebar_label":"Architecture","sidebar_position":2},"sidebar":"about","previous":{"title":"Quick Start","permalink":"/about/quick-start"},"next":{"title":"Security Model","permalink":"/about/security-model"}}')
+var site_docs_about_architecture_mdx_3e8_namespaceObject = JSON.parse('{"id":"about/architecture","title":"Architecture","description":"K8ston is a stateless Next.js App Router service. All persistent state lives in","source":"@site/docs/about/architecture.mdx","sourceDirName":"about","slug":"/about/architecture","permalink":"/about/architecture","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":2,"frontMatter":{"sidebar_label":"Architecture","sidebar_position":2},"sidebar":"about","previous":{"title":"Quick Start","permalink":"/about/quick-start"},"next":{"title":"Security Model","permalink":"/about/security-model"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
@@ -96,7 +96,7 @@ function _createMdxContent(props) {
         children: "Architecture"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Krypton is a stateless Next.js App Router service. All persistent state lives in\nthe Kubernetes API; the app holds no database connection or disk cache. Namespace\npolicy uses a 60-second in-memory ConfigMap read-through cache."
+      children: "K8ston is a stateless Next.js App Router service. All persistent state lives in\nthe Kubernetes API; the app holds no database connection or disk cache. Namespace\npolicy uses a 60-second in-memory ConfigMap read-through cache."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "request-flow",
       children: "Request flow"
@@ -166,7 +166,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Optional impersonation"
         }), ": ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_IMPERSONATION=true"
+          children: "K8STON_IMPERSONATION=true"
         }), " sends the session email\nand every group for human-authorized requests, including workload lists/patches.\nA per-request SDK ", (0,jsx_runtime.jsx)(_components.code, {
           children: "httpApi"
         }), " transport uses raw repeated group headers and retains\nthe SDK's TLS/auth configuration. The SA needs impersonation permission for the\ncorresponding human RBAC subjects. The access-policy ConfigMap remains a service\nread with the shared cache above. Default is ", (0,jsx_runtime.jsx)(_components.code, {
@@ -251,7 +251,7 @@ function _createMdxContent(props) {
       })]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_NAMESPACES=\"team-a,team-b\""
+        children: "K8STON_NAMESPACES=\"team-a,team-b\""
       }), " resolves without namespace-list calls. Names are\ndeduplicated/sorted; actual resource calls still enforce existence and RBAC.\nUnrestricted discovery errors surface explicitly instead of falling back to an\nown-namespace subset. Policy lookups use own properties, including ", (0,jsx_runtime.jsx)(_components.code, {
         children: "constructor"
       }), "."]
@@ -267,11 +267,11 @@ function _createMdxContent(props) {
         }), " converts raw records to decoded response DTOs only at\nthe authorized route boundary; restore copies raw data and cleanup reads metadata."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/version"
+          children: "k8ston.io/version"
         }), " starts at 1. Adoption treats missing/old-zero counters as\nlogical v1: archive v1, write v2, then archive v2, write v3. PUT/restore supply their loaded\nresourceVersion; update/restore replacements retain the live UID/RV for native CAS."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["New snapshots are immutable Opaque Secrets named ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton-h-<UID hash>-vN"
+          children: "k8ston-h-<UID hash>-vN"
         }), "\n(at most 60 characters). Bounded ", (0,jsx_runtime.jsx)(_components.code, {
           children: "source-uid"
         }), " and ", (0,jsx_runtime.jsx)(_components.code, {
@@ -281,7 +281,7 @@ function _createMdxContent(props) {
         children: "A snapshot-create 409 is a retry only when the occupied object has the same full\nsource identity and actual immutable byte/key content. Replica retries share that\narchive, then race through Kubernetes CAS. Different-source collisions block writing."
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_HISTORY_LIMIT"
+          children: "K8STON_HISTORY_LIMIT"
         }), " is 1–100, default 20. Pruning uses serial UID/RV-conditional\ndeletes, confirms absence, and reports failed/pending cleanup before permitting\nreplacement. Snapshots and pruning can persist after a failed live write; these\npre-write captures are not a transaction or an external-change watcher."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: "History is exposed only through an authorized live secret's version/restore\nendpoints. Snapshot names cannot be used as live route targets, and copied\nsnapshot ACLs do not determine current access. List/restore/prune/delete require\nthe live UID; retained predecessors never attach to a recreated name. Legacy and\nmalformed history is quarantined with no automatic name-based migration."
@@ -314,7 +314,7 @@ function _createMdxContent(props) {
       }), " on normal/init/ephemeral\ncontainers, normal/projected Secret volumes, and ", (0,jsx_runtime.jsx)(_components.code, {
         children: "imagePullSecrets"
       }), ". It then\nrequests rollouts with a ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.io/restarted-at"
+        children: "k8ston.io/restarted-at"
       }), " JSON-Patch pod-template patch,\nbound to each inspected workload UID/resourceVersion via ", (0,jsx_runtime.jsx)(_components.code, {
         children: "test"
       }), " preconditions and\nallowing at most four patches in flight per request across all kinds. Lists and\npatches retain the full request-local impersonated identity."]
@@ -331,7 +331,7 @@ function _createMdxContent(props) {
         href: "/guides/consumer-restarts/",
         children: "consumer rollout limits and retries"
       }), ".\nThe feature is disabled by default\n(", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_RESTART_ENABLED=false"
+        children: "K8STON_RESTART_ENABLED=false"
       }), ": button hidden, API returns 403, no ", (0,jsx_runtime.jsx)(_components.code, {
         children: "apps"
       }), "\npermissions needed)."]
@@ -341,7 +341,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-text",
-        children: "app/                    # Next.js App Router\n  app/api/namespaces/…  # secrets CRUD, versions, restore, restart-consumers\n  app/api/auth/…        # OIDC login/callback/logout/me\n  app/secrets/[ns]/…    # detail / edit / history views\n  lib/                  # k8s client, OIDC+session, authz, snapshots, consumers, validation\n  components/           # dashboard, tables, forms, masked values, history\n  k8s/                  # namespace, SA, Role/ClusterRole, configs, deployment\nhelm/                   # helm/main chart + helm/krypton subchart\nsandbox/                # kind cluster + Dex + fixtures + helper scripts\nwebsite/                # this documentation site (Docusaurus)\n"
+        children: "app/                    # Next.js App Router\n  app/api/namespaces/…  # secrets CRUD, versions, restore, restart-consumers\n  app/api/auth/…        # OIDC login/callback/logout/me\n  app/secrets/[ns]/…    # detail / edit / history views\n  lib/                  # k8s client, OIDC+session, authz, snapshots, consumers, validation\n  components/           # dashboard, tables, forms, masked values, history\n  k8s/                  # namespace, SA, Role/ClusterRole, configs, deployment\nhelm/                   # helm/main chart + helm/k8ston subchart\nsandbox/                # kind cluster + Dex + fixtures + helper scripts\nwebsite/                # this documentation site (Docusaurus)\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "related-pages",

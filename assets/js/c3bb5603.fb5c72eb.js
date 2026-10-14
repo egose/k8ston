@@ -72,7 +72,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"scope\": \"namespace\",\n  \"etcdEncrypted\": false,\n  \"authDisabled\": false,\n  \"oidcConfigured\": true,\n  \"historyLimit\": 20,\n  \"managedOnly\": true,\n  \"restartEnabled\": false,\n  \"appNamespace\": \"krypton\"\n}\n"
+        children: "{\n  \"scope\": \"namespace\",\n  \"etcdEncrypted\": false,\n  \"authDisabled\": false,\n  \"oidcConfigured\": true,\n  \"historyLimit\": 20,\n  \"managedOnly\": true,\n  \"restartEnabled\": false,\n  \"appNamespace\": \"k8ston\"\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
@@ -80,9 +80,9 @@ function _createMdxContent(props) {
       }), " is an integer ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "1–100"
       }), " (default 20 when unset). Invalid\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_HISTORY_LIMIT"
+        children: "K8STON_HISTORY_LIMIT"
       }), " configuration returns\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "503 { \"error\": \"KRYPTON_HISTORY_LIMIT must be an integer from 1 to 100\" }"
+        children: "503 { \"error\": \"K8STON_HISTORY_LIMIT must be an integer from 1 to 100\" }"
       }), "\ninstead of advertising an unlimited or silently substituted retention policy."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Use it in deployment checks: assert ", (0,jsx_runtime.jsx)(_components.code, {

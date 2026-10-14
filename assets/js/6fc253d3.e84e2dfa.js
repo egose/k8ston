@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 ;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-about-security-model-mdx-6fc.json
-var site_docs_about_security_model_mdx_6fc_namespaceObject = JSON.parse('{"id":"about/security-model","title":"Security Model","description":"Read this before production. Krypton makes secret management convenient, but it","source":"@site/docs/about/security-model.mdx","sourceDirName":"about","slug":"/about/security-model","permalink":"/about/security-model","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":3,"frontMatter":{"sidebar_label":"Security Model","sidebar_position":3},"sidebar":"about","previous":{"title":"Architecture","permalink":"/about/architecture"}}')
+var site_docs_about_security_model_mdx_6fc_namespaceObject = JSON.parse('{"id":"about/security-model","title":"Security Model","description":"Read this before production. K8ston makes secret management convenient, but it","source":"@site/docs/about/security-model.mdx","sourceDirName":"about","slug":"/about/security-model","permalink":"/about/security-model","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":3,"frontMatter":{"sidebar_label":"Security Model","sidebar_position":3},"sidebar":"about","previous":{"title":"Architecture","permalink":"/about/architecture"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
@@ -89,14 +89,14 @@ function _createMdxContent(props) {
         children: "Security Model"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Read this before production. Krypton makes secret management convenient, but it\ncannot make Kubernetes Secrets something they are not."
+      children: "Read this before production. K8ston makes secret management convenient, but it\ncannot make Kubernetes Secrets something they are not."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "the-etcd-truth",
       children: "The etcd truth"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Out of the box, Kubernetes Secrets are ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "base64-encoded, not encrypted"
-      }), ", in etcd —\nanyone with etcd or broad API access can decode them. Krypton therefore:"]
+      }), ", in etcd —\nanyone with etcd or broad API access can decode them. K8ston therefore:"]
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
@@ -122,7 +122,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Shows a warning banner"
         }), " until you confirm etcd encryption-at-rest is enabled\n(", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ETCD_ENCRYPTED=true"
+          children: "K8STON_ETCD_ENCRYPTED=true"
         }), " once the API server uses an encryption provider\nsuch as ", (0,jsx_runtime.jsx)(_components.code, {
           children: "aescbc"
         }), " on OpenShift)."]
@@ -137,7 +137,7 @@ function _createMdxContent(props) {
       type: "warning",
       children: (0,jsx_runtime.jsxs)(_components.p, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ETCD_ENCRYPTED"
+          children: "K8STON_ETCD_ENCRYPTED"
         }), " is an attestation, not a detector. Set it to ", (0,jsx_runtime.jsx)(_components.code, {
           children: "true"
         }), "\nonly after you have verified the API server encrypts Secret resources at rest."]
@@ -163,7 +163,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Sessions are stateless HS256 JWTs (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton_session"
+          children: "k8ston_session"
         }), " cookie, ", (0,jsx_runtime.jsx)(_components.code, {
           children: "HttpOnly"
         }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
@@ -211,15 +211,15 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.ol, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Admins (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ADMIN_GROUPS"
+          children: "K8STON_ADMIN_GROUPS"
         }), "/", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ADMIN_USERS"
+          children: "K8STON_ADMIN_USERS"
         }), ") always pass."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: "A secret with explicit annotations is decided by those alone (override)."
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Otherwise the namespace fallback in ConfigMap ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton-access"
+          children: "k8ston-access"
         }), " applies."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: "With no rules anywhere, the secret is visible to all authenticated users\n(open by default, restricted once rules are added)."
@@ -237,12 +237,12 @@ function _createMdxContent(props) {
       children: [(0,jsx_runtime.jsx)(_components.strong, {
         children: "Managed-only mode"
       }), " (default, ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_MANAGED_ONLY=true"
+        children: "K8STON_MANAGED_ONLY=true"
       }), "): secrets ", (0,jsx_runtime.jsx)(_components.em, {
         children: "without"
       }), "\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.io/managed-by: krypton"
-      }), " are hidden entirely — excluded from lists, 404\non direct access (read, edit, delete, history, restore, restart) — so K8s-level\nsecrets created outside Krypton can't be touched by accident.\nHistory objects are hidden from direct routes in ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "k8ston.io/managed-by: k8ston"
+      }), " are hidden entirely — excluded from lists, 404\non direct access (read, edit, delete, history, restore, restart) — so K8s-level\nsecrets created outside K8ston can't be touched by accident.\nHistory objects are hidden from direct routes in ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "both"
       }), " visibility modes,\nincluding for admins. Version/restore endpoints authorize the current live\nobject first; a snapshot's copied ACL cannot bypass a live ACL revocation.\nHistory must also be bound to that live object's UID. Retained predecessors and\nunbound legacy snapshots cannot be accessed through a recreated name; legacy\nrecovery requires ", (0,jsx_runtime.jsx)(_components.a, {
         href: "/guides/versioning-history/#upgrade-and-operator-reviewed-recovery",
@@ -288,15 +288,15 @@ function _createMdxContent(props) {
         }), " rule (deployments/statefulsets/daemonsets: get, list, watch, patch)\nis required ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "only"
         }), " when ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_RESTART_ENABLED=true"
+          children: "K8STON_RESTART_ENABLED=true"
         }), ". It ships commented\nout; enabling the flag without the rule fails closed at the API."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Unrestricted cluster scope needs namespace-list permission. A configured\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_NAMESPACES"
+          children: "K8STON_NAMESPACES"
         }), " allowlist resolves/checks locally with no namespace-list calls;\nactual operations still need the corresponding resource RBAC in those namespaces."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Optional impersonation (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_IMPERSONATION=true"
+          children: "K8STON_IMPERSONATION=true"
         }), ") requires the SA's\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "impersonate"
         }), " permission for the session user and every group, with matching\nhuman RBAC subjects. Namespace/secret/history operations and workload lists\nand patches use that complete identity. The access-policy ConfigMap is read\nas the SA and cached independently of human RBAC. See the\n", (0,jsx_runtime.jsx)(_components.a, {
@@ -323,9 +323,9 @@ function _createMdxContent(props) {
           type: "checkbox",
           disabled: true
         }), " ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ADMIN_GROUPS"
+          children: "K8STON_ADMIN_GROUPS"
         }), "/", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ADMIN_USERS"
+          children: "K8STON_ADMIN_USERS"
         }), " are set (no bootstrap mode)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         className: "task-list-item",
@@ -333,7 +333,7 @@ function _createMdxContent(props) {
           type: "checkbox",
           disabled: true
         }), " ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ETCD_ENCRYPTED=true"
+          children: "K8STON_ETCD_ENCRYPTED=true"
         }), " after verifying apiserver encryption."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         className: "task-list-item",
@@ -363,7 +363,7 @@ function _createMdxContent(props) {
         }), " RBAC rule present ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "iff"
         }), " ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_RESTART_ENABLED=true"
+          children: "K8STON_RESTART_ENABLED=true"
         }), "."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         className: "task-list-item",
@@ -371,7 +371,7 @@ function _createMdxContent(props) {
           type: "checkbox",
           disabled: true
         }), " ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_MANAGED_ONLY=true"
+          children: "K8STON_MANAGED_ONLY=true"
         }), " (default) unless you need the legacy adoption flow."]
       }), "\n"]
     })]

@@ -1,3 +1,3 @@
 User-agent: *
 Disallow: /assets/
-Sitemap: https://krypton.pages.dev/sitemap.xml
+Sitemap: https://k8ston.pages.dev/sitemap.xml

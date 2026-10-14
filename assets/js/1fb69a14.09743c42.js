@@ -94,7 +94,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "kubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml\n# real secrets — never commit values:\nkubectl create secret generic krypton-oidc -n krypton \\\n  --from-literal=OIDC_CLIENT_SECRET='...' \\\n  --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\nkubectl apply -f app/k8s/deployment.yaml\n"
+        children: "kubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml\n# real secrets — never commit values:\nkubectl create secret generic k8ston-oidc -n k8ston \\\n  --from-literal=OIDC_CLIENT_SECRET='...' \\\n  --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\nkubectl apply -f app/k8s/deployment.yaml\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
       children: "What you get:"
@@ -115,7 +115,7 @@ function _createMdxContent(props) {
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: [(0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton"
+              children: "k8ston"
             }), " namespace"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
@@ -125,7 +125,7 @@ function _createMdxContent(props) {
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: [(0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton"
+              children: "k8ston"
             }), " ServiceAccount (the identity that calls the K8s API)"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
@@ -147,7 +147,7 @@ function _createMdxContent(props) {
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["Non-secret app config (", (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_*"
+              children: "K8STON_*"
             }), ", ", (0,jsx_runtime.jsx)(_components.code, {
               children: "OIDC_*"
             }), ", ", (0,jsx_runtime.jsx)(_components.code, {
@@ -171,7 +171,7 @@ function _createMdxContent(props) {
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["Template for ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton-oidc"
+              children: "k8ston-oidc"
             }), " (create with real values instead)"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
@@ -199,7 +199,7 @@ function _createMdxContent(props) {
       children: "Cluster scope (multi-namespace dashboard)"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Set ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_SCOPE=cluster"
+        children: "K8STON_SCOPE=cluster"
       }), " in ", (0,jsx_runtime.jsx)(_components.code, {
         children: "configmap-app.yaml"
       }), ", apply ", (0,jsx_runtime.jsx)(_components.code, {
@@ -207,7 +207,7 @@ function _createMdxContent(props) {
       }), "\n(instead of, or in addition to, ", (0,jsx_runtime.jsx)(_components.code, {
         children: "role.yaml"
       }), "), and optionally narrow with\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_NAMESPACES=\"team-a,team-b\""
+        children: "K8STON_NAMESPACES=\"team-a,team-b\""
       }), ":"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
@@ -218,7 +218,7 @@ function _createMdxContent(props) {
       children: ["The ClusterRole adds ", (0,jsx_runtime.jsx)(_components.code, {
         children: "namespaces"
       }), " (get, list, watch) on top of the namespace\npermissions. A configured ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_NAMESPACES"
+        children: "K8STON_NAMESPACES"
       }), " allowlist resolves/checks locally\nwithout namespace-list calls, so curated deployments can instead grant resource\npermissions in just those namespaces. Without an allowlist, failed/incomplete\nnamespace discovery returns an error; it no longer falls back to the pod namespace."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "enabling-restart-apps",
@@ -230,7 +230,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.ol, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Set ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_RESTART_ENABLED: 'true'"
+          children: "K8STON_RESTART_ENABLED: 'true'"
         }), " in ", (0,jsx_runtime.jsx)(_components.code, {
           children: "configmap-app.yaml"
         }), "."]
@@ -252,7 +252,7 @@ function _createMdxContent(props) {
       children: ["The ", (0,jsx_runtime.jsx)(_components.code, {
         children: "Dockerfile"
       }), " (repo root, pnpm workspace context) builds\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "ghcr.io/egose/krypton:<tag>"
+        children: "ghcr.io/egose/k8ston:<tag>"
       }), " — published on ", (0,jsx_runtime.jsx)(_components.code, {
         children: "v*.*.*"
       }), " tags by the\n", (0,jsx_runtime.jsx)(_components.em, {
@@ -261,7 +261,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "docker build -t krypton:sandbox -f Dockerfile .\n"
+        children: "docker build -t k8ston:sandbox -f Dockerfile .\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The image runs the Next.js standalone server (", (0,jsx_runtime.jsx)(_components.code, {
@@ -270,7 +270,7 @@ function _createMdxContent(props) {
         children: "65532"
       }), " on port 3000, matching ", (0,jsx_runtime.jsx)(_components.code, {
         children: "app/k8s/deployment.yaml"
-      }), ". Krypton is stateless\n(all state lives in Kubernetes Secrets), so more than one replica is always safe."]
+      }), ". K8ston is stateless\n(all state lives in Kubernetes Secrets), so more than one replica is always safe."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "prefer-helm",
       children: "Prefer Helm?"
@@ -281,7 +281,7 @@ function _createMdxContent(props) {
       }), " covers the ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm/main"
       }), " chart\n(", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/krypton"
+        children: "helm/k8ston"
       }), " subchart, NetworkPolicy, OpenShift Routes). Prefer raw manifests\nwhen you want minimal moving parts; prefer Helm when you want templated RBAC\nscope, restart wiring, and access config in one values file."]
     })]
   });

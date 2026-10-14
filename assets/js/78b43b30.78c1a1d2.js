@@ -101,7 +101,7 @@ function _createMdxContent(props) {
         children: "kind"
       }), " Kubernetes cluster with seeded\nfixtures plus ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "Dex"
-      }), " as a throwaway OIDC provider — everything Krypton needs,\nnothing else (no database; Kubernetes ", (0,jsx_runtime.jsx)(_components.em, {
+      }), " as a throwaway OIDC provider — everything K8ston needs,\nnothing else (no database; Kubernetes ", (0,jsx_runtime.jsx)(_components.em, {
         children: "is"
       }), " the datastore)."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
@@ -193,7 +193,7 @@ function _createMdxContent(props) {
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton-admin"
+              children: "k8ston-admin"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "admin bypass"
@@ -239,7 +239,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["There is intentionally no ", (0,jsx_runtime.jsx)(_components.code, {
         children: "docker-compose.prod.yml"
-      }), " overlay: production Krypton\ndeploys to Kubernetes via ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " overlay: production K8ston\ndeploys to Kubernetes via ", (0,jsx_runtime.jsx)(_components.code, {
         children: "app/k8s/*.yaml"
       }), ", not compose."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
@@ -271,7 +271,7 @@ function _createMdxContent(props) {
               children: "database-credentials"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "krypton-test"
+            children: "k8ston-test"
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["annotation ", (0,jsx_runtime.jsx)(_components.code, {
               children: "allowed-groups: dev-team,…"
@@ -291,7 +291,7 @@ function _createMdxContent(props) {
               children: "feature-flags"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "krypton-test"
+            children: "k8ston-test"
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "none (open by default)"
           }), (0,jsx_runtime.jsx)(_components.td, {
@@ -309,7 +309,7 @@ function _createMdxContent(props) {
               children: "legacy-external"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "krypton-test"
+            children: "k8ston-test"
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "none + unmanaged (\"external\" badge)¹"
           }), (0,jsx_runtime.jsx)(_components.td, {
@@ -347,11 +347,11 @@ function _createMdxContent(props) {
       children: [(0,jsx_runtime.jsx)(_components.code, {
         children: "frontend-ns"
       }), " is governed by ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton-access"
+        children: "k8ston-access"
       }), " in ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton-test"
+        children: "k8ston-test"
       }), " (the app's own\nnamespace); ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton-test"
+        children: "k8ston-test"
       }), " is deliberately absent from it (open by default).\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "api-server"
       }), " (Deployment) consumes ", (0,jsx_runtime.jsx)(_components.code, {
@@ -361,7 +361,7 @@ function _createMdxContent(props) {
       }), " via volume for restart-consumer testing."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["¹ The sandbox sets ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_MANAGED_ONLY=false"
+        children: "K8STON_MANAGED_ONLY=false"
       }), " so ", (0,jsx_runtime.jsx)(_components.code, {
         children: "legacy-external"
       }), " stays\nvisible for the adoption demo. With the production default (", (0,jsx_runtime.jsx)(_components.code, {
@@ -379,7 +379,7 @@ function _createMdxContent(props) {
         }), ": edit ", (0,jsx_runtime.jsx)(_components.code, {
           children: "database-credentials"
         }), " twice → UID-bound v1/v2 snapshots\nappear (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kubectl get secret -n krypton-test -l krypton.io/kind=history"
+          children: "kubectl get secret -n k8ston-test -l k8ston.io/kind=history"
         }), ");\nrestore v1 in the UI (restores snapshot first, so rollback is reversible)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
@@ -397,9 +397,9 @@ function _createMdxContent(props) {
         }), ", hit ", (0,jsx_runtime.jsx)(_components.em, {
           children: "Restart apps"
         }), ",\nthen inspect ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kubectl rollout status deploy/api-server -n krypton-test"
+          children: "kubectl rollout status deploy/api-server -n k8ston-test"
         }), " and\nrollout history. The UI confirms the request only; verify application credential\nuptake separately without printing values (the sandbox sets\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_RESTART_ENABLED=true"
+          children: "K8STON_RESTART_ENABLED=true"
         }), "; the default is ", (0,jsx_runtime.jsx)(_components.code, {
           children: "false"
         }), ")."]
@@ -415,10 +415,10 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "External adoption"
         }), " (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_MANAGED_ONLY=false"
+          children: "K8STON_MANAGED_ONLY=false"
         }), " only): editing\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "legacy-external"
-        }), " stamps Krypton annotations on it."]
+        }), " stamps K8ston annotations on it."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "headless-authz-checks-no-browser",
@@ -430,7 +430,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)\nBOB=$(node sandbox/scripts/mint-jwt.mjs --email bob@company.com --groups other-team)\ncurl --cookie \"krypton_session=$ALICE\" localhost:3000/api/namespaces/krypton-test/secrets/database-credentials  # 200\ncurl --cookie \"krypton_session=$BOB\"   localhost:3000/api/namespaces/krypton-test/secrets/database-credentials  # 403\ncurl --cookie \"krypton_session=$BOB\"   localhost:3000/api/namespaces/krypton-test/secrets/feature-flags        # 200\n"
+        children: "ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)\nBOB=$(node sandbox/scripts/mint-jwt.mjs --email bob@company.com --groups other-team)\ncurl --cookie \"k8ston_session=$ALICE\" localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 200\ncurl --cookie \"k8ston_session=$BOB\"   localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 403\ncurl --cookie \"k8ston_session=$BOB\"   localhost:3000/api/namespaces/k8ston-test/secrets/feature-flags        # 200\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The full scripted lifecycle (create → update → versions → restore → restart →\ndelete) lives in the ", (0,jsx_runtime.jsx)(_components.a, {
@@ -451,22 +451,22 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "# from the repo root, with the kind cluster from `make up` running\ndocker build -t krypton:sandbox -f Dockerfile .\nkind load docker-image krypton:sandbox --name krypton-sandbox\nkubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml\nkubectl create secret generic krypton-oidc -n krypton \\\n  --from-literal=OIDC_CLIENT_SECRET=sandbox-unused \\\n  --from-literal=SESSION_SECRET=sandbox-only-session-secret-32chars!!!\nkubectl apply -f app/k8s/deployment.yaml\nkubectl -n krypton set image deploy/krypton krypton=krypton:sandbox\n# AUTH_DISABLED=true below: pods inside kind cannot reach host-side Dex via\n# localhost, so in-cluster runs validate the SA/RBAC path (pair with\n# scripts/mint-jwt.mjs sessions for authz checks). Real SSO stays host-side\n# via `pnpm dev`, where both browser and app share the issuer URL.\nkubectl -n krypton set env deploy/krypton AUTH_DISABLED=true \\\n  SESSION_SECRET=sandbox-only-session-secret-32chars!!!\nkubectl -n krypton rollout status deploy/krypton\nkubectl -n krypton port-forward --address 127.0.0.1 svc/krypton 3300:80\n# → http://127.0.0.1:3300, namespace scope over `krypton` only\n"
+        children: "# from the repo root, with the kind cluster from `make up` running\ndocker build -t k8ston:sandbox -f Dockerfile .\nkind load docker-image k8ston:sandbox --name k8ston-sandbox\nkubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml\nkubectl create secret generic k8ston-oidc -n k8ston \\\n  --from-literal=OIDC_CLIENT_SECRET=sandbox-unused \\\n  --from-literal=SESSION_SECRET=sandbox-only-session-secret-32chars!!!\nkubectl apply -f app/k8s/deployment.yaml\nkubectl -n k8ston set image deploy/k8ston k8ston=k8ston:sandbox\n# AUTH_DISABLED=true below: pods inside kind cannot reach host-side Dex via\n# localhost, so in-cluster runs validate the SA/RBAC path (pair with\n# scripts/mint-jwt.mjs sessions for authz checks). Real SSO stays host-side\n# via `pnpm dev`, where both browser and app share the issuer URL.\nkubectl -n k8ston set env deploy/k8ston AUTH_DISABLED=true \\\n  SESSION_SECRET=sandbox-only-session-secret-32chars!!!\nkubectl -n k8ston rollout status deploy/k8ston\nkubectl -n k8ston port-forward --address 127.0.0.1 svc/k8ston 3300:80\n# → http://127.0.0.1:3300, namespace scope over `k8ston` only\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Prove least privilege (Role allows ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton"
+        children: "k8ston"
       }), " only, no namespace listing):"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "kubectl auth can-i 'create secrets' -n krypton --as=system:serviceaccount:krypton:krypton         # yes\nkubectl auth can-i 'list secrets' -n krypton-test --as=system:serviceaccount:krypton:krypton      # no\nkubectl auth can-i 'list namespaces' --as=system:serviceaccount:krypton:krypton                    # no\n"
+        children: "kubectl auth can-i 'create secrets' -n k8ston --as=system:serviceaccount:k8ston:k8ston         # yes\nkubectl auth can-i 'list secrets' -n k8ston-test --as=system:serviceaccount:k8ston:k8ston      # no\nkubectl auth can-i 'list namespaces' --as=system:serviceaccount:k8ston:k8ston                    # no\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Note: with ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_SCOPE=cluster"
+        children: "K8STON_SCOPE=cluster"
       }), " but only the namespace Role applied, the\napp requires an explicit ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_NAMESPACES=krypton"
+        children: "K8STON_NAMESPACES=k8ston"
       }), " allowlist to avoid namespace\ndiscovery. Allowlist resolution makes no namespace-list calls. An empty allowlist\nrequires namespace-list RBAC and now returns an error if discovery fails instead\nof silently falling back to the pod namespace."]
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
       children: "Cheap static checks that need no cluster at all:"
@@ -489,7 +489,7 @@ function _createMdxContent(props) {
         children: ["Wrong cluster (", (0,jsx_runtime.jsx)(_components.code, {
           children: "kubectl config current-context"
         }), " should be\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kind-krypton-sandbox"
+          children: "kind-k8ston-sandbox"
         }), ") → ", (0,jsx_runtime.jsx)(_components.code, {
           children: "make kind-up"
         }), " re-selects it; never seed prod."]

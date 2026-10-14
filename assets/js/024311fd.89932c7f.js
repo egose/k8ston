@@ -167,7 +167,7 @@ function _createMdxContent(props) {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "You are not allowed to …"
-        }), " → Krypton authz denied it (annotations /\nnamespace rules / admin config). Check the visibility matrix in\n", (0,jsx_runtime.jsx)(_components.a, {
+        }), " → K8ston authz denied it (annotations /\nnamespace rules / admin config). Check the visibility matrix in\n", (0,jsx_runtime.jsx)(_components.a, {
           href: "/guides/authorization/",
           children: "Authorization"
         }), "."]
@@ -184,10 +184,10 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_MANAGED_ONLY=true"
+          children: "K8STON_MANAGED_ONLY=true"
         }), " (default) hides secrets without\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/managed-by: krypton"
-        }), " — excluded from lists, 404 on direct access.\nEither manage the secret through Krypton or set the flag to ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "k8ston.io/managed-by: k8ston"
+        }), " — excluded from lists, 404 on direct access.\nEither manage the secret through K8ston or set the flag to ", (0,jsx_runtime.jsx)(_components.code, {
           children: "false"
         }), "."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
@@ -210,7 +210,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["An explicit ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "snapshot identity/content conflict"
-      }), " needs review of the occupied\nversion's UID, source revision, and immutable bytes. A native edit after a failed\nKrypton write can leave the same app counter with a different source revision;\nreloading alone does not resolve that collision. Follow the\n", (0,jsx_runtime.jsx)(_components.a, {
+      }), " needs review of the occupied\nversion's UID, source revision, and immutable bytes. A native edit after a failed\nK8ston write can leave the same app counter with a different source revision;\nreloading alone does not resolve that collision. Follow the\n", (0,jsx_runtime.jsx)(_components.a, {
         href: "/guides/versioning-history/#upgrade-and-operator-reviewed-recovery",
         children: "reviewed recovery procedure"
       }), "\ninstead of relabeling or overwriting old snapshots."]
@@ -223,7 +223,7 @@ function _createMdxContent(props) {
       children: "503 history/configuration failure"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Use a decimal ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_HISTORY_LIMIT"
+        children: "K8STON_HISTORY_LIMIT"
       }), " from 1 to 100 (default 20 when unset).\nHistory creation/list failures or failed/pending pruning block the live replacement.\nResolve Kubernetes permissions, quota/admission errors, or snapshot finalizers,\nthen retry; an exact-source retry also retries cleanup. Failed DELETE history cleanup\ndoes not attempt live deletion, preserving the authorization object for a retry.\nEarlier partial cleanup is not rolled back. If a concurrent writer removes the live\nobject, or live deletion/confirmation has an uncertain outcome, reload first; an\noperator must handle old-UID leftovers when there is no live object to authorize."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "deletion-is-pending-202",
@@ -276,7 +276,7 @@ function _createMdxContent(props) {
         children: ["In ", (0,jsx_runtime.jsx)(_components.code, {
           children: "cluster"
         }), " scope, a configured ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_NAMESPACES"
+          children: "K8STON_NAMESPACES"
         }), " list is returned/checked\nlocally with no namespace-list calls. Check spelling and per-namespace resource\nRBAC; configured entries do not prove the namespace exists or is readable."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["With an empty allowlist, complete namespace discovery needs namespace-list RBAC\nfor the effective identity. ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -320,7 +320,7 @@ function _createMdxContent(props) {
       }), " missing / 403"]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The button is hidden and the API returns 403 while\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_RESTART_ENABLED=false"
+        children: "K8STON_RESTART_ENABLED=false"
       }), ". Enabling the flag also requires workload\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "list"
       }), "/", (0,jsx_runtime.jsx)(_components.code, {
@@ -343,7 +343,7 @@ function _createMdxContent(props) {
       children: "etcd warning banner won't go away"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Set ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_ETCD_ENCRYPTED=true"
+        children: "K8STON_ETCD_ENCRYPTED=true"
       }), " — but only after verifying the API server\nactually encrypts Secrets at rest (", (0,jsx_runtime.jsx)(_components.code, {
         children: "aescbc"
       }), " provider or equivalent). The flag\nis an attestation, not a detector."]
@@ -355,7 +355,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "kubectl config current-context"
         }), " should be ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kind-krypton-sandbox"
+          children: "kind-k8ston-sandbox"
         }), " —\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "make kind-up"
         }), " re-selects it. Never seed prod."]

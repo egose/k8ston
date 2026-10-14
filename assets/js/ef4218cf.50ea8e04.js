@@ -92,7 +92,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-text",
-        children: "Browser ──GET /api/auth/login──▶ Krypton ──discovery──▶ OIDC issuer\n   │                                  │ PKCE + nonce + state cookies\n   │◀──────── redirect to IdP ────────┘\n   │── user authenticates ──▶ IdP ──code──▶ /api/auth/callback\n                                                   │ code exchange, claim mapping\n                                                   ▼\n                                          krypton_session cookie (HS256 JWT, 8h)\n"
+        children: "Browser ──GET /api/auth/login──▶ K8ston ──discovery──▶ OIDC issuer\n   │                                  │ PKCE + nonce + state cookies\n   │◀──────── redirect to IdP ────────┘\n   │── user authenticates ──▶ IdP ──code──▶ /api/auth/callback\n                                                   │ code exchange, claim mapping\n                                                   ▼\n                                          k8ston_session cookie (HS256 JWT, 8h)\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.ol, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
@@ -140,7 +140,7 @@ function _createMdxContent(props) {
         children: "Auth API"
       }), " for exact shapes."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["An incomplete or failed transaction requires a new login. The IdP enforces\nsingle-use authorization codes; Krypton keeps no server-side transaction store.\nWhen UserInfo is available, its ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["An incomplete or failed transaction requires a new login. The IdP enforces\nsingle-use authorization codes; K8ston keeps no server-side transaction store.\nWhen UserInfo is available, its ", (0,jsx_runtime.jsx)(_components.code, {
         children: "sub"
       }), " must match the validated ID-token ", (0,jsx_runtime.jsx)(_components.code, {
         children: "sub"
@@ -160,7 +160,7 @@ function _createMdxContent(props) {
       }), " local bypass\nwithout a JWT."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Only HS256 session JWTs with issuer ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton"
+        children: "k8ston"
       }), ", nonempty string ", (0,jsx_runtime.jsx)(_components.code, {
         children: "sub"
       }), " and ", (0,jsx_runtime.jsx)(_components.code, {
@@ -302,7 +302,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "AUTH_DISABLED=true"
         }), " returns a mock admin (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "dev@krypton.local"
+          children: "dev@k8ston.local"
         }), ") for every\nrequest; login redirects to ", (0,jsx_runtime.jsx)(_components.code, {
           children: "/"
         }), " without minting a session token or requiring\na signing key. Local development only — assert ", (0,jsx_runtime.jsx)(_components.code, {
@@ -323,7 +323,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)\ncurl --cookie \"krypton_session=$ALICE\" localhost:3000/api/auth/me\n"
+        children: "ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)\ncurl --cookie \"k8ston_session=$ALICE\" localhost:3000/api/auth/me\n"
       })
     })]
   });

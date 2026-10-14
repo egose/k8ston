@@ -90,13 +90,13 @@ function _createMdxContent(props) {
       children: ["Everything is environment-driven (", (0,jsx_runtime.jsx)(_components.code, {
         children: "lib/config.ts"
       }), "), resolved at request time —\none image runs in many clusters. Non-secret values go in ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton-config"
+        children: "k8ston-config"
       }), ";\nsecrets (", (0,jsx_runtime.jsx)(_components.code, {
         children: "OIDC_CLIENT_SECRET"
       }), ", ", (0,jsx_runtime.jsx)(_components.code, {
         children: "SESSION_SECRET"
       }), ") go in the ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton-oidc"
+        children: "k8ston-oidc"
       }), " Secret."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "reference",
@@ -116,7 +116,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_SCOPE"
+              children: "K8STON_SCOPE"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
@@ -132,11 +132,11 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_NAMESPACE"
+              children: "K8STON_NAMESPACE"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton"
+              children: "k8ston"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "Fallback for the app's own namespace (downward API wins in-cluster)"
@@ -144,7 +144,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_NAMESPACES"
+              children: "K8STON_NAMESPACES"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "—"
@@ -154,7 +154,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_HISTORY_LIMIT"
+              children: "K8STON_HISTORY_LIMIT"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
@@ -166,7 +166,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_MANAGED_ONLY"
+              children: "K8STON_MANAGED_ONLY"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
@@ -174,13 +174,13 @@ function _createMdxContent(props) {
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["Hide secrets without ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "managed-by=krypton"
+              children: "managed-by=k8ston"
             }), " (404)"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_ETCD_ENCRYPTED"
+              children: "K8STON_ETCD_ENCRYPTED"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
@@ -194,7 +194,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_IMPERSONATION"
+              children: "K8STON_IMPERSONATION"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
@@ -206,7 +206,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_RESTART_ENABLED"
+              children: "K8STON_RESTART_ENABLED"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
@@ -220,9 +220,9 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsxs)(_components.td, {
             children: [(0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_ADMIN_GROUPS"
+              children: "K8STON_ADMIN_GROUPS"
             }), " / ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_ADMIN_USERS"
+              children: "K8STON_ADMIN_USERS"
             })]
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "—"
@@ -232,11 +232,11 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_ANNOTATION_PREFIX"
+              children: "K8STON_ANNOTATION_PREFIX"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.io"
+              children: "k8ston.io"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "Annotation/label prefix"
@@ -244,11 +244,11 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_ACCESS_CONFIGMAP"
+              children: "K8STON_ACCESS_CONFIGMAP"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton-access"
+              children: "k8ston-access"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "Namespace-rules ConfigMap name"
@@ -372,7 +372,7 @@ function _createMdxContent(props) {
       children: "Namespace discovery and API budgets"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["In cluster scope, nonempty ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_NAMESPACES"
+        children: "K8STON_NAMESPACES"
       }), " is resolved and checked locally:\nnames are sorted/deduplicated and require no Kubernetes namespace-list requests.\nActual operations still enforce existence and resource RBAC. With an empty allowlist,\nthe app requires a complete paginated namespace inventory; failed discovery now\nreturns an error instead of silently falling back to its own namespace."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Fixed ", (0,jsx_runtime.jsx)(_components.a, {
@@ -384,7 +384,7 @@ function _createMdxContent(props) {
       children: "History retention and upgrade"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_HISTORY_LIMIT"
+        children: "K8STON_HISTORY_LIMIT"
       }), " accepts decimal integers ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "1–100"
       }), "; only an unset value\ndefaults to ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -420,29 +420,29 @@ function _createMdxContent(props) {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsxs)(_components.strong, {
           children: [(0,jsx_runtime.jsx)(_components.code, {
-            children: "KRYPTON_ADMIN_GROUPS"
+            children: "K8STON_ADMIN_GROUPS"
           }), " / ", (0,jsx_runtime.jsx)(_components.code, {
-            children: "KRYPTON_ADMIN_USERS"
+            children: "K8STON_ADMIN_USERS"
           })]
         }), " — when both are empty,\nevery authenticated user is admin (bootstrap mode). Convenient for first\nlogin, dangerous to leave. Set at least one group."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: (0,jsx_runtime.jsx)(_components.code, {
-            children: "KRYPTON_MANAGED_ONLY"
+            children: "K8STON_MANAGED_ONLY"
           })
         }), " — default ", (0,jsx_runtime.jsx)(_components.code, {
           children: "true"
-        }), " hides any secret not created by\nKrypton (excluded from lists, 404 on direct access). Set ", (0,jsx_runtime.jsx)(_components.code, {
+        }), " hides any secret not created by\nK8ston (excluded from lists, 404 on direct access). Set ", (0,jsx_runtime.jsx)(_components.code, {
           children: "false"
-        }), " only to show\neverything again (legacy adopt-on-edit: saving an external secret stamps\nKrypton annotations onto it)."]
+        }), " only to show\neverything again (legacy adopt-on-edit: saving an external secret stamps\nK8ston annotations onto it)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: (0,jsx_runtime.jsx)(_components.code, {
-            children: "KRYPTON_IMPERSONATION"
+            children: "K8STON_IMPERSONATION"
           })
         }), " — default ", (0,jsx_runtime.jsx)(_components.code, {
           children: "false"
-        }), " (hybrid mode: the app\nServiceAccount executes, Krypton enforces authz itself). When enabled, session\nemail/groups must match cluster RBAC and the SA needs permission to impersonate\nthe user and every group. All human operations, including workload lists, send\nthe complete identity; access-policy reads remain service-scoped.\n", (0,jsx_runtime.jsx)(_components.code, {
+        }), " (hybrid mode: the app\nServiceAccount executes, K8ston enforces authz itself). When enabled, session\nemail/groups must match cluster RBAC and the SA needs permission to impersonate\nthe user and every group. All human operations, including workload lists, send\nthe complete identity; access-policy reads remain service-scoped.\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "AUTH_DISABLED=true"
         }), " explicitly bypasses human impersonation. See\n", (0,jsx_runtime.jsx)(_components.a, {
           href: "/guides/authorization/#optional-k8s-native-impersonation",
@@ -451,7 +451,7 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: (0,jsx_runtime.jsx)(_components.code, {
-            children: "KRYPTON_RESTART_ENABLED"
+            children: "K8STON_RESTART_ENABLED"
           })
         }), " — default ", (0,jsx_runtime.jsx)(_components.code, {
           children: "false"

@@ -107,7 +107,7 @@ function _createMdxContent(props) {
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["It patches ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "spec.template.metadata.annotations[\"krypton.io/restarted-at\"]"
+        children: "spec.template.metadata.annotations[\"k8ston.io/restarted-at\"]"
       }), " with\na timestamp, using an RFC 6902 JSON Patch and at most ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "four in-flight patches\nper request across all kinds"
       }), ". Each patch first tests the inspected workload\n", (0,jsx_runtime.jsx)(_components.code, {
@@ -311,7 +311,7 @@ function _createMdxContent(props) {
         children: ["Returns ", (0,jsx_runtime.jsx)(_components.code, {
           children: "403 { \"error\": \"Restarting apps is disabled on this deployment\" }"
         }), "\nunless ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_RESTART_ENABLED=true"
+          children: "K8STON_RESTART_ENABLED=true"
         }), " (which also needs the ", (0,jsx_runtime.jsx)(_components.code, {
           children: "apps"
         }), " RBAC rule)."]

@@ -79,7 +79,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "version"
         }), " is the app-level ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/version"
+          children: "k8ston.io/version"
         }), " number from the\n", (0,jsx_runtime.jsx)(_components.a, {
           href: "/api/versions/",
           children: "versions list"
@@ -107,7 +107,7 @@ function _createMdxContent(props) {
         }), " type and immutable state before\nany snapshot/write. Then snapshots the ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "current"
         }), " state so the restore itself\nis reversible, and replaces the live object with the target snapshot's data (bumping\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/version"
+          children: "k8ston.io/version"
         }), " again, stamped with the restoring user)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Copies ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -156,7 +156,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "curl --cookie \"krypton_session=$ALICE\" -X POST \\\n  -H 'Content-Type: application/json' -d '{\"version\":1,\"resourceVersion\":\"123456\"}' \\\n  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore\n"
+        children: "curl --cookie \"k8ston_session=$ALICE\" -X POST \\\n  -H 'Content-Type: application/json' -d '{\"version\":1,\"resourceVersion\":\"123456\"}' \\\n  localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials/restore\n"
       })
     })]
   });

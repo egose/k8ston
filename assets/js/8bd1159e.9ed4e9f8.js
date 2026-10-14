@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 ;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-guides-versioning-history-mdx-8bd.json
-var site_docs_guides_versioning_history_mdx_8bd_namespaceObject = JSON.parse('{"id":"guides/versioning-history","title":"Versioning & History","description":"Kubernetes overwrites Secrets in place. Before an update or restore, Krypton","source":"@site/docs/guides/versioning-history.mdx","sourceDirName":"guides","slug":"/guides/versioning-history","permalink":"/guides/versioning-history","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":7,"frontMatter":{"sidebar_label":"Versioning & History","sidebar_position":7},"sidebar":"guides","previous":{"title":"Authorization","permalink":"/guides/authorization"},"next":{"title":"Consumer Restarts","permalink":"/guides/consumer-restarts"}}')
+var site_docs_guides_versioning_history_mdx_8bd_namespaceObject = JSON.parse('{"id":"guides/versioning-history","title":"Versioning & History","description":"Kubernetes overwrites Secrets in place. Before an update or restore, K8ston","source":"@site/docs/guides/versioning-history.mdx","sourceDirName":"guides","slug":"/guides/versioning-history","permalink":"/guides/versioning-history","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":7,"frontMatter":{"sidebar_label":"Versioning & History","sidebar_position":7},"sidebar":"guides","previous":{"title":"Authorization","permalink":"/guides/authorization"},"next":{"title":"Consumer Restarts","permalink":"/guides/consumer-restarts"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
@@ -104,14 +104,14 @@ function _createMdxContent(props) {
         children: "Versioning & History"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Kubernetes overwrites Secrets in place. Before an update or restore, Krypton\narchives the previous data in an immutable Secret bound to that live object's\nUID and exact resourceVersion. Restores preserve the original bytes and current\nlive access rules, with rollback available within the retained history."
+      children: "Kubernetes overwrites Secrets in place. Before an update or restore, K8ston\narchives the previous data in an immutable Secret bound to that live object's\nUID and exact resourceVersion. Restores preserve the original bytes and current\nlive access rules, with rollback available within the retained history."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "how-snapshots-work",
       children: "How snapshots work"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Created Secrets start at ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/version=1"
+          children: "k8ston.io/version=1"
         }), ". An adopted Secret with no\ncounter (or the old ", (0,jsx_runtime.jsx)(_components.code, {
           children: "0"
         }), " counter) is logically ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -119,7 +119,7 @@ function _createMdxContent(props) {
         }), ". Its first edit archives\nv1 and writes v2; its next archives v2 and writes v3. Snapshot vN is the state\nbeing replaced, not the new state. Invalid/exhausted counters are rejected."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Storage names are ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton-h-<UID hash>-vN"
+          children: "k8ston-h-<UID hash>-vN"
         }), ", at most ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "60 characters"
         }), " even for\n253-character live names. Hashes are the first 32 lowercase hex characters of\nSHA-256. The live name is stored in an annotation, never a label value."]
@@ -135,7 +135,7 @@ function _createMdxContent(props) {
         }), ". Live owner references, finalizers, managed fields, and\ncontroller annotations are not copied, so the archive does not acquire the\nsource's controller lifecycle. Original type is retained for inspection."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Labels (using the configured annotation prefix) are ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "managed-by=krypton"
+          children: "managed-by=k8ston"
         }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "kind=history"
         }), ", ", (0,jsx_runtime.jsx)(_components.code, {
@@ -168,11 +168,11 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["A version slot is reserved for one exact source UID/resourceVersion. On snapshot\ncreate ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "409"
-      }), ", Krypton reads the occupied object and verifies full identity,\nimmutable status, actual byte content and own keys, original type, and copied\nsource description/ACLs. A mutable fingerprint annotation is not sufficient.\nThe first successful snapshot's actor/time remain on exact-source retries.\nUnrelated objects, different source revisions, changed bytes, active controller\nownership, finalizers, or terminating snapshots block the live replacement.\nSuccessful create responses are checked too, including admission-altered content."]
+      }), ", K8ston reads the occupied object and verifies full identity,\nimmutable status, actual byte content and own keys, original type, and copied\nsource description/ACLs. A mutable fingerprint annotation is not sufficient.\nThe first successful snapshot's actor/time remain on exact-source retries.\nUnrelated objects, different source revisions, changed bytes, active controller\nownership, finalizers, or terminating snapshots block the live replacement.\nSuccessful create responses are checked too, including admission-altered content."]
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
       children: "Two replicas saving the same source can share one verified snapshot; the native\nlive UID/resourceVersion replacement preconditions still admit only one write.\nThere is no process-local counter or lock. ResourceVersions are treated as opaque\nstrings, not sorted or parsed as version numbers."
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Krypton does not watch every native edit: it captures the state visible when an\nupdate/restore is attempted. Normal external changes after a successful Krypton\nwrite are captured at their new resourceVersion. If a snapshot was saved but the\nlive write failed, an external change can leave the ", (0,jsx_runtime.jsx)(_components.strong, {
+      children: ["K8ston does not watch every native edit: it captures the state visible when an\nupdate/restore is attempted. Normal external changes after a successful K8ston\nwrite are captured at their new resourceVersion. If a snapshot was saved but the\nlive write failed, an external change can leave the ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "same app counter with a\ndifferent resourceVersion"
       }), ". This returns a source-conflict 409, even for a\nmetadata-only external change, rather than discarding either rollback state.\nSee ", (0,jsx_runtime.jsx)(_components.a, {
         href: "#upgrade-and-operator-reviewed-recovery",
@@ -183,7 +183,7 @@ function _createMdxContent(props) {
       children: "Retention and partial operations"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_HISTORY_LIMIT"
+        children: "K8STON_HISTORY_LIMIT"
       }), " must be a decimal integer ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "1–100"
       }), ", default ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -192,7 +192,7 @@ function _createMdxContent(props) {
         children: "/api/config"
       }), "\nalso returns a configuration error. Zero is not a history-disable/unlimited mode."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["After saving or verifying a source snapshot, Krypton prunes the oldest eligible\nsnapshots for that ", (0,jsx_runtime.jsx)(_components.strong, {
+      children: ["After saving or verifying a source snapshot, K8ston prunes the oldest eligible\nsnapshots for that ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "live UID"
       }), ", ordered by app counter. Cleanup reads only\nmetadata from the native records; it never decodes values into text/DTOs. Deletes\nare serial, with each snapshot's UID and resourceVersion preconditions. A 404 is\nalready absent; other failures or a still-present object (including finalizers)\nreturn ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "503"
@@ -206,17 +206,17 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "kubectl get secret -n krypton-test -l krypton.io/kind=history\n"
+        children: "kubectl get secret -n k8ston-test -l k8ston.io/kind=history\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["In Krypton's API, history is reached through the ", (0,jsx_runtime.jsx)(_components.strong, {
+      children: ["In K8ston's API, history is reached through the ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "live secret's"
       }), " ", (0,jsx_runtime.jsx)(_components.code, {
         children: "/versions"
       }), "\nand ", (0,jsx_runtime.jsx)(_components.code, {
         children: "/restore"
       }), " endpoints. Both authorize its current ACL before accessing any\nsnapshot. Snapshot names themselves return 404 on all named-secret routes, even\nfor admins and with ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_MANAGED_ONLY=false"
+        children: "K8STON_MANAGED_ONLY=false"
       }), "; historical ACLs do not grant\ncurrent access."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The history panel distinguishes loading, a successfully empty history, permission\ndenial, and an unavailable response. ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -243,11 +243,11 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Review the chosen raw values and destination type/access/lifecycle requirements.\nRecover only the approved native base64 ", (0,jsx_runtime.jsx)(_components.code, {
           children: "data"
-        }), " into a reviewed live Secret.\nFor an existing target, use current UID/resourceVersion preconditions and\npreserve its ACLs, owners, finalizers, type, and immutable rules. Binary base64\nmust not be submitted to Krypton's plaintext ", (0,jsx_runtime.jsx)(_components.code, {
+        }), " into a reviewed live Secret.\nFor an existing target, use current UID/resourceVersion preconditions and\npreserve its ACLs, owners, finalizers, type, and immutable rules. Binary base64\nmust not be submitted to K8ston's plaintext ", (0,jsx_runtime.jsx)(_components.code, {
           children: "data"
         }), " input."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
-        children: "Keep the original archive quarantined until explicit operator cleanup. Do not\ninvent source-UID/revision annotations or relabel legacy objects to force the\napp to accept them. Future Krypton edits create new bound snapshots of the\nrecovered live state; old app-version numbers are not automatically imported."
+        children: "Keep the original archive quarantined until explicit operator cleanup. Do not\ninvent source-UID/revision annotations or relabel legacy objects to force the\napp to accept them. Future K8ston edits create new bound snapshots of the\nrecovered live state; old app-version numbers are not automatically imported."
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["For a ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -302,7 +302,7 @@ function _createMdxContent(props) {
       }), ". It snapshots the ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "current"
       }), " state first, then replaces the live object\nwith the target version's data (bumping ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.io/version"
+        children: "k8ston.io/version"
       }), " again). Rolling\nback never destroys the state you rolled back from — within the history limit."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Data is restored from the snapshot's ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -313,7 +313,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Native type/immutable checks run ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "before"
-      }), " saving the current state. Immutable\nSecrets reject data changes (422) and have disabled UI restore controls;\nbyte-identical API restores are allowed. Their metadata can still be edited.\nService-account tokens cannot be created, edited, or restored through Krypton:\nuse Kubernetes TokenRequest or controller management instead of creating\nindependent snapshots."]
+      }), " saving the current state. Immutable\nSecrets reject data changes (422) and have disabled UI restore controls;\nbyte-identical API restores are allowed. Their metadata can still be edited.\nService-account tokens cannot be created, edited, or restored through K8ston:\nuse Kubernetes TokenRequest or controller management instead of creating\nindependent snapshots."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h3, {
       id: "viewing-text-values",
       children: "Viewing text values"
@@ -346,7 +346,7 @@ function _createMdxContent(props) {
         children: "binaryKeys"
       }), " names non-text entries and ", (0,jsx_runtime.jsx)(_components.code, {
         children: "keys"
-      }), " covers both.\nBinary values are masked and can be viewed/copied as base64. To edit a\nbinary-containing Secret, update metadata in Krypton or use Kubernetes tooling\nto change bytes. API metadata edits ", (0,jsx_runtime.jsxs)(_components.strong, {
+      }), " covers both.\nBinary values are masked and can be viewed/copied as base64. To edit a\nbinary-containing Secret, update metadata in K8ston or use Kubernetes tooling\nto change bytes. API metadata edits ", (0,jsx_runtime.jsxs)(_components.strong, {
         children: ["omit ", (0,jsx_runtime.jsx)(_components.code, {
           children: "data"
         })]
@@ -354,7 +354,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "curl --cookie \"krypton_session=$ALICE\" \\\n  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/versions\ncurl --cookie \"krypton_session=$ALICE\" -X POST \\\n  -H 'Content-Type: application/json' -d '{\"version\":1,\"resourceVersion\":\"123456\"}' \\\n  localhost:3000/api/namespaces/krypton-test/secrets/database-credentials/restore\n"
+        children: "curl --cookie \"k8ston_session=$ALICE\" \\\n  localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials/versions\ncurl --cookie \"k8ston_session=$ALICE\" -X POST \\\n  -H 'Content-Type: application/json' -d '{\"version\":1,\"resourceVersion\":\"123456\"}' \\\n  localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials/restore\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "optimistic-concurrency-409s",
@@ -384,7 +384,7 @@ function _createMdxContent(props) {
       id: "size-guard-1-mib",
       children: "Size guard (1 MiB)"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["K8s enforces ~1 MiB per Secret object. Krypton estimates conservatively\n(UTF-8 bytes × 1.4 for base64 inflation) and enforces the limit client-side\n(the form meter blocks) and server-side (", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["K8s enforces ~1 MiB per Secret object. K8ston estimates conservatively\n(UTF-8 bytes × 1.4 for base64 inflation) and enforces the limit client-side\n(the form meter blocks) and server-side (", (0,jsx_runtime.jsx)(_components.code, {
         children: "413 Secret is too large"
       }), "). History\nsnapshots count as separate objects and consume namespace storage/quota. Snapshot\ncreation or cleanup failure blocks the live replacement.\nRaw restores and metadata-only updates use Kubernetes' decoded-data size bound,\nso valid native binary data is not rejected merely for base64 inflation."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {

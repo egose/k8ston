@@ -25809,7 +25809,7 @@ var docusaurus_config = __webpack_require__(4784);
 ;// CONCATENATED MODULE: ./.docusaurus/globalData.json
 var globalData_namespaceObject = JSON.parse('{"docusaurus-plugin-content-docs":{"default":{"path":"/","versions":[{"name":"current","label":"Next","isLast":true,"path":"/","mainDocId":"about/overview","docs":[{"id":"about/architecture","path":"/about/architecture","sidebar":"about"},{"id":"about/overview","path":"/about/overview","sidebar":"about"},{"id":"about/quick-start","path":"/about/quick-start","sidebar":"about"},{"id":"about/security-model","path":"/about/security-model","sidebar":"about"},{"id":"api/auth","path":"/api/auth","sidebar":"api"},{"id":"api/config","path":"/api/config","sidebar":"api"},{"id":"api/namespaces","path":"/api/namespaces","sidebar":"api"},{"id":"api/overview","path":"/api/overview","sidebar":"api"},{"id":"api/restart-consumers","path":"/api/restart-consumers","sidebar":"api"},{"id":"api/restore","path":"/api/restore","sidebar":"api"},{"id":"api/secrets","path":"/api/secrets","sidebar":"api"},{"id":"api/versions","path":"/api/versions","sidebar":"api"},{"id":"guides/authentication","path":"/guides/authentication","sidebar":"guides"},{"id":"guides/authorization","path":"/guides/authorization","sidebar":"guides"},{"id":"guides/configuration","path":"/guides/configuration","sidebar":"guides"},{"id":"guides/consumer-restarts","path":"/guides/consumer-restarts","sidebar":"guides"},{"id":"guides/deploy-helm","path":"/guides/deploy-helm","sidebar":"guides"},{"id":"guides/deploy-kubernetes","path":"/guides/deploy-kubernetes","sidebar":"guides"},{"id":"guides/local-development","path":"/guides/local-development","sidebar":"guides"},{"id":"guides/sandbox","path":"/guides/sandbox","sidebar":"guides"},{"id":"guides/troubleshooting","path":"/guides/troubleshooting","sidebar":"guides"},{"id":"guides/versioning-history","path":"/guides/versioning-history","sidebar":"guides"}],"draftIds":[],"sidebars":{"about":{"link":{"path":"/about/overview","label":"Overview"}},"guides":{"link":{"path":"/guides/local-development","label":"Local Development"}},"api":{"link":{"path":"/api/overview","label":"Overview"}}}}],"breadcrumbs":true}}}')
 ;// CONCATENATED MODULE: ./.docusaurus/i18n.json
-var i18n_namespaceObject = JSON.parse('{"defaultLocale":"en","locales":["en"],"path":"i18n","currentLocale":"en","localeConfigs":{"en":{"label":"English","direction":"ltr","htmlLang":"en","calendar":"gregory","path":"en","translate":false,"url":"https://krypton.pages.dev","baseUrl":"/"}}}')
+var i18n_namespaceObject = JSON.parse('{"defaultLocale":"en","locales":["en"],"path":"i18n","currentLocale":"en","localeConfigs":{"en":{"label":"English","direction":"ltr","htmlLang":"en","calendar":"gregory","path":"en","translate":false,"url":"https://k8ston.pages.dev","baseUrl":"/"}}}')
 // EXTERNAL MODULE: ./.docusaurus/codeTranslations.json
 var codeTranslations = __webpack_require__(2654);
 ;// CONCATENATED MODULE: ./.docusaurus/site-metadata.json
@@ -29901,7 +29901,7 @@ __webpack_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js
 var react = __webpack_require__(2990);
 ;// CONCATENATED MODULE: ./.docusaurus/site-storage.json
-var site_storage_namespaceObject = JSON.parse('{"N":"localStorage","M":"-d78"}')
+var site_storage_namespaceObject = JSON.parse('{"N":"localStorage","M":"-0e9"}')
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/@docusaurus+theme-common@3.10.0_27a111eee035574cc6173ff84d325400/node_modules/@docusaurus/theme-common/lib/utils/storageUtils.js
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -32942,7 +32942,7 @@ __webpack_require__.d(__webpack_exports__, {
  * Modify the docusaurus.config.js file at your site's root instead.
  */
 /* export default */ const __rspack_default_export = ({
-  "title": "Krypton",
+  "title": "K8ston",
   "tagline": "Kubernetes-native secret manager backed directly by Kubernetes Secret objects. No database, no secret sprawl: SSO login, hybrid authorization, versioned history, and one-click rollbacks.",
   "favicon": "img/favicon.svg",
   "future": {
@@ -32967,11 +32967,11 @@ __webpack_require__.d(__webpack_exports__, {
       "gitEagerVcs": true
     }
   },
-  "url": "https://krypton.pages.dev",
+  "url": "https://k8ston.pages.dev",
   "baseUrl": "/",
   "trailingSlash": true,
   "organizationName": "egose",
-  "projectName": "krypton",
+  "projectName": "k8ston",
   "onBrokenLinks": "throw",
   "markdown": {
     "hooks": {
@@ -33024,11 +33024,11 @@ __webpack_require__.d(__webpack_exports__, {
   "themeConfig": {
     "image": "img/social-card.png",
     "navbar": {
-      "title": "Krypton",
+      "title": "K8ston",
       "logo": {
-        "alt": "Krypton logo",
-        "src": "img/krypton-mark.svg",
-        "srcDark": "img/krypton-mark.svg"
+        "alt": "K8ston logo",
+        "src": "img/k8ston-mark.svg",
+        "srcDark": "img/k8ston-mark.svg"
       },
       "items": [
         {
@@ -33050,7 +33050,7 @@ __webpack_require__.d(__webpack_exports__, {
           "label": "API"
         },
         {
-          "href": "https://github.com/egose/krypton",
+          "href": "https://github.com/egose/k8ston",
           "label": "GitHub",
           "position": "right"
         }
@@ -33082,7 +33082,7 @@ __webpack_require__.d(__webpack_exports__, {
           "items": [
             {
               "label": "GitHub",
-              "href": "https://github.com/egose/krypton"
+              "href": "https://github.com/egose/k8ston"
             },
             {
               "label": "Security Model",

@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 ;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-guides-deploy-helm-mdx-1e6.json
-var site_docs_guides_deploy_helm_mdx_1e6_namespaceObject = JSON.parse('{"id":"guides/deploy-helm","title":"Deploy with Helm","description":"The helm/main chart deploys Krypton via the helm/krypton subchart, with","source":"@site/docs/guides/deploy-helm.mdx","sourceDirName":"guides","slug":"/guides/deploy-helm","permalink":"/guides/deploy-helm","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":3,"frontMatter":{"sidebar_label":"Deploy with Helm","sidebar_position":3},"sidebar":"guides","previous":{"title":"Deploy to Kubernetes","permalink":"/guides/deploy-kubernetes"},"next":{"title":"Configuration","permalink":"/guides/configuration"}}')
+var site_docs_guides_deploy_helm_mdx_1e6_namespaceObject = JSON.parse('{"id":"guides/deploy-helm","title":"Deploy with Helm","description":"The helm/main chart deploys K8ston via the helm/k8ston subchart, with","source":"@site/docs/guides/deploy-helm.mdx","sourceDirName":"guides","slug":"/guides/deploy-helm","permalink":"/guides/deploy-helm","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":3,"frontMatter":{"sidebar_label":"Deploy with Helm","sidebar_position":3},"sidebar":"guides","previous":{"title":"Deploy to Kubernetes","permalink":"/guides/deploy-kubernetes"},"next":{"title":"Configuration","permalink":"/guides/configuration"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
@@ -23,7 +23,7 @@ var lib = __webpack_require__(3191);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+theme-classic@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10.0_@sw_d80ed93973d8fdb1b9e1067267ab632b/node_modules/@docusaurus/theme-classic/lib/theme/CodeBlock/index.js + 27 modules
 var CodeBlock = __webpack_require__(4401);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/raw-loader@4.0.2_webpack@5.111.1_@swc+core@1.16.18_@swc+html@1.16.18_clean-css@5.3.3_cs_0a2048681882c260752bdc7655a466eb/node_modules/raw-loader/dist/cjs.js!./.samples/values-helm.yaml
-/* export default */ const values_helm = ("# Minimal Helm values for Krypton (chart: helm/main, subchart: helm/krypton).\n# Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes\n# Secret referenced by envSecretName — never in values files.\nglobal:\n  env: {}\n\nkrypton:\n  enabled: true\n  replicaCount: 2\n  # kubectl create secret generic krypton-oidc -n krypton \\\n  #   --from-literal=OIDC_CLIENT_SECRET='...' \\\n  #   --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n  envSecretName: krypton-oidc\n  env:\n    KRYPTON_SCOPE: namespace\n    KRYPTON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on\n    KRYPTON_ADMIN_GROUPS: krypton-admin\n    OIDC_ISSUER: https://keycloak.example.com/realms/company\n    OIDC_CLIENT_ID: krypton\n    OIDC_SCOPES: openid profile email groups\n    NEXT_PUBLIC_APP_URL: https://krypton.example.com\n  # Derives the default KRYPTON_SCOPE (explicit entries must match):\n  # namespace (default) or cluster. Curated extras add a derived allowlist.\n  rbac:\n    create: true\n    scope: namespace\n  # \"Restart apps\" (API + UI + apps RBAC rule). Default false.\n  restartEnabled: false\n  # Namespace fallback rules (krypton-access / access.json).\n  accessConfig:\n    enabled: false\n\nnetworkPolicy:\n  enabled: true\n  # MUST be true on OpenShift (routes arrive from openshift-ingress).\n  allowOpenShiftIngress: false\n");
+/* export default */ const values_helm = ("# Minimal Helm values for K8ston (chart: helm/main, subchart: helm/k8ston).\n# Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes\n# Secret referenced by envSecretName — never in values files.\nglobal:\n  env: {}\n\nk8ston:\n  enabled: true\n  replicaCount: 2\n  # kubectl create secret generic k8ston-oidc -n k8ston \\\n  #   --from-literal=OIDC_CLIENT_SECRET='...' \\\n  #   --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n  envSecretName: k8ston-oidc\n  env:\n    K8STON_SCOPE: namespace\n    K8STON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on\n    K8STON_ADMIN_GROUPS: k8ston-admin\n    OIDC_ISSUER: https://keycloak.example.com/realms/company\n    OIDC_CLIENT_ID: k8ston\n    OIDC_SCOPES: openid profile email groups\n    NEXT_PUBLIC_APP_URL: https://k8ston.example.com\n  # Derives the default K8STON_SCOPE (explicit entries must match):\n  # namespace (default) or cluster. Curated extras add a derived allowlist.\n  rbac:\n    create: true\n    scope: namespace\n  # \"Restart apps\" (API + UI + apps RBAC rule). Default false.\n  restartEnabled: false\n  # Namespace fallback rules (k8ston-access / access.json).\n  accessConfig:\n    enabled: false\n\nnetworkPolicy:\n  enabled: true\n  # MUST be true on OpenShift (routes arrive from openshift-ingress).\n  allowOpenShiftIngress: false\n");
 ;// CONCATENATED MODULE: ./docs/guides/deploy-helm.mdx
 
 
@@ -109,8 +109,8 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm/main"
-      }), " chart deploys Krypton via the ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/krypton"
+      }), " chart deploys K8ston via the ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "helm/k8ston"
       }), " subchart, with\ntemplated RBAC scope, restart wiring, access config, and NetworkPolicy."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "minimal-values",
@@ -123,7 +123,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "kubectl create secret generic krypton-oidc -n krypton \\\n  --from-literal=OIDC_CLIENT_SECRET='...' \\\n  --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n"
+        children: "kubectl create secret generic k8ston-oidc -n k8ston \\\n  --from-literal=OIDC_CLIENT_SECRET='...' \\\n  --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "key-knobs",
@@ -141,17 +141,17 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.env"
+              children: "k8ston.env"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
-            children: ["Non-secret Krypton config (full reference: ", (0,jsx_runtime.jsx)(_components.code, {
+            children: ["Non-secret K8ston config (full reference: ", (0,jsx_runtime.jsx)(_components.code, {
               children: "app/.env.example"
             }), ")"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.envSecretName"
+              children: "k8ston.envSecretName"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["K8s Secret with ", (0,jsx_runtime.jsx)(_components.code, {
@@ -163,7 +163,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.rbac.scope"
+              children: "k8ston.rbac.scope"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: [(0,jsx_runtime.jsx)(_components.code, {
@@ -171,27 +171,27 @@ function _createMdxContent(props) {
             }), " (default) or ", (0,jsx_runtime.jsx)(_components.code, {
               children: "cluster"
             }), " — the chart derives ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_SCOPE"
+              children: "K8STON_SCOPE"
             }), " from it (explicit entries must match)"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.rbac.extraNamespaces"
+              children: "k8ston.rbac.extraNamespaces"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["Curated extra namespaces (namespace scope): Roles plus a derived ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_NAMESPACES"
+              children: "K8STON_NAMESPACES"
             }), " allowlist, no ClusterRole"]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.restartEnabled"
+              children: "k8ston.restartEnabled"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["Single effective value wiring ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_RESTART_ENABLED"
+              children: "K8STON_RESTART_ENABLED"
             }), " ", (0,jsx_runtime.jsx)(_components.strong, {
               children: "and"
             }), " the ", (0,jsx_runtime.jsx)(_components.code, {
@@ -201,13 +201,13 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.accessConfig.enabled"
+              children: "k8ston.accessConfig.enabled"
             })
           }), (0,jsx_runtime.jsxs)(_components.td, {
             children: ["Renders the access ConfigMap ", (0,jsx_runtime.jsx)(_components.strong, {
               children: "and"
             }), " derives ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "KRYPTON_ACCESS_CONFIGMAP"
+              children: "K8STON_ACCESS_CONFIGMAP"
             }), " from its name (", (0,jsx_runtime.jsx)(_components.code, {
               children: "access.json"
             }), " key)"]
@@ -215,7 +215,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.replicaCount"
+              children: "k8ston.replicaCount"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "Stateless — more than one replica is always safe (default 2)"
@@ -223,7 +223,7 @@ function _createMdxContent(props) {
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsxs)(_components.td, {
             children: [(0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.ingress.enabled"
+              children: "k8ston.ingress.enabled"
             }), " / ", (0,jsx_runtime.jsx)(_components.code, {
               children: "route.enabled"
             }), " / ", (0,jsx_runtime.jsx)(_components.code, {
@@ -267,48 +267,48 @@ function _createMdxContent(props) {
       children: "RBAC scope"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["One effective configuration (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.effectiveConfig"
+        children: "k8ston.effectiveConfig"
       }), " in the subchart) derives\nthe chart-managed runtime env from the RBAC/feature values, so the rendered\nDeployment env, Role/ClusterRole scope, subjects, and ", (0,jsx_runtime.jsx)(_components.code, {
         children: "apps"
       }), " permissions always\nagree. Local ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.env"
+        children: "k8ston.env"
       }), " wins over ", (0,jsx_runtime.jsx)(_components.code, {
         children: "global.env"
       }), " per key. Omit the managed keys\n(", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_SCOPE"
+        children: "K8STON_SCOPE"
       }), ", ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_NAMESPACES"
+        children: "K8STON_NAMESPACES"
       }), ", ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_RESTART_ENABLED"
+        children: "K8STON_RESTART_ENABLED"
       }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_ACCESS_CONFIGMAP"
+        children: "K8STON_ACCESS_CONFIGMAP"
       }), ") to use the derived defaults; an explicit entry must\nequal the derived effective value, otherwise rendering fails with actionable\nguidance instead of deploying disagreeing runtime/RBAC behavior."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "namespace"
         }), ": own namespace only (least privilege, the default). The chart\nderives ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_SCOPE=namespace"
+          children: "K8STON_SCOPE=namespace"
         }), " and renders a Role + RoleBinding."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "namespace"
         }), " + ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.rbac.extraNamespaces: [team-a]"
+          children: "k8ston.rbac.extraNamespaces: [team-a]"
         }), ": curated\nmulti-namespace access. The chart renders a Role + RoleBinding pair per entry\n(subject stays this release's ServiceAccount) and derives\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_SCOPE=cluster"
+          children: "K8STON_SCOPE=cluster"
         }), " with the bounded allowlist\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_NAMESPACES=<release-namespace>,team-a"
+          children: "K8STON_NAMESPACES=<release-namespace>,team-a"
         }), " — served by these namespaced\nRoles only, no ClusterRole is rendered. Previously the extra Roles were\nunusable because the namespace runtime scope only exposed the pod namespace."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "cluster"
         }), ": centralized dashboard (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_SCOPE=cluster"
+          children: "K8STON_SCOPE=cluster"
         }), "); narrow with\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_NAMESPACES=\"team-a,team-b\""
+          children: "K8STON_NAMESPACES=\"team-a,team-b\""
         }), " in ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.env"
+          children: "k8ston.env"
         }), ". ", (0,jsx_runtime.jsx)(_components.code, {
           children: "extraNamespaces"
         }), " is\nrejected with cluster scope."]
@@ -316,11 +316,11 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "rbac.create: false"
         }), ": RBAC is managed out-of-band. Set ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_SCOPE"
+          children: "K8STON_SCOPE"
         }), " /\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_NAMESPACES"
+          children: "K8STON_NAMESPACES"
         }), " in ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.env"
+          children: "k8ston.env"
         }), " yourself to match your external grants\n(", (0,jsx_runtime.jsx)(_components.code, {
           children: "rbac.scope"
         }), "/", (0,jsx_runtime.jsx)(_components.code, {
@@ -328,7 +328,7 @@ function _createMdxContent(props) {
         }), " are then ignored), and grant the ", (0,jsx_runtime.jsx)(_components.code, {
           children: "apps"
         }), "\npermissions yourself to match ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.restartEnabled"
+          children: "k8ston.restartEnabled"
         }), "."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
@@ -336,11 +336,11 @@ function _createMdxContent(props) {
       children: "Restart + access config in one place"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Unlike the raw manifests (where the flag and the RBAC rule are separate manual\nsteps), the chart wires them together: ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.restartEnabled"
+        children: "k8ston.restartEnabled"
       }), " is the single\neffective value driving ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "both"
       }), " the ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_RESTART_ENABLED"
+        children: "K8STON_RESTART_ENABLED"
       }), " runtime flag\n", (0,jsx_runtime.jsx)(_components.strong, {
         children: "and"
       }), " the ", (0,jsx_runtime.jsx)(_components.code, {
@@ -348,13 +348,13 @@ function _createMdxContent(props) {
       }), " RBAC rule (an explicit env entry must parse to the same\nvalue — runtime truthy strings are ", (0,jsx_runtime.jsx)(_components.code, {
         children: "1/true/yes/on"
       }), " — or rendering fails).\nSimilarly, ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.accessConfig.enabled"
+        children: "k8ston.accessConfig.enabled"
       }), " renders the namespace fallback\nConfigMap instead of applying ", (0,jsx_runtime.jsx)(_components.code, {
         children: "app/k8s/configmap-access.yaml"
       }), " by hand, ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "and"
       }), "\nderives ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_ACCESS_CONFIGMAP"
+        children: "K8STON_ACCESS_CONFIGMAP"
       }), " from ", (0,jsx_runtime.jsx)(_components.code, {
         children: "accessConfig.name"
       }), " so the runtime\npolicy reader finds it. The key must stay ", (0,jsx_runtime.jsx)(_components.code, {
@@ -362,7 +362,7 @@ function _createMdxContent(props) {
       }), " (hardcoded by the\nreader); with ", (0,jsx_runtime.jsx)(_components.code, {
         children: "accessConfig.enabled: false"
       }), ", point ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_ACCESS_CONFIGMAP"
+        children: "K8STON_ACCESS_CONFIGMAP"
       }), "\nat an externally managed ConfigMap. Each namespace entry accepts ", (0,jsx_runtime.jsx)(_components.code, {
         children: "groups"
       }), ",\n", (0,jsx_runtime.jsx)(_components.code, {
@@ -395,7 +395,7 @@ function _createMdxContent(props) {
         }), "."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Standard NetworkPolicy cannot match DNS names: add your IdP's CIDR ranges\nunder ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "networkPolicy.krypton.idpEgressIpBlocks"
+          children: "networkPolicy.k8ston.idpEgressIpBlocks"
         }), " when you tighten API egress."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["On OpenShift, ", (0,jsx_runtime.jsx)(_components.code, {
@@ -418,11 +418,11 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "cd helm/main\nmake upgrade NAMESPACE=krypton IMAGE_TAG=0.1.0   # helm dependency update + upgrade --install\nmake lint NAMESPACE=krypton IMAGE_TAG=0.1.0      # render + validate\nmake template NAMESPACE=krypton IMAGE_TAG=0.1.0  # render to template.yaml\n"
+        children: "cd helm/main\nmake upgrade NAMESPACE=k8ston IMAGE_TAG=0.1.0   # helm dependency update + upgrade --install\nmake lint NAMESPACE=k8ston IMAGE_TAG=0.1.0      # render + validate\nmake template NAMESPACE=k8ston IMAGE_TAG=0.1.0  # render to template.yaml\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The packaged subchart (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/main/charts/krypton-0.1.0.tgz"
+        children: "helm/main/charts/k8ston-0.1.0.tgz"
       }), ") is refreshed by the\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm-dep"
       }), " step (", (0,jsx_runtime.jsx)(_components.code, {
@@ -435,9 +435,9 @@ function _createMdxContent(props) {
       children: ["Every ", (0,jsx_runtime.jsx)(_components.code, {
         children: "v*.*.*"
       }), " tag publishes the ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/krypton"
+        children: "helm/k8ston"
       }), " chart to\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "oci://ghcr.io/egose/charts/krypton"
+        children: "oci://ghcr.io/egose/charts/k8ston"
       }), " (see the ", (0,jsx_runtime.jsx)(_components.em, {
         children: "Publish Helm chart"
       }), " workflow).\nChart ", (0,jsx_runtime.jsx)(_components.code, {
@@ -449,7 +449,7 @@ function _createMdxContent(props) {
       }), " deploys app ", (0,jsx_runtime.jsx)(_components.code, {
         children: "1.2.3"
       }), " (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "ghcr.io/egose/krypton:1.2.3"
+        children: "ghcr.io/egose/k8ston:1.2.3"
       }), " by default —\noverride with ", (0,jsx_runtime.jsx)(_components.code, {
         children: "image.tag"
       }), ")."]
@@ -458,7 +458,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "helm install krypton oci://ghcr.io/egose/charts/krypton --version 1.2.3 \\\n  --namespace krypton --create-namespace\n"
+        children: "helm install k8ston oci://ghcr.io/egose/charts/k8ston --version 1.2.3 \\\n  --namespace k8ston --create-namespace\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Or consume it as a dependency (", (0,jsx_runtime.jsx)(_components.code, {
@@ -467,16 +467,16 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-yaml",
-        children: "# Chart.yaml\ndependencies:\n  - name: krypton\n    version: '1.2.3'\n    repository: oci://ghcr.io/egose/charts\n"
+        children: "# Chart.yaml\ndependencies:\n  - name: k8ston\n    version: '1.2.3'\n    repository: oci://ghcr.io/egose/charts\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-yaml",
-        children: "# values.yaml\nkrypton:\n  enabled: true\n  env:\n    KRYPTON_SCOPE: namespace\n"
+        children: "# values.yaml\nk8ston:\n  enabled: true\n  env:\n    K8STON_SCOPE: namespace\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["See ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/krypton/README.md"
+        children: "helm/k8ston/README.md"
       }), " for the full values reference (image, exposure,\nautoscaling, PDB, security contexts, extra volumes)."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "exposure-and-health",
@@ -501,7 +501,7 @@ function _createMdxContent(props) {
           children: "must"
         }), " stay auto-mounted\n(", (0,jsx_runtime.jsx)(_components.code, {
           children: "serviceAccount.automount: true"
-        }), ") — Krypton talks to the Kubernetes API\nwith its own token."]
+        }), ") — K8ston talks to the Kubernetes API\nwith its own token."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "chart-ci",
@@ -512,7 +512,7 @@ function _createMdxContent(props) {
       }), " workflow lints both charts and templates them on every ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm/**"
       }), "\nchange, including a full-flag matrix for the subchart (cluster scope,\nrestart, ingress + route + HTTPRoute, access config, autoscaling, PDB,\nexternal ServiceAccount) and both umbrella example values files. It also runs\nthe rendered-object regressions in ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/krypton/tests/render-regressions.sh"
+        children: "helm/k8ston/tests/render-regressions.sh"
       }), "\n(default, cluster, curated namespaces, local/global conflicts, false\noverrides, external RBAC, custom access config, and every contradiction\nerror). Run the same locally with ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm lint"
       }), " / ", (0,jsx_runtime.jsx)(_components.code, {

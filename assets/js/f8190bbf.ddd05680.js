@@ -74,7 +74,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{ \"scope\": \"cluster\", \"namespaces\": [\"frontend-ns\", \"krypton-test\"] }\n"
+        children: "{ \"scope\": \"cluster\", \"namespaces\": [\"frontend-ns\", \"k8ston-test\"] }\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Behavior (", (0,jsx_runtime.jsx)(_components.code, {
@@ -91,7 +91,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "cluster"
         }), " scope with ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_NAMESPACES"
+          children: "K8STON_NAMESPACES"
         }), ": returns the configured names,\ndeduplicated and sorted, with ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "zero Kubernetes namespace-list requests"
         }), ".\nExistence and Kubernetes permission are checked by the actual resource operations."]

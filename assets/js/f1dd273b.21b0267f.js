@@ -87,7 +87,7 @@ function _createMdxContent(props) {
       id: "path-a-local-dev-with-a-mock-admin-fastest",
       children: "Path A: local dev with a mock admin (fastest)"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster\n(Krypton uses ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster\n(K8ston uses ", (0,jsx_runtime.jsx)(_components.code, {
         children: "~/.kube/config"
       }), " when not running in-cluster)."]
     }), "\n", (0,jsx_runtime.jsxs)(Tabs/* ["default"] */.A, {
@@ -132,7 +132,7 @@ function _createMdxContent(props) {
       children: [(0,jsx_runtime.jsx)(_components.code, {
         children: "AUTH_DISABLED=true"
       }), " skips SSO with a mock admin (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "dev@krypton.local"
+        children: "dev@k8ston.local"
       }), ") — local\ndevelopment only, never production. To exercise real SSO locally instead, set\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "AUTH_DISABLED=false"
       }), " and fill in ", (0,jsx_runtime.jsx)(_components.code, {
@@ -156,7 +156,7 @@ function _createMdxContent(props) {
       id: "path-b-full-sandbox-with-real-sso-recommended",
       children: "Path B: full sandbox with real SSO (recommended)"
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "The repo-root sandbox spins up a kind cluster with seeded fixtures plus Dex as\na throwaway OIDC provider — everything Krypton needs, nothing else."
+      children: "The repo-root sandbox spins up a kind cluster with seeded fixtures plus Dex as\na throwaway OIDC provider — everything K8ston needs, nothing else."
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
@@ -221,7 +221,7 @@ function _createMdxContent(props) {
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton-admin"
+              children: "k8ston-admin"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "admin bypass"
@@ -259,7 +259,7 @@ function _createMdxContent(props) {
         }), " — the ", (0,jsx_runtime.jsx)(_components.code, {
           children: "helm/main"
         }), " chart with the\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "helm/krypton"
+          children: "helm/k8ston"
         }), " subchart, NetworkPolicy included."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.a, {

@@ -85,7 +85,7 @@ function _createMdxContent(props) {
         children: "Local Development"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster\n(Krypton uses ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster\n(K8ston uses ", (0,jsx_runtime.jsx)(_components.code, {
         children: "~/.kube/config"
       }), " when not running in-cluster)."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
@@ -133,9 +133,9 @@ function _createMdxContent(props) {
       children: [(0,jsx_runtime.jsx)(_components.code, {
         children: "AUTH_DISABLED=true"
       }), " signs every request in as ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "dev@krypton.local"
+        children: "dev@k8ston.local"
       }), "\n(", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton-admin"
+        children: "k8ston-admin"
       }), " group) — the fastest way to iterate on UI, forms, and K8s\nwiring against any cluster your kubeconfig can reach."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "real-sso-loop-local-app-real-idp",

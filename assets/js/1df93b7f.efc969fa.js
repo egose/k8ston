@@ -139,7 +139,7 @@ function Hero() {
                     }),
                     /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)("p", {
                         className: "!max-w-md !text-sm !leading-7 !text-zinc-400 lg:!justify-self-end",
-                        children: "Krypton is a lightweight UI and API backed directly by native Secret objects. SSO proves who you are, annotations decide what you may see, and every change is versioned — with Velero, GitOps, and RBAC still in charge underneath."
+                        children: "K8ston is a lightweight UI and API backed directly by native Secret objects. SSO proves who you are, annotations decide what you may see, and every change is versioned — with Velero, GitOps, and RBAC still in charge underneath."
                     })
                 ]
             })
@@ -520,7 +520,7 @@ function Dashboard() {
                                 }),
                                 /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)("span", {
                                     className: "!ml-3 !flex-1 !truncate !rounded-md !bg-white/5 !px-3 !py-1 !font-mono !text-[11px] !text-zinc-500",
-                                    children: "krypton.example.com/secrets/krypton-test/database-credentials"
+                                    children: "k8ston.example.com/secrets/k8ston-test/database-credentials"
                                 })
                             ]
                         }),
@@ -539,7 +539,7 @@ function Dashboard() {
                                             children: [
                                                 /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)("div", {
                                                     className: "!rounded-md !bg-white/5 !px-3 !py-2 !text-zinc-200",
-                                                    children: "krypton-test"
+                                                    children: "k8ston-test"
                                                 }),
                                                 /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)("div", {
                                                     className: "!rounded-md !px-3 !py-2 !text-zinc-500",
@@ -684,19 +684,19 @@ const codeSample = `# Headless authz checks (no browser)
 ALICE=$(node sandbox/scripts/mint-jwt.mjs \\
   --email alice@company.com --groups dev-team)
 
-curl --cookie "krypton_session=$ALICE" \\
-  localhost:3000/api/namespaces/krypton-test/secrets
+curl --cookie "k8ston_session=$ALICE" \\
+  localhost:3000/api/namespaces/k8ston-test/secrets
 
 # Optimistic-concurrency update (409 on drift)
-curl --cookie "krypton_session=$ALICE" -X PUT \\
+curl --cookie "k8ston_session=$ALICE" -X PUT \\
   -H 'Content-Type: application/json' \\
   -d '{"data":{"API_KEY":"<rotated>"},"resourceVersion":"'$RV'"}' \\
-  localhost:3000/api/namespaces/krypton-test/secrets/demo-secret
+  localhost:3000/api/namespaces/k8ston-test/secrets/demo-secret
 
 # Reversible restore — snapshots current state first
-curl --cookie "krypton_session=$ALICE" -X POST \\
+curl --cookie "k8ston_session=$ALICE" -X POST \\
   -d '{"version":1}' \\
-  localhost:3000/api/namespaces/krypton-test/secrets/demo-secret/restore`;
+  localhost:3000/api/namespaces/k8ston-test/secrets/demo-secret/restore`;
 function CodeSection() {
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)("section", {
         className: "!border-b !border-white/5 !bg-[#0a0a0a]",
@@ -709,7 +709,7 @@ function CodeSection() {
                             children: "Automation"
                         }),
                         /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(SectionHeading, {
-                            children: "Drive Krypton from scripts"
+                            children: "Drive K8ston from scripts"
                         }),
                         /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(SectionSub, {
                             children: "Plain REST over JSON with session-cookie auth. Values cross the API as plain strings — base64 stays inside Kubernetes."
@@ -798,7 +798,7 @@ function DeployOptions() {
         {
             title: 'Helm + OCI',
             description: 'Umbrella chart or direct OCI install. Chart version tracks the app release.',
-            snippet: 'helm install krypton oci://ghcr.io/egose/charts/krypton',
+            snippet: 'helm install k8ston oci://ghcr.io/egose/charts/k8ston',
             to: '/guides/deploy-helm/',
             link: 'Deploy with Helm →'
         }
@@ -874,7 +874,7 @@ function OpenSource() {
                             children: [
                                 /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_docusaurus_Link__rspack_import_1/* ["default"] */.A, {
                                     className: "!inline-flex !items-center !rounded-md !border !border-white/15 !bg-white/5 !px-4 !py-2 !text-sm !font-medium !text-zinc-200 !no-underline !transition hover:!bg-white/10",
-                                    to: "https://github.com/egose/krypton",
+                                    to: "https://github.com/egose/k8ston",
                                     children: "Star on GitHub"
                                 }),
                                 /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_docusaurus_Link__rspack_import_1/* ["default"] */.A, {
@@ -953,8 +953,8 @@ function FinalCta() {
 }
 function Home() {
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_theme_Layout__rspack_import_2/* ["default"] */.A, {
-        title: "Krypton",
-        description: "Krypton is a Kubernetes-native secret manager: SSO login, hybrid authorization, versioned history, and one-click rollbacks on top of native Secret objects.",
+        title: "K8ston",
+        description: "K8ston is a Kubernetes-native secret manager: SSO login, hybrid authorization, versioned history, and one-click rollbacks on top of native Secret objects.",
         children: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)("main", {
             className: "!bg-black",
             children: [

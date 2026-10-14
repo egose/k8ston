@@ -81,13 +81,13 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"namespace\": \"krypton-test\",\n  \"name\": \"database-credentials\",\n  \"versions\": [\n    {\n      \"version\": 2,\n      \"snapshotName\": \"krypton-h-7b6ad742c31e4d37b5c8a90486d05a10-v2\",\n      \"snapshotAt\": \"2026-01-05T09:30:00Z\",\n      \"snapshotBy\": \"alice@company.com\",\n      \"keys\": [\"DATABASE_URL\"],\n      \"data\": { \"DATABASE_URL\": \"postgres://…\" },\n      \"binaryKeys\": [],\n      \"binaryData\": {}\n    }\n  ]\n}\n"
+        children: "{\n  \"namespace\": \"k8ston-test\",\n  \"name\": \"database-credentials\",\n  \"versions\": [\n    {\n      \"version\": 2,\n      \"snapshotName\": \"k8ston-h-7b6ad742c31e4d37b5c8a90486d05a10-v2\",\n      \"snapshotAt\": \"2026-01-05T09:30:00Z\",\n      \"snapshotBy\": \"alice@company.com\",\n      \"keys\": [\"DATABASE_URL\"],\n      \"data\": { \"DATABASE_URL\": \"postgres://…\" },\n      \"binaryKeys\": [],\n      \"binaryData\": {}\n    }\n  ]\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Versions sort by app counter descending. Each entry is a real immutable Opaque\nKubernetes Secret (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton-h-<UID hash>-vN"
+        children: "k8ston-h-<UID hash>-vN"
       }), ", labeled ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.io/kind=history"
+        children: "k8ston.io/kind=history"
       }), "),\nwith full source UID/resourceVersion/name/type annotations. Treat ", (0,jsx_runtime.jsx)(_components.code, {
         children: "snapshotName"
       }), "\nas an opaque returned identifier, not a name to reconstruct or use on live routes.\nThe response contains decoded DTOs, not internal raw/metadata storage records.\nResponse ", (0,jsx_runtime.jsx)(_components.code, {

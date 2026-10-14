@@ -123,7 +123,7 @@ function _createMdxContent(props) {
       }), ". Non-text values have an\nexplicit ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "base64"
       }), " representation in authorized detail/history responses.\nAll routes require a session and enforce namespace scope. Named-secret\nroutes then enforce live visibility (404 for history objects in either mode, and\nfor unmanaged secrets when ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_MANAGED_ONLY=true"
+        children: "K8STON_MANAGED_ONLY=true"
       }), ") → hybrid authorization\n(403 for denied rules; 503 if required namespace policy is unavailable).\nSuccess and error responses use ", (0,jsx_runtime.jsx)(_components.code, {
         children: "Cache-Control: no-store"
       }), ". Shared\n", (0,jsx_runtime.jsx)(_components.a, {
@@ -140,7 +140,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"namespace\": \"krypton-test\",\n  \"name\": \"database-credentials\",\n  \"type\": \"Opaque\",\n  \"keys\": [\"DATABASE_URL\", \"DB_PASSWORD\"],\n  \"keyCount\": 2,\n  \"description\": \"Primary database credentials\",\n  \"version\": 3,\n  \"resourceVersion\": \"123456\",\n  \"creationTimestamp\": \"2026-01-04T12:00:00Z\",\n  \"allowedGroups\": [\"dev-team\"],\n  \"allowedUsers\": [],\n  \"team\": \"team1\",\n  \"managedByKrypton\": true,\n  \"immutable\": false,\n  \"binaryKeys\": []\n}\n"
+        children: "{\n  \"namespace\": \"k8ston-test\",\n  \"name\": \"database-credentials\",\n  \"type\": \"Opaque\",\n  \"keys\": [\"DATABASE_URL\", \"DB_PASSWORD\"],\n  \"keyCount\": 2,\n  \"description\": \"Primary database credentials\",\n  \"version\": 3,\n  \"resourceVersion\": \"123456\",\n  \"creationTimestamp\": \"2026-01-04T12:00:00Z\",\n  \"allowedGroups\": [\"dev-team\"],\n  \"allowedUsers\": [],\n  \"team\": \"team1\",\n  \"managedByK8ston\": true,\n  \"immutable\": false,\n  \"binaryKeys\": []\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
@@ -302,7 +302,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-json",
-        children: "{\n  \"namespace\": \"krypton-test\",\n  \"secrets\": [{ \"...\": \"SecretSummary[]\" }],\n  \"canCreate\": true,\n  \"teams\": [\"team1\", \"team2\"],\n  \"creatableTeams\": [\"team1\"]\n}\n"
+        children: "{\n  \"namespace\": \"k8ston-test\",\n  \"secrets\": [{ \"...\": \"SecretSummary[]\" }],\n  \"canCreate\": true,\n  \"teams\": [\"team1\", \"team2\"],\n  \"creatableTeams\": [\"team1\"]\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["History snapshots are excluded ", (0,jsx_runtime.jsx)(_components.strong, {
@@ -312,7 +312,7 @@ function _createMdxContent(props) {
       }), ".\nThe server follows all pages within 5,000 objects / 32 MiB / 100 pages, keeping\ncomplete per-user options. Annotation-only managed Secrets remain eligible: the\nselector does not require a managed label. Current live ACLs and the ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "managed-by\nannotation"
       }), " are checked after collection, including in legacy mode. Identical\nduplicates appear once; failed/inconsistent/over-budget lists return an error, not\na truncated result. Unmanaged secrets are excluded when\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_MANAGED_ONLY=true"
+        children: "K8STON_MANAGED_ONLY=true"
       }), ". ", (0,jsx_runtime.jsx)(_components.code, {
         children: "canCreate"
       }), " is a UX hint for unassigned creation\n(namespace rules only), ", (0,jsx_runtime.jsx)(_components.code, {
@@ -398,9 +398,9 @@ function _createMdxContent(props) {
         children: ["Answers ", (0,jsx_runtime.jsx)(_components.code, {
           children: "201 { \"secret\": SecretSummary }"
         }), ", stamping\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/managed-by: krypton"
+          children: "k8ston.io/managed-by: k8ston"
         }), " and ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/version: 1"
+          children: "k8ston.io/version: 1"
         }), "."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
@@ -511,7 +511,7 @@ function _createMdxContent(props) {
         children: "Preserves live type, UID, owner references, finalizers, immutable state, and\nother native lifecycle metadata. The API does not expose a way to unset immutable."
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["After validation, snapshots the current state (reversible history), then replaces the\nlive object with a bumped ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.io/version"
+          children: "k8ston.io/version"
         }), " and ", (0,jsx_runtime.jsx)(_components.code, {
           children: "last-modified-by"
         }), "."]

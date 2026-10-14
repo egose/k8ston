@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 ;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-about-overview-mdx-24d.json
-var site_docs_about_overview_mdx_24d_namespaceObject = JSON.parse('{"id":"about/overview","title":"Overview","description":"Krypton is a lightweight secret manager UI and API backed directly by Kubernetes Secret objects.","source":"@site/docs/about/overview.mdx","sourceDirName":"about","slug":"/about/overview","permalink":"/about/overview","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":0,"frontMatter":{"sidebar_label":"Overview","sidebar_position":0},"sidebar":"about","next":{"title":"Quick Start","permalink":"/about/quick-start"}}')
+var site_docs_about_overview_mdx_24d_namespaceObject = JSON.parse('{"id":"about/overview","title":"Overview","description":"K8ston is a lightweight secret manager UI and API backed directly by Kubernetes Secret objects.","source":"@site/docs/about/overview.mdx","sourceDirName":"about","slug":"/about/overview","permalink":"/about/overview","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":0,"frontMatter":{"sidebar_label":"Overview","sidebar_position":0},"sidebar":"about","next":{"title":"Quick Start","permalink":"/about/quick-start"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
@@ -40,8 +40,8 @@ const toc = [{
   "id": "how-it-works",
   "level": 2
 }, {
-  "value": "What Krypton is not",
-  "id": "what-krypton-is-not",
+  "value": "What K8ston is not",
+  "id": "what-k8ston-is-not",
   "level": 2
 }, {
   "value": "At a glance",
@@ -81,9 +81,9 @@ function _createMdxContent(props) {
         children: "Overview"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Krypton is a lightweight secret manager UI and API backed ", (0,jsx_runtime.jsx)(_components.strong, {
+      children: ["K8ston is a lightweight secret manager UI and API backed ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "directly by Kubernetes Secret objects"
-      }), ".\nNo database, no persistent volumes, no secret sprawl: Kubernetes is the source of\ntruth, and Krypton is the translation + visualization layer on top."]
+      }), ".\nNo database, no persistent volumes, no secret sprawl: Kubernetes is the source of\ntruth, and K8ston is the translation + visualization layer on top."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["It is built with Next.js (App Router), ", (0,jsx_runtime.jsx)(_components.code, {
         children: "@kubernetes/client-node"
@@ -94,7 +94,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-text",
-        children: "Browser ──SSO login──▶ Krypton (Next.js)\n                            │  ServiceAccount token (auto-mounted in-cluster)\n                            │  https://kubernetes.default.svc  — no credentials to manage\n                            ▼\n                    Kubernetes API ──▶ etcd (Secrets + one access ConfigMap)\n"
+        children: "Browser ──SSO login──▶ K8ston (Next.js)\n                            │  ServiceAccount token (auto-mounted in-cluster)\n                            │  https://kubernetes.default.svc  — no credentials to manage\n                            ▼\n                    Kubernetes API ──▶ etcd (Secrets + one access ConfigMap)\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
@@ -122,22 +122,22 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "History"
-        }), ": K8s overwrites secrets in place, so Krypton snapshots the previous\nstate into an immutable, UID/resourceVersion-bound Secret before updates and\nrestores. Rollbacks preserve raw bytes and current access rules within the\n", (0,jsx_runtime.jsx)(_components.a, {
+        }), ": K8s overwrites secrets in place, so K8ston snapshots the previous\nstate into an immutable, UID/resourceVersion-bound Secret before updates and\nrestores. Rollbacks preserve raw bytes and current access rules within the\n", (0,jsx_runtime.jsx)(_components.a, {
           href: "/guides/versioning-history/",
           children: "retained history"
         }), "."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
-      id: "what-krypton-is-not",
-      children: "What Krypton is not"
+      id: "what-k8ston-is-not",
+      children: "What K8ston is not"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Not an encryption layer."
         }), " Out of the box, Kubernetes Secrets are ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "base64-encoded,\nnot encrypted"
-        }), ", in etcd. Krypton shows a warning banner until you confirm etcd\nencryption-at-rest is enabled (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_ETCD_ENCRYPTED=true"
+        }), ", in etcd. K8ston shows a warning banner until you confirm etcd\nencryption-at-rest is enabled (", (0,jsx_runtime.jsx)(_components.code, {
+          children: "K8STON_ETCD_ENCRYPTED=true"
         }), "). Read the\n", (0,jsx_runtime.jsx)(_components.a, {
           href: "/about/security-model/",
           children: "Security Model"
@@ -145,7 +145,7 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Not a replacement for RBAC."
-        }), " Krypton adds an SSO-friendly authorization layer\nfor users without cluster identities. The ServiceAccount it runs as should still\nfollow least privilege (namespace ", (0,jsx_runtime.jsx)(_components.code, {
+        }), " K8ston adds an SSO-friendly authorization layer\nfor users without cluster identities. The ServiceAccount it runs as should still\nfollow least privilege (namespace ", (0,jsx_runtime.jsx)(_components.code, {
           children: "Role"
         }), " by default, ", (0,jsx_runtime.jsx)(_components.code, {
           children: "ClusterRole"
@@ -175,7 +175,7 @@ function _createMdxContent(props) {
             children: ["Native ", (0,jsx_runtime.jsx)(_components.code, {
               children: "Secret"
             }), " objects; snapshots labeled ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "krypton.io/kind=history"
+              children: "k8ston.io/kind=history"
             })]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
@@ -219,7 +219,7 @@ function _createMdxContent(props) {
             }), ") or Helm (", (0,jsx_runtime.jsx)(_components.code, {
               children: "helm/main"
             }), " + ", (0,jsx_runtime.jsx)(_components.code, {
-              children: "helm/krypton"
+              children: "helm/k8ston"
             }), " subchart)"]
           })]
         })]
@@ -252,7 +252,7 @@ function _createMdxContent(props) {
         children: [(0,jsx_runtime.jsx)(_components.a, {
           href: "/api/overview/",
           children: "API Overview"
-        }), " — drive Krypton from scripts and automation."]
+        }), " — drive K8ston from scripts and automation."]
       }), "\n"]
     })]
   });

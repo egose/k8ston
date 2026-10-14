@@ -99,7 +99,7 @@ function _createMdxContent(props) {
       }), " finds explicit consumers and ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "requests a rollout"
       }), " by patching\ntheir pod template with a ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "krypton.io/restarted-at"
+        children: "k8ston.io/restarted-at"
       }), " annotation. An acknowledged\npatch does not prove a rollout completed, that pods are healthy, or that an\napplication is using the new credential."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "enabling-the-feature",
@@ -111,9 +111,9 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.ol, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Set ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "KRYPTON_RESTART_ENABLED=true"
+          children: "K8STON_RESTART_ENABLED=true"
         }), " (or ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "krypton.restartEnabled: true"
+          children: "k8ston.restartEnabled: true"
         }), " in Helm,\nwhich also renders the RBAC rule)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Grant the ", (0,jsx_runtime.jsx)(_components.code, {
@@ -135,7 +135,7 @@ function _createMdxContent(props) {
       id: "what-it-scans",
       children: "What it scans"
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "In the secret's namespace, Krypton inspects Deployments, StatefulSets, and\nDaemonSets for references to the secret name across:"
+      children: "In the secret's namespace, K8ston inspects Deployments, StatefulSets, and\nDaemonSets for references to the secret name across:"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
       children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
@@ -199,13 +199,13 @@ function _createMdxContent(props) {
         children: "{\n  \"status\": \"requested\",\n  \"matched\": 1,\n  \"requested\": [{ \"kind\": \"Deployment\", \"name\": \"api-server\" }],\n  \"failures\": [],\n  \"discoveryFailures\": [],\n  \"message\": \"Rollout requested for 1 workload.\",\n  \"note\": \"Only acknowledged pod-template patches are reported as requested. Rollout completion, readiness, and credential uptake are not verified.\"\n}\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Paused Deployments, OnDelete/partitioned strategies, image caching, and application\nbehavior can delay or prevent credential uptake even after an acknowledged patch.\nInspect rollout state, readiness, and application behavior with your normal\noperational tooling. Resolve permission/unavailability errors before retrying.\nA conflict or rejected patch means the workload was replaced or edited after\ndiscovery: inspect its current revision and references, then retry only if the\nrollout is still wanted. A transport failure may follow an applied patch;\nretrying scans all kinds again and can request another rollout for earlier\nsuccesses. Krypton adds no watcher, transaction, or background retry. The cap\nis per request, not a cluster-wide limit."
+      children: "Paused Deployments, OnDelete/partitioned strategies, image caching, and application\nbehavior can delay or prevent credential uptake even after an acknowledged patch.\nInspect rollout state, readiness, and application behavior with your normal\noperational tooling. Resolve permission/unavailability errors before retrying.\nA conflict or rejected patch means the workload was replaced or edited after\ndiscovery: inspect its current revision and references, then retry only if the\nrollout is still wanted. A transport failure may follow an applied patch;\nretrying scans all kinds again and can request another rollout for earlier\nsuccesses. K8ston adds no watcher, transaction, or background retry. The cap\nis per request, not a cluster-wide limit."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "trying-it-in-the-sandbox",
       children: "Trying it in the sandbox"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The sandbox sets ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "KRYPTON_RESTART_ENABLED=true"
+        children: "K8STON_RESTART_ENABLED=true"
       }), " and ships an ", (0,jsx_runtime.jsx)(_components.code, {
         children: "api-server"
       }), "\nDeployment consuming ", (0,jsx_runtime.jsx)(_components.code, {
@@ -222,7 +222,7 @@ function _createMdxContent(props) {
         }), "."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["The UI reports the acknowledged rollout request. Inspect\n", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kubectl rollout status deploy/api-server -n krypton-test"
+          children: "kubectl rollout status deploy/api-server -n k8ston-test"
         }), " and rollout history\nfor progress/revision changes; history alone does not verify env values."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: "Verify application behavior using the rotated credential without printing it."

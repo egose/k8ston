@@ -12,7 +12,7 @@ export function Banners() {
     <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 pt-3">
       {!data.etcdEncrypted && (
         <Alert variant="warning">
-          <IconAlertTriangle size={16} />
+          <IconAlertTriangle size={16} className="mt-[3px]" />
           <div>
             <strong>Secrets on this deployment are not encrypted at rest.</strong>{' '}
             <span className="opacity-90">
@@ -23,7 +23,7 @@ export function Banners() {
       )}
       {data.authDisabled && (
         <Alert variant="info">
-          <IconFlask size={16} />
+          <IconFlask size={16} className="mt-[3px]" />
           <div>
             <strong>Auth disabled (local dev).</strong>{' '}
             <span className="opacity-90">Running as a mock admin. Configure OIDC SSO for any shared deployment.</span>

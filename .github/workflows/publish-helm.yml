@@ -63,6 +63,7 @@ jobs:
 
     - name: Verify published chart
       run: |
+        mkdir -p /tmp/verify
         helm pull "${CHART_REPOSITORY}/k8ston" --version "${VERSION}" --destination /tmp/verify
         helm show chart "/tmp/verify/k8ston-${VERSION}.tgz"
       env:

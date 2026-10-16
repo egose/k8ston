@@ -23,9 +23,11 @@ Browser ──SSO login──▶ K8ston (Next.js)
 ```
 
 - **State**: every secret is a native `Secret` object. Standard tools (Velero,
-  `kubectl`, GitOps) keep working; RBAC, audit logs, and network policies come free.
-- **Auth**: users sign in via OIDC SSO (Keycloak, Entra ID, Okta, Google, GitHub…).
-  Users do **not** need cluster credentials.
+  `kubectl`, GitOps) keep working; cluster RBAC, audit configuration, and network
+  controls remain the operator's responsibility.
+- **Auth**: users sign in through OIDC-compatible providers such as Keycloak or Dex.
+  OAuth-only providers need an OIDC-compatible bridge. In the default hybrid mode,
+  users do **not** need Kubernetes identities or cluster credentials.
 - **Authz (hybrid)**: SSO proves _who you are_; per-secret annotations and one
   namespace-level ConfigMap decide _what you may see_. The app's ServiceAccount
   executes the K8s calls.
@@ -49,15 +51,15 @@ Browser ──SSO login──▶ K8ston (Next.js)
 
 ## At a glance
 
-| Concern              | Approach                                                                |
-| -------------------- | ----------------------------------------------------------------------- |
-| Storage              | Native `Secret` objects; snapshots labeled `k8ston.io/kind=history`    |
-| Login                | Generic OIDC (discovery-based), stateless HS256 session JWT             |
-| Authorization        | Admins bypass; per-secret annotations override namespace fallback       |
-| Concurrency          | Optimistic writes on `metadata.resourceVersion` (409 + reload on drift) |
-| Size guard           | 1 MiB per-object limit enforced client- and server-side (413)           |
-| Consumer rollout     | Opt-in bounded rollout requests for explicit Secret consumers; reports partial failures |
-| Deployment           | Raw manifests (`app/k8s/`) or Helm (`helm/main` + `helm/k8ston` subchart) |
+| Concern          | Approach                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| Storage          | Native `Secret` objects; snapshots labeled `k8ston.io/kind=history`                     |
+| Login            | Generic OIDC (discovery-based), stateless HS256 session JWT                             |
+| Authorization    | Admins bypass; per-secret annotations override namespace fallback                       |
+| Concurrency      | Optimistic writes on `metadata.resourceVersion` (409 + reload on drift)                 |
+| Size guard       | 1 MiB data guard in the form and API; validation/payload failures return 400/413        |
+| Consumer rollout | Opt-in bounded rollout requests for explicit Secret consumers; reports partial failures |
+| Deployment       | Raw manifests (`app/k8s/`) or Helm (`helm/main` + `helm/k8ston` subchart)               |
 
 ## Where to go next
 

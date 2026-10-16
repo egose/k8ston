@@ -5,9 +5,11 @@ sidebar_position: 5
 
 # Authentication
 
-Users sign in via generic OIDC SSO — Keycloak, Entra ID, Okta, Google, GitHub,
-or anything speaking discovery + PKCE. Users never need cluster credentials;
-the app's ServiceAccount executes the K8s calls.
+Users sign in through OIDC-compatible providers such as Keycloak, Entra ID, Okta,
+Google, or Dex, using discovery and PKCE. OAuth-only providers need an OIDC-compatible
+bridge. In the default hybrid mode, users need no Kubernetes identity or cluster
+credentials; the app's ServiceAccount executes Kubernetes calls. Optional
+impersonation additionally requires matching human RBAC.
 
 ## How login works
 
@@ -62,12 +64,12 @@ email/empty-list defaults.
 
 ## Claim mapping
 
-| Variable               | Default  | Maps to            |
-| ---------------------- | -------- | ------------------ |
-| `OIDC_GROUPS_CLAIM`    | `groups` | `SessionUser.groups` (authz input) |
-| `OIDC_USERNAME_CLAIM`  | `email`  | `SessionUser.email` (identity)     |
-| `OIDC_NAME_CLAIM`      | `name`   | `SessionUser.name` (display)       |
-| `OIDC_SCOPES`          | `openid profile email groups` | Requested scopes |
+| Variable              | Default                       | Maps to                            |
+| --------------------- | ----------------------------- | ---------------------------------- |
+| `OIDC_GROUPS_CLAIM`   | `groups`                      | `SessionUser.groups` (authz input) |
+| `OIDC_USERNAME_CLAIM` | `email`                       | `SessionUser.email` (identity)     |
+| `OIDC_NAME_CLAIM`     | `name`                        | `SessionUser.name` (display)       |
+| `OIDC_SCOPES`         | `openid profile email groups` | Requested scopes                   |
 
 `email` is the identity: admin matching, `allowed-users`, and
 `last-modified-by` all key off it (lowercased). `groups` is the authorization
@@ -84,8 +86,11 @@ provider claims.
 - `OIDC_ISSUER` is the issuer identifier, **not** the discovery URL — the app
   appends `/.well-known/openid-configuration` itself and requires an exact
   match with the document's `issuer` field.
-- Redirect URI defaults to `<NEXT_PUBLIC_APP_URL>/api/auth/callback`
+- Redirect URI defaults to `<configured-app-url>/api/auth/callback`
   (override with `OIDC_REDIRECT_URI`); register the same value at your IdP.
+  `NEXT_PUBLIC_APP_URL` takes precedence over runtime `APP_URL` and can be baked
+  into the build. For reusable images, prefer `APP_URL` without a conflicting
+  build-time public URL.
   Behind a TLS-terminating proxy, the code exchange uses that registered public
   URI rather than the internal request host, preserving the callback parameters.
   Use a redirect URI without its own query string or fragment.
@@ -98,11 +103,13 @@ provider claims.
 ## Dev bypass and headless sessions
 
 - `AUTH_DISABLED=true` returns a mock admin (`dev@k8ston.local`) for every
-  request; login redirects to `/` without minting a session token or requiring
+  request and ignores supplied session cookies; login redirects to `/` without minting a session token or requiring
   a signing key. Local development only — assert `authDisabled: false` via
   [`GET /api/config`](/api/config/) in real environments.
-- `sandbox/scripts/mint-jwt.mjs` mints session JWTs directly (must match
-  `SESSION_SECRET`) for headless authz checks:
+- `sandbox/scripts/mint-jwt.mjs` mints sandbox session JWTs directly (must match
+  `SESSION_SECRET`) for headless authz checks with `AUTH_DISABLED=false`.
+  It defaults to the public sandbox key. These are session/ACL checks, not an
+  OIDC sign-in test; they cannot distinguish users while the bypass is enabled:
 
 ```bash
 ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)

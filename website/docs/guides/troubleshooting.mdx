@@ -10,7 +10,9 @@ sidebar_position: 9
 - Confirm `OIDC_ISSUER` is the issuer identifier, not the discovery URL, and
   that it exactly matches the discovery document's `issuer` field.
 - Confirm the redirect URI registered at the IdP matches the app's
-  (`<NEXT_PUBLIC_APP_URL>/api/auth/callback`, or `OIDC_REDIRECT_URI`).
+  (`<configured-app-url>/api/auth/callback`, or `OIDC_REDIRECT_URI`).
+  Check runtime `APP_URL` and any higher-precedence `NEXT_PUBLIC_APP_URL` baked
+  into the image; see [Configuration](/guides/configuration/).
 - For `http://` issuers (sandbox Dex): hostname must be loopback,
   `OIDC_ALLOW_HTTP=true` must be set, and `NODE_ENV` must not be `production`.
 - OIDC configuration is cached per process — restart `pnpm dev` (or roll the
@@ -184,6 +186,7 @@ is an attestation, not a detector.
 
 - `kubectl config current-context` should be `kind-k8ston-sandbox` —
   `make kind-up` re-selects it. Never seed prod.
-- `make seed` re-applies fixtures idempotently; `make reset` for a clean slate.
+- `make seed` reapplies fixtures and can overwrite edits; `make reset` destroys
+  all kind cluster data before recreating the sandbox.
 - `make verify-sandbox` runs static checks (compose config + manifest
   validation) with no cluster needed.

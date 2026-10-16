@@ -19,7 +19,8 @@ Browser ──SSO login──▶ K8ston (Next.js)
 
 - **State**: every secret is a native `Secret` object. Standard tools (Velero,
   `kubectl`, GitOps) keep working; RBAC, audit logs, and network policies come free.
-- **Auth**: users sign in via OIDC SSO (Keycloak, Entra ID, Okta, Google, GitHub…).
+- **Auth**: users sign in via OIDC SSO (for example Keycloak, Entra ID, Okta, Google, or Dex).
+  OAuth-only providers require an OIDC-compatible bridge.
   Users do **not** need cluster credentials.
 - **Authz (hybrid)**: SSO proves _who you are_; per-secret annotations and one
   namespace-level ConfigMap decide _what you may see_. The app's ServiceAccount
@@ -599,15 +600,24 @@ optional classified `code`/`hint`; they no longer return the raw issuer URL.
 
 ## Local development
 
-Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster
-(K8ston uses `~/.kube/config` when not running in-cluster).
+Prerequisites: Node 22.22 (the Docker build version) or the developer/CI version
+in [`.tool-versions`](../.tool-versions), the pnpm version selected by root
+[package.json](../package.json), and a kubeconfig for a development cluster
+(`KUBECONFIG` or `~/.kube/config`). Current dependencies require at least Node 22.19.
+Choose credentials allowed to manage Secrets in your development namespace.
 
 ```bash
-cd app
-cp .env.example .env   # AUTH_DISABLED=true gives a mock admin, no IdP needed
-pnpm install
-pnpm dev               # http://localhost:3000
+# From the repository root.
+pnpm install --frozen-lockfile
+cp -n app/.env.example app/.env
+# Set K8STON_NAMESPACE in app/.env to your development namespace (example: default).
+pnpm --dir app dev --hostname 127.0.0.1   # http://localhost:3000
 ```
+
+`cp -n` preserves an existing `app/.env`; adapt it deliberately if it exists.
+`AUTH_DISABLED=true` makes every request the mock admin, ignores session cookies,
+and still performs real Kubernetes writes. Keep the server loopback-bound and
+never use the bypass in production or for per-user authorization checks.
 
 To exercise real SSO locally, set a fresh `SESSION_SECRET`, set
 `AUTH_DISABLED=false`, and fill in `OIDC_*`
@@ -618,9 +628,11 @@ cluster with seeded fixtures plus Dex as a throwaway OIDC provider —
 see [`../sandbox/README.md`](../sandbox/README.md) (`make up`, then copy
 `sandbox/app.env.sandbox` to `app/.env`).
 
-Useful commands: `pnpm build`, `pnpm lint`, `pnpm start`, `pnpm e2e`
-(visual Playwright suite over the production build; first run needs
-`pnpm exec playwright install chromium`).
+From the repository root, use `pnpm --dir app build`, `pnpm --dir app lint`,
+`pnpm --dir app start --hostname 127.0.0.1`, and `pnpm --dir app e2e`.
+The Playwright suite needs a production build and
+`pnpm --dir app exec playwright install chromium`. It mocks Kubernetes-backed
+HTTP APIs and does not prove real cluster RBAC or OIDC integration.
 
 From the **repository root**, run `pnpm test:unit` for Node-only backend regressions,
 or `pnpm test:unit app/tests/auth-oidc.test.ts` for a focused file. These tests use
@@ -644,15 +656,17 @@ deployment configuration.
 
 ## Deploy to Kubernetes / OpenShift
 
-Manifests live in `k8s/`. Namespace-scoped (default, least privilege):
+Manifests live in `app/k8s/`. Run the following deployment commands **from `app/`**.
+Customize the example provider/public URL, admins, namespace policy, and image tag
+before applying them. Namespace-scoped (default, least privilege):
 
 ```bash
 kubectl apply -f k8s/namespace.yaml -f k8s/serviceaccount.yaml -f k8s/role.yaml
 kubectl apply -f k8s/configmap-access.yaml -f k8s/configmap-app.yaml
-# real secrets — never commit values:
+# Prepare a private env file outside the checkout with OIDC_CLIENT_SECRET and
+# a fresh SESSION_SECRET from openssl rand -hex 32; never commit real values.
 kubectl create secret generic k8ston-oidc -n k8ston \
-  --from-literal=OIDC_CLIENT_SECRET='...' \
-  --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
+  --from-env-file=/secure/path/k8ston-oidc.env
 kubectl apply -f k8s/deployment.yaml
 ```
 
@@ -663,23 +677,29 @@ and register the OIDC redirect URI (`https://<host>/api/auth/callback`).
 
 ## Configuration reference
 
-| Variable                                             | Default                                               | Purpose                                                          |
-| ---------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| `K8STON_SCOPE`                                       | `namespace`                                           | `namespace` (own NS only) or `cluster`                           |
-| `K8STON_NAMESPACES`                                  | —                                                     | comma allowlist for cluster scope                                |
-| `K8STON_HISTORY_LIMIT`                               | `20`                                                  | eligible snapshots per live UID, integer 1–100                   |
-| `K8STON_MANAGED_ONLY`                                | `true`                                                | hide secrets without `managed-by=k8ston` (404)                   |
-| `K8STON_ETCD_ENCRYPTED`                              | `false`                                               | set `true` once apiserver encryption is on                       |
-| `K8STON_IMPERSONATION`                               | `false`                                               | forward SSO identity to K8s RBAC                                 |
-| `K8STON_RESTART_ENABLED`                             | `false`                                               | `true` enables "Restart apps" (needs apps RBAC rule)             |
-| `K8STON_ADMIN_GROUPS/USERS`                          | —                                                     | bootstrap admins (empty = everyone, lock down!)                  |
-| `K8STON_ACCESS_CONFIGMAP`                            | `k8ston-access`                                       | namespace-rules ConfigMap name                                   |
-| `AUTH_DISABLED`                                      | `false`                                               | `true` = mock admin, local dev only                              |
-| `SESSION_SECRET`                                     | — (required with auth)                                | ≥32-char random HMAC key; no development fallback                |
-| `OIDC_ISSUER/CLIENT_ID/CLIENT_SECRET`                | —                                                     | SSO provider (discovery-based)                                   |
-| `OIDC_ALLOW_HTTP`                                    | `false`                                               | allow `http://` issuers — loopback + non-prod only (sandbox Dex) |
-| `OIDC_SCOPES/GROUPS_CLAIM/USERNAME_CLAIM/NAME_CLAIM` | `openid profile email groups`/`groups`/`email`/`name` | claim mapping                                                    |
-| `NEXT_PUBLIC_APP_URL`                                | `http://localhost:3000`                               | public URL (derives OIDC redirect)                               |
+| Variable                                                                     | Default                                               | Purpose                                                           |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
+| `K8STON_SCOPE`                                                               | `namespace`                                           | `namespace` (own NS only) or `cluster`                            |
+| `K8STON_NAMESPACES`                                                          | —                                                     | comma allowlist for cluster scope                                 |
+| `K8STON_HISTORY_LIMIT`                                                       | `20`                                                  | eligible snapshots per live UID, integer 1–100                    |
+| `K8STON_MANAGED_ONLY`                                                        | `true`                                                | hide secrets without `managed-by=k8ston` (404)                    |
+| `K8STON_ETCD_ENCRYPTED`                                                      | `false`                                               | set `true` once apiserver encryption is on                        |
+| `K8STON_IMPERSONATION`                                                       | `false`                                               | forward SSO identity to K8s RBAC                                  |
+| `K8STON_RESTART_ENABLED`                                                     | `false`                                               | `true` enables "Restart apps" (needs apps RBAC rule)              |
+| `K8STON_ADMIN_GROUPS`, `K8STON_ADMIN_USERS`                                  | —                                                     | bootstrap admins (both empty = every authenticated user is admin) |
+| `K8STON_ACCESS_CONFIGMAP`                                                    | `k8ston-access`                                       | namespace-rules ConfigMap name                                    |
+| `AUTH_DISABLED`                                                              | `false`                                               | `true` = mock admin, local dev only                               |
+| `SESSION_SECRET`                                                             | — (required with auth)                                | ≥32-char random HMAC key; no development fallback                 |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`                        | —                                                     | SSO provider (discovery-based)                                    |
+| `OIDC_ALLOW_HTTP`                                                            | `false`                                               | allow `http://` issuers — loopback + non-prod only (sandbox Dex)  |
+| `OIDC_SCOPES`, `OIDC_GROUPS_CLAIM`, `OIDC_USERNAME_CLAIM`, `OIDC_NAME_CLAIM` | `openid profile email groups`/`groups`/`email`/`name` | claim mapping                                                     |
+| `NEXT_PUBLIC_APP_URL`                                                        | `http://localhost:3000`                               | public URL (derives OIDC redirect)                                |
+| `APP_URL`                                                                    | `http://localhost:3000` fallback                      | server runtime base URL when `NEXT_PUBLIC_APP_URL` is not set     |
+
+`NEXT_PUBLIC_APP_URL` takes precedence over `APP_URL` and can be baked into a build.
+For an image promoted between environments, prefer runtime `APP_URL` without a
+conflicting build-time `NEXT_PUBLIC_APP_URL`. `OIDC_REDIRECT_URI` can explicitly
+override the callback; it must match the provider's registration.
 
 ## Project layout
 

@@ -11,30 +11,44 @@ nothing else (no database; Kubernetes _is_ the datastore).
 
 ## Prerequisites
 
-- Docker + `docker compose`
+- Docker with Compose v2, GNU Make, and Bash
 - [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) (any recent release; validated with v0.33.0)
-- `kubectl`, `curl`, Node 20+
+- `kubectl` and `curl`
+- Node 22.22 (the Docker build version) or the developer/CI version in
+  [`.tool-versions`](https://github.com/egose/k8ston/blob/main/.tool-versions);
+  current dependencies require at least Node 22.19.
+- The pnpm version selected by `packageManager` in
+  [package.json](https://github.com/egose/k8ston/blob/main/package.json).
 
 ## Quickstart
 
 ```bash
 # from the repo root
+pnpm install --frozen-lockfile
 make up          # kind cluster + Dex + fixtures
-cp sandbox/app.env.sandbox app/.env
-cd app && pnpm install && pnpm dev   # http://localhost:3000
+cp -n sandbox/app.env.sandbox app/.env
+pnpm --dir app dev --hostname 127.0.0.1   # http://localhost:3000
 ```
 
-Sign in with any sandbox user (password is `password` for all):
+The app runs on the host, not in Compose. `cp -n` preserves an existing `app/.env`;
+update it deliberately if you previously used a different configuration.
+`make up` selects `kind-k8ston-sandbox` before seeding fixtures.
 
-| User                | Groups          | Role in tests             |
-| ------------------- | --------------- | ------------------------- |
-| `alice@company.com` | `dev-team`      | restricted-secret reader  |
-| `bob@company.com`   | `other-team`    | gets 403s (negative case) |
-| `carol@company.com` | `frontend-team` | namespace-fallback reader |
-| `admin@company.com` | `k8ston-admin` | admin bypass              |
+Sign in with any sandbox user (password is `password` for all). These credentials
+and the sandbox signing key are public test fixtures, never production credentials:
+
+| User                | Groups          | Expected access                                                     |
+| ------------------- | --------------- | ------------------------------------------------------------------- |
+| `alice@company.com` | `dev-team`      | can manage `database-credentials`                                   |
+| `bob@company.com`   | `other-team`    | denied restricted Secrets; can manage open fixtures                 |
+| `carol@company.com` | `frontend-team` | can manage namespace-fallback Secrets in `frontend-ns`              |
+| `admin@company.com` | `k8ston-admin`  | application ACL bypass, within scope/visibility and Kubernetes RBAC |
+
+An application grant permits reading and managing a Secret; these are not read-only roles.
 
 Tear down: `make down` (stops Dex, keeps kind for fast iteration),
-`make destroy` (removes Dex volumes **and** the kind cluster), `make reset`.
+`make destroy` (removes Dex volumes **and** all kind cluster data), or `make reset`
+(destroy and recreate). `make seed` reapplies fixtures and can overwrite fixture edits.
 
 ## Layout
 
@@ -49,22 +63,23 @@ sandbox/
   scripts/             seed.sh, wait-for-dex.sh, mint-jwt.mjs
 ```
 
-Ports (all `127.0.0.1`-bound): Dex `5556`, app `3000`, kind API `6443`
-(auto-mapped). Changing `DEX_PORT` requires changing the `issuer` in
+Dex binds to `127.0.0.1:5556`; the dev command above binds the app to `127.0.0.1:3000`.
+Kind assigns a host API port recorded in its kubeconfig; do not assume host port `6443`.
+Changing `DEX_PORT` requires changing the `issuer` in
 `dex/config.yaml` and the app's `OIDC_ISSUER` together — the issuer URL embeds
 the port.
 
 There is intentionally no `docker-compose.prod.yml` overlay: production K8ston
-deploys to Kubernetes via `app/k8s/*.yaml`, not compose.
+uses reviewed [manifests](/guides/deploy-kubernetes/) or the [Helm chart](/guides/deploy-helm/), not this Compose setup.
 
 ## Fixture map + expected visibility matrix
 
-| Secret                 | Namespace    | Rule source                             | alice | bob | carol | admin |
-| ---------------------- | ------------ | --------------------------------------- | ----- | --- | ----- | ----- |
+| Secret                 | Namespace   | Rule source                             | alice | bob | carol | admin |
+| ---------------------- | ----------- | --------------------------------------- | ----- | --- | ----- | ----- |
 | `database-credentials` | k8ston-test | annotation `allowed-groups: dev-team,…` | ✅    | ❌  | ❌    | ✅    |
 | `feature-flags`        | k8ston-test | none (open by default)                  | ✅    | ✅  | ✅    | ✅    |
 | `legacy-external`      | k8ston-test | none + unmanaged ("external" badge)¹    | ✅    | ✅  | ✅    | ✅    |
-| `frontend-api-keys`    | frontend-ns  | namespace fallback (`frontend-team`)    | ❌    | ❌  | ✅    | ✅    |
+| `frontend-api-keys`    | frontend-ns | namespace fallback (`frontend-team`)    | ❌    | ❌  | ✅    | ✅    |
 
 `frontend-ns` is governed by `k8ston-access` in `k8ston-test` (the app's own
 namespace); `k8ston-test` is deliberately absent from it (open by default).
@@ -80,30 +95,40 @@ unmanaged secrets are hidden entirely (excluded from lists, 404 on access).
 Walk the matrix above by logging in as each user. Then:
 
 - **Versioning**: edit `database-credentials` twice → UID-bound v1/v2 snapshots
-  appear (`kubectl get secret -n k8ston-test -l k8ston.io/kind=history`);
-  restore v1 in the UI (restores snapshot first, so rollback is reversible).
+  named `k8ston-h-<UID hash>-vN` appear
+  (`kubectl --context kind-k8ston-sandbox get secret -n k8ston-test -l k8ston.io/kind=history`).
+  Restoring v1 captures the current live state before replacing its data; recovery
+  depends on retained history. These are pre-write captures, not an atomic backup log.
 - **409 conflicts**: open the same secret's edit page in two tabs/sessions, save
   both — the second gets the resourceVersion-mismatch prompt.
-- **1 MiB guard**: paste a large value — the form meter blocks; forced API calls 413.
+- **Size guards**: paste oversized data — the form blocks it and the API rejects
+  it too (400 for data validation or 413 for payload-size guards, depending on the input).
 - **Restart consumers**: edit `database-credentials`, hit _Restart apps_,
-  then inspect `kubectl rollout status deploy/api-server -n k8ston-test` and
+  then inspect `kubectl --context kind-k8ston-sandbox rollout status deploy/api-server -n k8ston-test` and
   rollout history. The UI confirms the request only; verify application credential
   uptake separately without printing values (the sandbox sets
   `K8STON_RESTART_ENABLED=true`; the default is `false`).
-- **Redaction**: `grep` the `pnpm dev` log — key names only, never values.
+- **Redaction**: inspect app audit/error diagnostics — action metadata and key names,
+  not Secret values.
 - **External adoption** (`K8STON_MANAGED_ONLY=false` only): editing
   `legacy-external` stamps K8ston annotations on it.
 
 ## Headless authz checks (no browser)
 
-Mint session JWTs directly (must match the app's `SESSION_SECRET`):
+Keep `AUTH_DISABLED=false` and mint sandbox session JWTs with the app's matching
+`SESSION_SECRET`. The helper defaults to the public sandbox key, not a production key.
+With auth disabled, cookies are ignored and every request is the mock admin, so a
+negative per-user check cannot work. Print only HTTP status codes, not response values:
 
 ```bash
 ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)
 BOB=$(node sandbox/scripts/mint-jwt.mjs --email bob@company.com --groups other-team)
-curl --cookie "k8ston_session=$ALICE" localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 200
-curl --cookie "k8ston_session=$BOB"   localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 403
-curl --cookie "k8ston_session=$BOB"   localhost:3000/api/namespaces/k8ston-test/secrets/feature-flags        # 200
+curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
+  --cookie "k8ston_session=$ALICE" http://localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 200
+curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
+  --cookie "k8ston_session=$BOB" http://localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials    # 403
+curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
+  --cookie "k8ston_session=$BOB" http://localhost:3000/api/namespaces/k8ston-test/secrets/feature-flags          # 200
 ```
 
 The full scripted lifecycle (create → update → versions → restore → restart →
@@ -111,50 +136,65 @@ delete) lives in the [API overview](/api/overview/).
 
 ## Validating the in-cluster path (ServiceAccount + RBAC)
 
-`pnpm dev` uses your kubeconfig (admin-ish) — it does **not** exercise
-`app/k8s/role.yaml` or the SA-token flow. Validate those against kind too:
+The host dev server uses your selected kubeconfig (typically admin in kind), not
+the app's ServiceAccount or Role. The following **local-only** setup validates that
+identity in namespace `k8ston`, not the host fixture namespaces. It prepares a
+minimal auth-disabled ConfigMap and a local image before applying the Deployment;
+no host-side Dex connection is needed:
 
 ```bash
 # from the repo root, with the kind cluster from `make up` running
+SANDBOX_CONTEXT=kind-k8ston-sandbox
 docker build -t k8ston:sandbox -f Dockerfile .
 kind load docker-image k8ston:sandbox --name k8ston-sandbox
-kubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml
-kubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml
-kubectl create secret generic k8ston-oidc -n k8ston \
-  --from-literal=OIDC_CLIENT_SECRET=sandbox-unused \
-  --from-literal=SESSION_SECRET=sandbox-only-session-secret-32chars!!!
-kubectl apply -f app/k8s/deployment.yaml
-kubectl -n k8ston set image deploy/k8ston k8ston=k8ston:sandbox
-# AUTH_DISABLED=true below: pods inside kind cannot reach host-side Dex via
-# localhost, so in-cluster runs validate the SA/RBAC path (pair with
-# scripts/mint-jwt.mjs sessions for authz checks). Real SSO stays host-side
-# via `pnpm dev`, where both browser and app share the issuer URL.
-kubectl -n k8ston set env deploy/k8ston AUTH_DISABLED=true \
-  SESSION_SECRET=sandbox-only-session-secret-32chars!!!
-kubectl -n k8ston rollout status deploy/k8ston
-kubectl -n k8ston port-forward --address 127.0.0.1 svc/k8ston 3300:80
+kubectl --context "$SANDBOX_CONTEXT" apply \
+  -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml
+kubectl --context "$SANDBOX_CONTEXT" apply -f app/k8s/configmap-access.yaml
+kubectl --context "$SANDBOX_CONTEXT" -n k8ston create configmap k8ston-config \
+  --from-literal=AUTH_DISABLED=true \
+  --from-literal=APP_URL=http://127.0.0.1:3300 \
+  --from-literal=K8STON_ADMIN_GROUPS=k8ston-admin \
+  --dry-run=client -o yaml | kubectl --context "$SANDBOX_CONTEXT" apply -f -
+kubectl --context "$SANDBOX_CONTEXT" -n k8ston create secret generic k8ston-oidc \
+  --from-literal=SESSION_SECRET='sandbox-only-session-secret-32chars!!!' \
+  --dry-run=client -o yaml | kubectl --context "$SANDBOX_CONTEXT" apply -f -
+sed 's|image: ghcr.io/egose/k8ston:latest|image: k8ston:sandbox|' app/k8s/deployment.yaml \
+  | kubectl --context "$SANDBOX_CONTEXT" apply -f -
+kubectl --context "$SANDBOX_CONTEXT" -n k8ston rollout status deploy/k8ston
+kubectl --context "$SANDBOX_CONTEXT" -n k8ston port-forward --address 127.0.0.1 svc/k8ston 3300:80
 # → http://127.0.0.1:3300, namespace scope over `k8ston` only
 ```
 
-Prove least privilege (Role allows `k8ston` only, no namespace listing):
+In another terminal, prove least privilege (Role allows `k8ston` only, no namespace listing):
 
 ```bash
-kubectl auth can-i 'create secrets' -n k8ston --as=system:serviceaccount:k8ston:k8ston         # yes
-kubectl auth can-i 'list secrets' -n k8ston-test --as=system:serviceaccount:k8ston:k8ston      # no
-kubectl auth can-i 'list namespaces' --as=system:serviceaccount:k8ston:k8ston                    # no
+kubectl --context kind-k8ston-sandbox auth can-i create secrets -n k8ston \
+  --as=system:serviceaccount:k8ston:k8ston       # yes
+kubectl --context kind-k8ston-sandbox auth can-i list secrets -n k8ston-test \
+  --as=system:serviceaccount:k8ston:k8ston       # no
+kubectl --context kind-k8ston-sandbox auth can-i list namespaces \
+  --as=system:serviceaccount:k8ston:k8ston       # no
 ```
 
-Note: with `K8STON_SCOPE=cluster` but only the namespace Role applied, the
-app requires an explicit `K8STON_NAMESPACES=k8ston` allowlist to avoid namespace
-discovery. Allowlist resolution makes no namespace-list calls. An empty allowlist
-requires namespace-list RBAC and now returns an error if discovery fails instead
-of silently falling back to the pod namespace.
+With cluster scope but only this namespace Role, set an explicit
+`K8STON_NAMESPACES=k8ston` allowlist to avoid namespace discovery. An empty allowlist
+requires namespace-list RBAC and returns an error on discovery failure; there is
+no fallback to the pod namespace. The allowlist does not grant extra Kubernetes access.
+
+Auth-disabled runs validate ServiceAccount access, **not per-user ACLs**.
+For headless in-cluster session checks, use `AUTH_DISABLED=false`, the matching
+session key, and managed test Secrets in `k8ston`; the unchanged Role cannot manage
+the `k8ston-test` fixtures. Session fixtures do not exercise OIDC sign-in. For real
+in-cluster SSO, use an HTTPS provider reachable by both the browser and pod — a
+pod's `localhost` is not host-side Dex, and HTTP issuers are rejected in production.
 
 Cheap static checks that need no cluster at all:
 
 ```bash
 make verify-sandbox   # compose config + offline manifest validation (no cluster needed)
 ```
+
+This structural check needs Python 3/PyYAML and does not replace API-server validation.
 
 ## Troubleshooting
 
@@ -167,5 +207,5 @@ make verify-sandbox   # compose config + offline manifest validation (no cluster
 - App shows login errors → check `OIDC_ISSUER`/`OIDC_ALLOW_HTTP=true` in
   `app/.env` and that Dex is up before the app boots (OIDC config is cached
   per process — restart `pnpm dev` after Dex restarts).
-- Stale fixtures → `make seed` re-applies (idempotent); `make reset` for a
-  fully clean slate.
+- Stale fixtures → `make seed` reapplies them and can overwrite edits; `make reset`
+  destroys all cluster data before recreating the sandbox.

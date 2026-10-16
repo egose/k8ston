@@ -5,25 +5,32 @@ sidebar_position: 0
 
 # Local Development
 
-Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster
-(K8ston uses `~/.kube/config` when not running in-cluster).
+Use Node 22.22 (the Docker build version) or the developer/CI version in
+[`.tool-versions`](https://github.com/egose/k8ston/blob/main/.tool-versions),
+the pnpm version selected by root `package.json`, and a kubeconfig for a development
+cluster (`KUBECONFIG` or `~/.kube/config`). Current dependencies require at least Node 22.19.
+Choose credentials allowed to manage Secrets in your development namespace.
 
 ## Mock-admin loop (no IdP)
 
-```bash npm2yarn
-cd app
-cp .env.example .env   # AUTH_DISABLED=true gives a mock admin, no IdP needed
-pnpm install
-pnpm dev               # http://localhost:3000
+```bash
+# From the repository root.
+pnpm install --frozen-lockfile
+cp -n app/.env.example app/.env
+# Set K8STON_NAMESPACE in app/.env to your development namespace (example: default).
+pnpm --dir app dev --hostname 127.0.0.1   # http://localhost:3000
 ```
 
-`AUTH_DISABLED=true` signs every request in as `dev@k8ston.local`
-(`k8ston-admin` group) — the fastest way to iterate on UI, forms, and K8s
-wiring against any cluster your kubeconfig can reach.
+`cp -n` preserves an existing `app/.env`; adapt it deliberately if it exists.
+`AUTH_DISABLED=true` signs every request in as the mock admin `dev@k8ston.local`
+and ignores session cookies. It still performs real Kubernetes writes, so use a
+development cluster, keep it loopback-bound, and never enable it in production
+or for per-user authorization checks. Managed-only mode hides unmanaged Secrets by default.
 
 ## Real-SSO loop (local app, real IdP)
 
-Set `AUTH_DISABLED=false` and fill in `OIDC_*` in `app/.env`. Your IdP needs
+Set a fresh random `SESSION_SECRET` (use `openssl rand -hex 32`),
+`AUTH_DISABLED=false`, and your `OIDC_*` settings in `app/.env`. Your IdP needs
 the redirect URI registered:
 
 ```text
@@ -47,16 +54,23 @@ authz fixtures, and consumer workloads without touching a shared cluster.
 
 ## Commands
 
-| Command                                 | Purpose                                              |
-| --------------------------------------- | ---------------------------------------------------- |
-| `pnpm dev`                              | Dev server with hot reload                           |
-| `pnpm build` / `pnpm start`             | Production build / serve it                          |
-| `pnpm lint`                             | ESLint                                               |
-| `pnpm e2e`                              | Visual Playwright suite over the production build    |
-| `pnpm exec playwright install chromium` | One-time browser install for `pnpm e2e`              |
+Run these from the repository root:
+
+| Command                                           | Purpose                                            |
+| ------------------------------------------------- | -------------------------------------------------- |
+| `pnpm --dir app dev --hostname 127.0.0.1`         | Loopback dev server with hot reload                |
+| `pnpm --dir app build`                            | Production build                                   |
+| `pnpm --dir app start --hostname 127.0.0.1`       | Serve the production build on loopback             |
+| `pnpm --dir app lint`                             | ESLint                                             |
+| `pnpm --dir app e2e`                              | Playwright browser suite; needs a production build |
+| `pnpm --dir app exec playwright install chromium` | One-time browser install                           |
+| `pnpm test:unit`                                  | Backend regressions; no cluster or IdP required    |
+
+Browser tests mock Kubernetes-backed HTTP APIs; they are not proof of real cluster
+RBAC or end-to-end OIDC. See the sandbox for integration checks.
 
 :::note
-`pnpm dev` uses your kubeconfig (admin-ish) — it does **not** exercise
+The host dev server uses your selected kubeconfig — it does **not** exercise
 `app/k8s/role.yaml` or the ServiceAccount-token flow. Validate those against
 kind too; the [sandbox guide](/guides/sandbox/) shows how.
 :::

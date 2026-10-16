@@ -1,4 +1,5 @@
-# Minimal Helm values for K8ston (chart: helm/main, subchart: helm/k8ston).
+# Minimal Helm values for namespace k8ston (umbrella chart: helm/main).
+# Replace the image-version placeholder, URLs, client ID, and group names.
 # Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes
 # Secret referenced by envSecretName — never in values files.
 global:
@@ -7,18 +8,18 @@ global:
 k8ston:
   enabled: true
   replicaCount: 2
-  # kubectl create secret generic k8ston-oidc -n k8ston \
-  #   --from-literal=OIDC_CLIENT_SECRET='...' \
-  #   --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
+  image:
+    tag: <published-X.Y.Z-version>
+  # Provision this Secret out-of-band; do not put its values in Git or shell history.
   envSecretName: k8ston-oidc
   env:
-    K8STON_SCOPE: namespace
+    AUTH_DISABLED: 'false'
     K8STON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on
     K8STON_ADMIN_GROUPS: k8ston-admin
     OIDC_ISSUER: https://keycloak.example.com/realms/company
     OIDC_CLIENT_ID: k8ston
     OIDC_SCOPES: openid profile email groups
-    NEXT_PUBLIC_APP_URL: https://k8ston.example.com
+    APP_URL: https://k8ston.example.com
   # Derives the default K8STON_SCOPE (explicit entries must match):
   # namespace (default) or cluster. Curated extras add a derived allowlist.
   rbac:
@@ -28,7 +29,11 @@ k8ston:
   restartEnabled: false
   # Namespace fallback rules (k8ston-access / access.json).
   accessConfig:
-    enabled: false
+    enabled: true
+    data:
+      k8ston:
+        groups: [secret-operators]
+        users: []
 
 networkPolicy:
   enabled: true

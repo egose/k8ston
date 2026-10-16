@@ -9,6 +9,8 @@ import CodeBlock from '@theme/CodeBlock';
 
 The `helm/main` chart deploys K8ston via the `helm/k8ston` subchart, with
 templated RBAC scope, restart wiring, access config, and NetworkPolicy.
+Only the `helm/k8ston` chart is published to OCI; direct-chart values are not
+wrapped in `k8ston:` and the direct chart does not include the umbrella's NetworkPolicy.
 
 ## Minimal values
 
@@ -18,28 +20,40 @@ import HelmValues from '!!raw-loader!../../.samples/values-helm.yaml';
 <CodeBlock language="yaml">{HelmValues}</CodeBlock>
 ```
 
-Create the referenced Secret out-of-band (never commit values):
+The example uses namespace `k8ston`; replace the image version, URLs, client ID,
+and group names. Configure a TLS exposure and register the exact provider callback
+`https://<your-host>/api/auth/callback`. Absent or empty namespace policy is open,
+not deny-all; leaving both admin lists empty makes all authenticated users admins.
+
+`APP_URL` is read at server runtime. Do not bake in a conflicting `NEXT_PUBLIC_APP_URL`,
+which takes precedence and can be fixed at build time. Replicas must share a random
+signing key and consistent annotation/retention settings.
+
+Create the referenced Secret out-of-band. For a manual initial setup, prepare a
+private env file outside the checkout (permissions `0600`) containing your provider's
+`OIDC_CLIENT_SECRET` and a fresh `SESSION_SECRET` from `openssl rand -hex 32`.
+Do not commit the file or put the actual credential in shell history:
 
 ```bash
-kubectl create secret generic k8ston-oidc -n k8ston \
-  --from-literal=OIDC_CLIENT_SECRET='...' \
-  --from-literal=SESSION_SECRET="$(openssl rand -hex 32)"
+kubectl apply -f app/k8s/namespace.yaml
+kubectl -n k8ston create secret generic k8ston-oidc \
+  --from-env-file=/secure/path/k8ston-oidc.env
 ```
 
 ## Key knobs
 
-| Value                         | Purpose                                                                 |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `k8ston.env`                     | Non-secret K8ston config (full reference: `app/.env.example`)          |
-| `k8ston.envSecretName`           | K8s Secret with `OIDC_CLIENT_SECRET` + `SESSION_SECRET`                 |
-| `k8ston.rbac.scope`              | `namespace` (default) or `cluster` — the chart derives `K8STON_SCOPE` from it (explicit entries must match) |
-| `k8ston.rbac.extraNamespaces`    | Curated extra namespaces (namespace scope): Roles plus a derived `K8STON_NAMESPACES` allowlist, no ClusterRole |
-| `k8ston.restartEnabled`          | Single effective value wiring `K8STON_RESTART_ENABLED` **and** the `apps` RBAC rule together |
-| `k8ston.accessConfig.enabled`    | Renders the access ConfigMap **and** derives `K8STON_ACCESS_CONFIGMAP` from its name (`access.json` key) |
-| `k8ston.replicaCount`            | Stateless — more than one replica is always safe (default 2)            |
-| `k8ston.ingress.enabled` / `route.enabled` / `httpRoute.enabled` | Expose via Ingress / OpenShift Route / Gateway API HTTPRoute |
-| `networkPolicy.enabled`       | Locks down pod traffic (DNS + K8s API egress allowed)                   |
-| `networkPolicy.allowOpenShiftIngress` | **Must be `true` on OpenShift** (routes arrive from `openshift-ingress`) |
+| Value                                                            | Purpose                                                                                                        |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `k8ston.env`                                                     | Non-secret K8ston config (full reference: `app/.env.example`)                                                  |
+| `k8ston.envSecretName`                                           | K8s Secret with `OIDC_CLIENT_SECRET` + `SESSION_SECRET`                                                        |
+| `k8ston.rbac.scope`                                              | `namespace` (default) or `cluster` — the chart derives `K8STON_SCOPE` from it (explicit entries must match)    |
+| `k8ston.rbac.extraNamespaces`                                    | Curated extra namespaces (namespace scope): Roles plus a derived `K8STON_NAMESPACES` allowlist, no ClusterRole |
+| `k8ston.restartEnabled`                                          | Single effective value wiring `K8STON_RESTART_ENABLED` **and** the `apps` RBAC rule together                   |
+| `k8ston.accessConfig.enabled`                                    | Renders the access ConfigMap **and** derives `K8STON_ACCESS_CONFIGMAP` from its name (`access.json` key)       |
+| `k8ston.replicaCount`                                            | Application replicas; share the signing key and consistent configuration (umbrella default 2).                 |
+| `k8ston.ingress.enabled` / `route.enabled` / `httpRoute.enabled` | Expose via Ingress / OpenShift Route / Gateway API HTTPRoute                                                   |
+| `networkPolicy.enabled`                                          | Locks down pod traffic (DNS + K8s API egress allowed)                                                          |
+| `networkPolicy.allowOpenShiftIngress`                            | **Must be `true` on OpenShift** (routes arrive from `openshift-ingress`)                                       |
 
 See `helm/main/values-example.yaml` and `helm/main/values-k8s-prod.example.yaml`
 for fuller examples, including topology spread and IdP egress CIDRs.
@@ -66,7 +80,8 @@ guidance instead of deploying disagreeing runtime/RBAC behavior.
   unusable because the namespace runtime scope only exposed the pod namespace.
 - `cluster`: centralized dashboard (`K8STON_SCOPE=cluster`); narrow with
   `K8STON_NAMESPACES="team-a,team-b"` in `k8ston.env`. `extraNamespaces` is
-  rejected with cluster scope.
+  rejected with cluster scope. This allowlist limits the app, not the ClusterRole's
+  Kubernetes permissions; curated namespaces can use namespaced Roles instead.
 - `rbac.create: false`: RBAC is managed out-of-band. Set `K8STON_SCOPE` /
   `K8STON_NAMESPACES` in `k8ston.env` yourself to match your external grants
   (`rbac.scope`/`extraNamespaces` are then ignored), and grant the `apps`
@@ -98,22 +113,29 @@ not set managed keys (they render last and would shadow the derived values).
   is allowed on ports 443/6443 via `allowKubeApiEgress`.
 - Standard NetworkPolicy cannot match DNS names: add your IdP's CIDR ranges
   under `networkPolicy.k8ston.idpEgressIpBlocks` when you tighten API egress.
-- On OpenShift, `allowOpenShiftIngress` must be `true` or all ingress is denied.
+  The default API-port allowance permits all destinations on those ports; adding
+  IdP CIDRs does not narrow that rule. Restrict API and IdP destinations deliberately.
+- With this NetworkPolicy enabled, OpenShift Routes require `allowOpenShiftIngress=true`;
+  other ingress controllers need appropriate `ingressFrom` allowances.
 
 ## Installing with the chart Makefile
 
-`helm/main/Makefile` wraps the standard flow. Secret values live in a
-`values-<namespace>.secret.yaml` file (see `values-ai-poc.secret.yaml` for the
-shape; never commit real ones):
+`helm/main/Makefile` wraps the standard flow and reads
+`values-<namespace>.secret.yaml`. Despite that filename, keep provider/signing
+credentials in the referenced Kubernetes Secret, not embedded in the values file.
+From the repository root, copy the documentation example without overwriting an
+existing file, then customize it for your namespace and platform:
 
 ```bash
-cd helm/main
-make upgrade NAMESPACE=k8ston IMAGE_TAG=0.1.0   # helm dependency update + upgrade --install
-make lint NAMESPACE=k8ston IMAGE_TAG=0.1.0      # render + validate
-make template NAMESPACE=k8ston IMAGE_TAG=0.1.0  # render to template.yaml
+cp -n website/.samples/values-helm.yaml helm/main/values-k8ston.secret.yaml
+RELEASE_VERSION='<published-X.Y.Z-version>'
+make -C helm/main lint NAMESPACE=k8ston IMAGE_TAG="$RELEASE_VERSION"
+make -C helm/main upgrade NAMESPACE=k8ston IMAGE_TAG="$RELEASE_VERSION"
+make -C helm/main template NAMESPACE=k8ston IMAGE_TAG="$RELEASE_VERSION"
 ```
 
-The packaged subchart (`helm/main/charts/k8ston-0.1.0.tgz`) is refreshed by the
+`template` writes `helm/main/template.yaml`; avoid overwriting useful generated work.
+The packaged subchart under `helm/main/charts/` is refreshed by the
 `helm-dep` step (`helm dependency update`) before every install, upgrade, lint,
 and template run.
 
@@ -121,15 +143,23 @@ and template run.
 
 Every `v*.*.*` tag publishes the `helm/k8ston` chart to
 `oci://ghcr.io/egose/charts/k8ston` (see the _Publish Helm chart_ workflow).
-Chart `version` and `appVersion` are both set from the release tag, so chart
-`1.2.3` deploys app `1.2.3` (`ghcr.io/egose/k8ston:1.2.3` by default —
-override with `image.tag`).
+Chart `version` and `appVersion` are set from the release tag, but `image.tag`
+still defaults to `latest`. **Pin both chart and image**; `--version` alone does
+not pin the app. Choose a published stable `X.Y.Z` release without a leading `v`.
 
-Install it directly, without the umbrella chart:
+For a direct install, save the app settings at the top level in
+`k8ston-direct-values.yaml` (no `k8ston:` wrapper). See the
+[chart README](https://github.com/egose/k8ston/blob/main/helm/k8ston/README.md#install-directly)
+for a complete direct-chart example. After provisioning the namespace and Secret:
 
 ```bash
-helm install k8ston oci://ghcr.io/egose/charts/k8ston --version 1.2.3 \
-  --namespace k8ston --create-namespace
+RELEASE_VERSION='<published-X.Y.Z-version>'
+helm upgrade --install k8ston oci://ghcr.io/egose/charts/k8ston \
+  --version "$RELEASE_VERSION" \
+  --namespace k8ston --create-namespace \
+  --values k8ston-direct-values.yaml \
+  --set-string image.tag="$RELEASE_VERSION" \
+  --wait
 ```
 
 Or consume it as a dependency (`helm registry login ghcr.io` first if the
@@ -139,20 +169,26 @@ package is private):
 # Chart.yaml
 dependencies:
   - name: k8ston
-    version: '1.2.3'
+    version: '<published-X.Y.Z-version>'
     repository: oci://ghcr.io/egose/charts
+    condition: k8ston.enabled
 ```
 
 ```yaml
 # values.yaml
 k8ston:
   enabled: true
-  env:
-    K8STON_SCOPE: namespace
+  image:
+    tag: '<published-X.Y.Z-version>'
+  envSecretName: k8ston-oidc
+  rbac:
+    scope: namespace
 ```
 
-See `helm/k8ston/README.md` for the full values reference (image, exposure,
-autoscaling, PDB, security contexts, extra volumes).
+Replace both version placeholders and add authentication, access rules, and
+exposure settings under `k8ston:` for dependency usage. See the
+[chart README](https://github.com/egose/k8ston/blob/main/helm/k8ston/README.md)
+for the full values reference.
 
 ## Exposure and health
 
@@ -160,7 +196,8 @@ autoscaling, PDB, security contexts, extra volumes).
   the ClusterIP Service — enable exactly what your platform provides.
 - Liveness and readiness probes hit `/api/config`: unauthenticated and
   K8s/OIDC-free, so it is safe to probe (the raw manifests in `app/k8s/`
-  probe the same endpoint).
+  probe the same endpoint). They do not establish working auth or Kubernetes access;
+  verify a real sign-in, allowed operations, and an unauthorized-user denial.
 - The ServiceAccount token **must** stay auto-mounted
   (`serviceAccount.automount: true`) — K8ston talks to the Kubernetes API
   with its own token.

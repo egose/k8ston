@@ -9,24 +9,31 @@ Two paths, same app. Pick the one that matches how much realism you need.
 
 ## Path A: local dev with a mock admin (fastest)
 
-Prerequisites: Node 20+, pnpm, and a kubeconfig pointing at a cluster
-(K8ston uses `~/.kube/config` when not running in-cluster).
+Use Node 22.22 (the Docker build version) or the developer/CI version in
+[`.tool-versions`](https://github.com/egose/k8ston/blob/main/.tool-versions),
+the pnpm version selected by root `package.json`, and a kubeconfig for a development
+cluster (`KUBECONFIG` or `~/.kube/config`). Current dependencies require at least Node 22.19.
 
-```bash npm2yarn
-cd app
-cp .env.example .env   # AUTH_DISABLED=true gives a mock admin, no IdP needed
-pnpm install
-pnpm dev               # http://localhost:3000
+```bash
+# From the repository root.
+pnpm install --frozen-lockfile
+cp -n app/.env.example app/.env
+# Set K8STON_NAMESPACE in app/.env to your development namespace (example: default).
+pnpm --dir app dev --hostname 127.0.0.1   # http://localhost:3000
 ```
 
-`AUTH_DISABLED=true` skips SSO with a mock admin (`dev@k8ston.local`) — local
-development only, never production. To exercise real SSO locally instead, set
-`AUTH_DISABLED=false` and fill in `OIDC_*` (your IdP needs redirect URI
+`cp -n` preserves an existing `app/.env`; update it deliberately if needed.
+`AUTH_DISABLED=true` uses the mock admin (`dev@k8ston.local`) for every request,
+ignores session cookies, and still performs real Kubernetes writes. Use development
+credentials, keep it loopback-bound, and never enable the bypass in production.
+To exercise real SSO locally, set a fresh random `SESSION_SECRET` (`openssl rand -hex 32`),
+`AUTH_DISABLED=false`, and `OIDC_*` (your IdP needs redirect URI
 `http://localhost:3000/api/auth/callback`).
 
-Useful commands: `pnpm build`, `pnpm lint`, `pnpm start`, `pnpm e2e`
-(visual Playwright suite over the production build; first run needs
-`pnpm exec playwright install chromium`).
+From the repository root, use `pnpm --dir app build`, `pnpm --dir app lint`,
+`pnpm --dir app start --hostname 127.0.0.1`, and `pnpm --dir app e2e`.
+The browser suite needs a production build and
+`pnpm --dir app exec playwright install chromium`; it mocks Kubernetes-backed APIs.
 
 ## Path B: full sandbox with real SSO (recommended)
 
@@ -35,22 +42,27 @@ a throwaway OIDC provider — everything K8ston needs, nothing else.
 
 ```bash
 # from the repo root
+pnpm install --frozen-lockfile
 make up          # kind cluster + Dex + fixtures
-cp sandbox/app.env.sandbox app/.env
-cd app && pnpm install && pnpm dev   # http://localhost:3000
+cp -n sandbox/app.env.sandbox app/.env
+pnpm --dir app dev --hostname 127.0.0.1   # http://localhost:3000
 ```
 
 Sign in with any sandbox user (password is `password` for all):
 
-| User                | Groups          | Role                    |
-| ------------------- | --------------- | ----------------------- |
-| `alice@company.com` | `dev-team`      | restricted-secret reader |
-| `bob@company.com`   | `other-team`    | gets 403s (negative case) |
-| `carol@company.com` | `frontend-team` | namespace-fallback reader |
-| `admin@company.com` | `k8ston-admin` | admin bypass             |
+| User                | Groups          | Expected access                                                    |
+| ------------------- | --------------- | ------------------------------------------------------------------ |
+| `alice@company.com` | `dev-team`      | can manage `database-credentials`                                  |
+| `bob@company.com`   | `other-team`    | denied restricted Secrets; can manage open fixtures                |
+| `carol@company.com` | `frontend-team` | can manage namespace-fallback Secrets in `frontend-ns`             |
+| `admin@company.com` | `k8ston-admin`  | application ACL bypass within scope/visibility and Kubernetes RBAC |
+
+These are read/manage grants, not read-only roles. Keep all sandbox credentials
+and signing keys confined to local testing.
 
 Tear down: `make down` (stops Dex, keeps kind for fast iteration),
-`make destroy` (removes Dex volumes **and** the kind cluster), `make reset`.
+`make destroy` (removes Dex volumes **and** all kind cluster data), or `make reset`
+(destroy and recreate). `make seed` can overwrite fixture edits.
 
 See the [Sandbox guide](/guides/sandbox/) for the fixture map, visibility
 matrix, test scenarios, and headless authz checks.

@@ -4508,29 +4508,3 @@ TODO merge this logic back in Infima?
   flex: 1 0 auto;
 }
 
-/**
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-.tabList_OoHE {
-  margin-bottom: var(--ifm-leading);
-}
-
-.tabItem_uhFq {
-  margin-top: 0 !important;
-}
-
-/**
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-.tabItem_xtZm > *:last-child {
-  margin-bottom: 0;
-}
-

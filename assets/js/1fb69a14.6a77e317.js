@@ -91,11 +91,35 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "namespace-scope-default",
       children: "Namespace scope (default)"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Before applying the examples, configure your OIDC client/public URL and admins,\nadd namespace rules for the actual targets, and replace the Deployment's ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "latest"
+      }), "\nimage with a published tag. The example access ConfigMap omits ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston"
+      }), ", so its\nfallback access is open until you add a rule. Keep ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "AUTH_DISABLED=false"
+      }), " in production."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["For reusable images, prefer runtime ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "APP_URL"
+      }), " without a conflicting build-time\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "NEXT_PUBLIC_APP_URL"
+      }), ". Provision a private env file outside the checkout (permissions\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "0600"
+      }), ") with your ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "OIDC_CLIENT_SECRET"
+      }), " and a fresh ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "SESSION_SECRET"
+      }), " from\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "openssl rand -hex 32"
+      }), "; never put actual credentials in Git or shell history.\nFrom the repository root:"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "kubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml\n# real secrets — never commit values:\nkubectl create secret generic k8ston-oidc -n k8ston \\\n  --from-literal=OIDC_CLIENT_SECRET='...' \\\n  --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\nkubectl apply -f app/k8s/deployment.yaml\n"
+        children: "kubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml\nkubectl -n k8ston create secret generic k8ston-oidc \\\n  --from-env-file=/secure/path/k8ston-oidc.env\nkubectl apply -f app/k8s/deployment.yaml\nkubectl -n k8ston rollout status deployment/k8ston\n"
       })
+    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
+      children: "Do not apply the entire directory indiscriminately: it includes broader cluster\nRBAC and an OIDC Secret template with placeholder values."
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
       children: "What you get:"
     }), "\n", (0,jsx_runtime.jsxs)(_components.table, {
@@ -193,7 +217,7 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Liveness and readiness probes hit ", (0,jsx_runtime.jsx)(_components.code, {
         children: "/api/config"
-      }), " — unauthenticated and free of\nK8s/OIDC calls, so it is safe to probe (the Helm chart probes the same endpoint)."]
+      }), " — unauthenticated and free of\nK8s/OIDC calls, so it is safe to probe (the Helm chart probes the same endpoint).\nThey do not verify authentication or Kubernetes connectivity; test real sign-in,\nallowed Secret operations, and an unauthorized-user denial separately."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "cluster-scope-multi-namespace-dashboard",
       children: "Cluster scope (multi-namespace dashboard)"
@@ -219,7 +243,9 @@ function _createMdxContent(props) {
         children: "namespaces"
       }), " (get, list, watch) on top of the namespace\npermissions. A configured ", (0,jsx_runtime.jsx)(_components.code, {
         children: "K8STON_NAMESPACES"
-      }), " allowlist resolves/checks locally\nwithout namespace-list calls, so curated deployments can instead grant resource\npermissions in just those namespaces. Without an allowlist, failed/incomplete\nnamespace discovery returns an error; it no longer falls back to the pod namespace."]
+      }), " allowlist resolves/checks locally\nwithout namespace-list calls, so curated deployments can instead grant resource\npermissions in just those namespaces. Without an allowlist, failed/incomplete\nnamespace discovery returns an error; it no longer falls back to the pod namespace.\nAn application allowlist does not narrow the ClusterRole's Kubernetes permissions.\nFor curated namespaces without a ClusterRole, use matching namespaced Roles or\nthe Helm chart's ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "rbac.extraNamespaces"
+      }), " option."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "enabling-restart-apps",
       children: "Enabling \"Restart apps\""
@@ -270,7 +296,7 @@ function _createMdxContent(props) {
         children: "65532"
       }), " on port 3000, matching ", (0,jsx_runtime.jsx)(_components.code, {
         children: "app/k8s/deployment.yaml"
-      }), ". K8ston is stateless\n(all state lives in Kubernetes Secrets), so more than one replica is always safe."]
+      }), ". K8ston is stateless\n(no separate application database). Replicas share Kubernetes state and must use\nthe same signing key, annotation prefix, and retention configuration. Environment\nchanges require a rollout; replacing the signing key invalidates existing sessions."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "prefer-helm",
       children: "Prefer Helm?"

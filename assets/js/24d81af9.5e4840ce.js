@@ -104,13 +104,13 @@ function _createMdxContent(props) {
           children: "Secret"
         }), " object. Standard tools (Velero,\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "kubectl"
-        }), ", GitOps) keep working; RBAC, audit logs, and network policies come free."]
+        }), ", GitOps) keep working; cluster RBAC, audit configuration, and network\ncontrols remain the operator's responsibility."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Auth"
-        }), ": users sign in via OIDC SSO (Keycloak, Entra ID, Okta, Google, GitHub…).\nUsers do ", (0,jsx_runtime.jsx)(_components.strong, {
+        }), ": users sign in through OIDC-compatible providers such as Keycloak or Dex.\nOAuth-only providers need an OIDC-compatible bridge. In the default hybrid mode,\nusers do ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "not"
-        }), " need cluster credentials."]
+        }), " need Kubernetes identities or cluster credentials."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Authz (hybrid)"
@@ -202,7 +202,7 @@ function _createMdxContent(props) {
           children: [(0,jsx_runtime.jsx)(_components.td, {
             children: "Size guard"
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "1 MiB per-object limit enforced client- and server-side (413)"
+            children: "1 MiB data guard in the form and API; validation/payload failures return 400/413"
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {

@@ -24448,7 +24448,7 @@ var routesChunkNames = __webpack_require__(4054);
         /*require.resolve*/(6514)
     ],
     "c467d44f": [
-        ()=>Promise.all(/* import() | c467d44f */ [__webpack_require__.e("14"), __webpack_require__.e("725")]).then(__webpack_require__.bind(__webpack_require__, 476)),
+        ()=>__webpack_require__.e(/* import() | c467d44f */ "725").then(__webpack_require__.bind(__webpack_require__, 476)),
         "@site/docs/guides/local-development.mdx",
         /*require.resolve*/(476)
     ],
@@ -24468,7 +24468,7 @@ var routesChunkNames = __webpack_require__(4054);
         /*require.resolve*/(1116)
     ],
     "f1dd273b": [
-        ()=>Promise.all(/* import() | f1dd273b */ [__webpack_require__.e("14"), __webpack_require__.e("63")]).then(__webpack_require__.bind(__webpack_require__, 9555)),
+        ()=>__webpack_require__.e(/* import() | f1dd273b */ "63").then(__webpack_require__.bind(__webpack_require__, 9555)),
         "@site/docs/about/quick-start.mdx",
         /*require.resolve*/(9555)
     ],
@@ -26944,27 +26944,81 @@ const Context = /*#__PURE__*/ react__rspack_import_1.createContext(EmptyContext)
 
 
 },
-2395(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+6314(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 "use strict";
+
+// EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  B5: () => (useDocRootMetadata),
-  Nr: () => (findFirstSidebarItemLink),
-  OF: () => (useSidebarBreadcrumbs),
-  QB: () => (useLayoutDoc),
-  Vd: () => (useDocsVersionCandidates),
-  Y: () => (useVisibleSidebarItems),
-  fW: () => (useLayoutDocsSidebar),
-  w8: () => (isActiveSidebarItem)
+  w8: () => (/* binding */ isActiveSidebarItem),
+  fW: () => (/* binding */ useLayoutDocsSidebar),
+  Nr: () => (/* binding */ findFirstSidebarItemLink),
+  B5: () => (/* binding */ useDocRootMetadata),
+  Vd: () => (/* binding */ useDocsVersionCandidates),
+  QB: () => (/* binding */ useLayoutDoc),
+  OF: () => (/* binding */ useSidebarBreadcrumbs),
+  Y: () => (/* binding */ useVisibleSidebarItems)
 });
-/* import */ var react__rspack_import_0 = __webpack_require__(2990);
-/* import */ var _docusaurus_router__rspack_import_3 = __webpack_require__(8029);
-/* import */ var _docusaurus_renderRoutes__rspack_import_8 = __webpack_require__(6341);
-/* import */ var _docusaurus_plugin_content_docs_client__rspack_import_4 = __webpack_require__(518);
-/* import */ var _docusaurus_theme_common_internal__rspack_import_1 = __webpack_require__(2059);
-/* import */ var _docusaurus_theme_common__rspack_import_6 = __webpack_require__(256);
-/* import */ var _docsPreferredVersion__rspack_import_5 = __webpack_require__(971);
-/* import */ var _docsVersion__rspack_import_7 = __webpack_require__(7246);
-/* import */ var _docsSidebar__rspack_import_2 = __webpack_require__(7982);
+
+// UNUSED EXPORTS: filterDocCardListItems, isVisibleSidebarItem, useCurrentSidebarCategory, useDocById, findSidebarCategory, useCurrentSidebarSiblings, findFirstSidebarItemCategoryLink
+
+// EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js
+var react = __webpack_require__(2990);
+// EXTERNAL MODULE: ./node_modules/.pnpm/react-router@5.3.4_react@19.3.0/node_modules/react-router/esm/react-router.js
+var react_router = __webpack_require__(8029);
+// EXTERNAL MODULE: ./node_modules/.pnpm/react-router-config@5.1.1_react-router@5.3.4_react@19.3.0__react@19.3.0/node_modules/react-router-config/esm/react-router-config.js
+var react_router_config = __webpack_require__(6341);
+// EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/index.js + 2 modules
+var client = __webpack_require__(518);
+// EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+theme-common@3.10.0_27a111eee035574cc6173ff84d325400/node_modules/@docusaurus/theme-common/lib/utils/routesUtils.js
+var routesUtils = __webpack_require__(2059);
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@docusaurus+theme-common@3.10.0_27a111eee035574cc6173ff84d325400/node_modules/@docusaurus/theme-common/lib/utils/jsUtils.js
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */ // A replacement of lodash in client code
+/**
+ * Gets the duplicate values in an array.
+ * @param arr The array.
+ * @param comparator Compares two values and returns `true` if they are equal
+ * (duplicated).
+ * @returns Value of the elements `v` that have a preceding element `u` where
+ * `comparator(u, v) === true`. Values within the returned array are not
+ * guaranteed to be unique.
+ */ function duplicates(arr, comparator = (a, b)=>a === b) {
+    return arr.filter((v, vIndex)=>arr.findIndex((u)=>comparator(u, v)) !== vIndex);
+}
+/**
+ * Remove duplicate array items (similar to `_.uniq`)
+ * @param arr The array.
+ * @returns An array with duplicate elements removed by reference comparison.
+ */ function uniq(arr) {
+    // Note: had problems with [...new Set()]: https://github.com/facebook/docusaurus/issues/4972#issuecomment-863895061
+    return Array.from(new Set(arr));
+}
+// TODO 2025: replace by std Object.groupBy ?
+// This is a local polyfill with exact same TS signature
+// see https://github.com/microsoft/TypeScript/blob/main/src/lib/esnext.object.d.ts
+function groupBy(items, keySelector) {
+    const result = {};
+    let index = 0;
+    for (const item of items){
+        const key = keySelector(item, index);
+        result[key] ??= [];
+        result[key].push(item);
+        index += 1;
+    }
+    return result;
+} //# sourceMappingURL=jsUtils.js.map
+
+// EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/docsPreferredVersion.js
+var docsPreferredVersion = __webpack_require__(971);
+// EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/docsVersion.js
+var docsVersion = __webpack_require__(7246);
+// EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/docsSidebar.js
+var docsSidebar = __webpack_require__(7982);
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/docsUtils.js
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
@@ -27070,7 +27124,7 @@ function useDocById(id) {
     const deepestCategory = categoryBreadcrumbs.slice(-1)[0];
     return deepestCategory?.items ?? sidebar.items;
 }
-const isActive = (testedPath, activePath)=>typeof testedPath !== 'undefined' && (0,_docusaurus_theme_common_internal__rspack_import_1/* .isSamePath */.ys)(testedPath, activePath);
+const isActive = (testedPath, activePath)=>typeof testedPath !== 'undefined' && (0,routesUtils/* .isSamePath */.ys)(testedPath, activePath);
 const containsActiveSidebarItem = (items, activePath)=>items.some((subItem)=>isActiveSidebarItem(subItem, activePath));
 /**
  * Checks if a sidebar item should be active, based on the active path.
@@ -27095,7 +27149,7 @@ function isVisibleSidebarItem(item, activePath) {
     }
 }
 function useVisibleSidebarItems(items, activePath) {
-    return (0,react__rspack_import_0.useMemo)(()=>items.filter((item)=>isVisibleSidebarItem(item, activePath)), [
+    return (0,react.useMemo)(()=>items.filter((item)=>isVisibleSidebarItem(item, activePath)), [
         items,
         activePath
     ]);
@@ -27109,11 +27163,11 @@ function useVisibleSidebarItems(items, activePath) {
         for (const item of items){
             // Extract category item
             if (item.type === 'category') {
-                if ((0,_docusaurus_theme_common_internal__rspack_import_1/* .isSamePath */.ys)(item.href, pathname) || extract(item.items)) {
+                if ((0,routesUtils/* .isSamePath */.ys)(item.href, pathname) || extract(item.items)) {
                     breadcrumbs.unshift(item);
                     return true;
                 }
-            } else if (item.type === 'link' && item.docId && (0,_docusaurus_theme_common_internal__rspack_import_1/* .isSamePath */.ys)(item.href, pathname)) {
+            } else if (item.type === 'link' && item.docId && (0,routesUtils/* .isSamePath */.ys)(item.href, pathname)) {
                 if (!onlyCategories) {
                     breadcrumbs.unshift(item);
                 }
@@ -27129,9 +27183,9 @@ function useVisibleSidebarItems(items, activePath) {
  * Gets the breadcrumbs of the current doc page, based on its sidebar location.
  * Returns `null` if there's no sidebar or breadcrumbs are disabled.
  */ function useSidebarBreadcrumbs() {
-    const sidebar = (0,_docsSidebar__rspack_import_2/* .useDocsSidebar */.t)();
-    const { pathname } = (0,_docusaurus_router__rspack_import_3/* .useLocation */.zy)();
-    const breadcrumbsOption = (0,_docusaurus_plugin_content_docs_client__rspack_import_4/* .useActivePlugin */.vT)()?.pluginData.breadcrumbs;
+    const sidebar = (0,docsSidebar/* .useDocsSidebar */.t)();
+    const { pathname } = (0,react_router/* .useLocation */.zy)();
+    const breadcrumbsOption = (0,client/* .useActivePlugin */.vT)()?.pluginData.breadcrumbs;
     if (breadcrumbsOption === false || !sidebar) {
         return null;
     }
@@ -27156,10 +27210,10 @@ function useVisibleSidebarItems(items, activePath) {
  * @returns An array of 1~3 versions with priorities defined above, guaranteed
  * to be unique and non-sparse. Will be memoized, hence stable for deps array.
  */ function useDocsVersionCandidates(docsPluginId) {
-    const { activeVersion } = (0,_docusaurus_plugin_content_docs_client__rspack_import_4/* .useActiveDocContext */.zK)(docsPluginId);
-    const { preferredVersion } = (0,_docsPreferredVersion__rspack_import_5/* .useDocsPreferredVersion */.g1)(docsPluginId);
-    const latestVersion = (0,_docusaurus_plugin_content_docs_client__rspack_import_4/* .useLatestVersion */.r7)(docsPluginId);
-    return (0,react__rspack_import_0.useMemo)(()=>(0,_docusaurus_theme_common__rspack_import_6/* .uniq */.sb)([
+    const { activeVersion } = (0,client/* .useActiveDocContext */.zK)(docsPluginId);
+    const { preferredVersion } = (0,docsPreferredVersion/* .useDocsPreferredVersion */.g1)(docsPluginId);
+    const latestVersion = (0,client/* .useLatestVersion */.r7)(docsPluginId);
+    return (0,react.useMemo)(()=>uniq([
             activeVersion,
             preferredVersion,
             latestVersion
@@ -27178,7 +27232,7 @@ function useVisibleSidebarItems(items, activePath) {
  * @throws This hook throws if a sidebar with said ID is not found.
  */ function useLayoutDocsSidebar(sidebarId, docsPluginId) {
     const versions = useDocsVersionCandidates(docsPluginId);
-    return (0,react__rspack_import_0.useMemo)(()=>{
+    return (0,react.useMemo)(()=>{
         const allSidebars = versions.flatMap((version)=>version.sidebars ? Object.entries(version.sidebars) : []);
         const sidebarEntry = allSidebars.find((sidebar)=>sidebar[0] === sidebarId);
         if (!sidebarEntry) {
@@ -27201,7 +27255,7 @@ Available sidebar ids are:
  * @throws This hook throws if a doc with said ID is not found.
  */ function useLayoutDoc(docId, docsPluginId) {
     const versions = useDocsVersionCandidates(docsPluginId);
-    return (0,react__rspack_import_0.useMemo)(()=>{
+    return (0,react.useMemo)(()=>{
         const allDocs = versions.flatMap((version)=>version.docs);
         const doc = allDocs.find((versionDoc)=>versionDoc.id === docId);
         if (!doc) {
@@ -27212,7 +27266,7 @@ Available sidebar ids are:
             }
             throw new Error(`Couldn't find any doc with id "${docId}" in version${versions.length > 1 ? 's' : ''} "${versions.map((version)=>version.name).join(', ')}".
 Available doc ids are:
-- ${(0,_docusaurus_theme_common__rspack_import_6/* .uniq */.sb)(allDocs.map((versionDoc)=>versionDoc.id)).join('\n- ')}`);
+- ${uniq(allDocs.map((versionDoc)=>versionDoc.id)).join('\n- ')}`);
         }
         return doc;
     }, [
@@ -27230,17 +27284,17 @@ Available doc ids are:
  * @returns The data of the relevant document at the current location, or `null`
  * if no document associated with the current location can be found.
  */ function useDocRootMetadata({ route }) {
-    const location = (0,_docusaurus_router__rspack_import_3/* .useLocation */.zy)();
-    const versionMetadata = (0,_docsVersion__rspack_import_7/* .useDocsVersion */.r)();
+    const location = (0,react_router/* .useLocation */.zy)();
+    const versionMetadata = (0,docsVersion/* .useDocsVersion */.r)();
     const docRoutes = route.routes;
-    const currentDocRoute = docRoutes.find((docRoute)=>(0,_docusaurus_router__rspack_import_3/* .matchPath */.B6)(location.pathname, docRoute));
+    const currentDocRoute = docRoutes.find((docRoute)=>(0,react_router/* .matchPath */.B6)(location.pathname, docRoute));
     if (!currentDocRoute) {
         return null;
     }
     // For now, the sidebarName is added as route config: not ideal!
     const sidebarName = currentDocRoute.sidebar;
     const sidebarItems = sidebarName ? versionMetadata.docsSidebars[sidebarName] : undefined;
-    const docElement = (0,_docusaurus_renderRoutes__rspack_import_8/* .renderRoutes */.v)(docRoutes);
+    const docElement = (0,react_router_config/* .renderRoutes */.v)(docRoutes);
     return {
         docElement,
         sidebarName,
@@ -29128,7 +29182,6 @@ var useThemeConfig = __webpack_require__(3092);
 __webpack_require__.d(__webpack_exports__, {
   $Z: () => (useHistoryPopHandler),
   Hl: () => (useHistorySelector),
-  aZ: () => (useQueryStringValue),
   jy: () => (mergeSearchStrings)
 });
 /* import */ var react__rspack_import_0 = __webpack_require__(2990);
@@ -29290,54 +29343,6 @@ function mergeSearchStrings(searchStrings, strategy) {
     const str = params.toString();
     return str ? `?${str}` : str;
 } //# sourceMappingURL=historyUtils.js.map
-
-
-},
-256(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-"use strict";
-__webpack_require__.d(__webpack_exports__, {
-  XI: () => (duplicates),
-  sb: () => (uniq)
-});
-/**
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */ // A replacement of lodash in client code
-/**
- * Gets the duplicate values in an array.
- * @param arr The array.
- * @param comparator Compares two values and returns `true` if they are equal
- * (duplicated).
- * @returns Value of the elements `v` that have a preceding element `u` where
- * `comparator(u, v) === true`. Values within the returned array are not
- * guaranteed to be unique.
- */ function duplicates(arr, comparator = (a, b)=>a === b) {
-    return arr.filter((v, vIndex)=>arr.findIndex((u)=>comparator(u, v)) !== vIndex);
-}
-/**
- * Remove duplicate array items (similar to `_.uniq`)
- * @param arr The array.
- * @returns An array with duplicate elements removed by reference comparison.
- */ function uniq(arr) {
-    // Note: had problems with [...new Set()]: https://github.com/facebook/docusaurus/issues/4972#issuecomment-863895061
-    return Array.from(new Set(arr));
-}
-// TODO 2025: replace by std Object.groupBy ?
-// This is a local polyfill with exact same TS signature
-// see https://github.com/microsoft/TypeScript/blob/main/src/lib/esnext.object.d.ts
-function groupBy(items, keySelector) {
-    const result = {};
-    let index = 0;
-    for (const item of items){
-        const key = keySelector(item, index);
-        result[key] ??= [];
-        result[key].push(item);
-        index += 1;
-    }
-    return result;
-} //# sourceMappingURL=jsUtils.js.map
 
 
 },
@@ -29655,7 +29660,6 @@ __webpack_require__.d(__webpack_exports__, {
 __webpack_require__.d(__webpack_exports__, {
   Mq: () => (useScrollPosition),
   Tv: () => (ScrollControllerProvider),
-  a_: () => (useScrollPositionBlocker),
   gk: () => (useSmoothScrollTo)
 });
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__(4686);
@@ -29747,17 +29751,17 @@ const getScrollPosition = ()=>_docusaurus_ExecutionEnvironment__rspack_import_2/
     ]);
 }
 function useScrollPositionSaver() {
-    const lastElementRef = (0,react__rspack_import_1.useRef)({
+    const lastElementRef = useRef({
         elem: null,
         top: 0
     });
-    const save = (0,react__rspack_import_1.useCallback)((elem)=>{
+    const save = useCallback((elem)=>{
         lastElementRef.current = {
             elem,
             top: elem.getBoundingClientRect().top
         };
     }, []);
-    const restore = (0,react__rspack_import_1.useCallback)(()=>{
+    const restore = useCallback(()=>{
         const { current: { elem, top } } = lastElementRef;
         if (!elem) {
             return {
@@ -29780,7 +29784,7 @@ function useScrollPositionSaver() {
             restored: heightDiff !== 0
         };
     }, []);
-    return (0,react__rspack_import_1.useMemo)(()=>({
+    return useMemo(()=>({
             save,
             restore
         }), [
@@ -29801,8 +29805,8 @@ function useScrollPositionSaver() {
  */ function useScrollPositionBlocker() {
     const scrollController = useScrollController();
     const scrollPositionSaver = useScrollPositionSaver();
-    const nextLayoutEffectCallbackRef = (0,react__rspack_import_1.useRef)(undefined);
-    const blockElementScrollPositionUntilNextRender = (0,react__rspack_import_1.useCallback)((el)=>{
+    const nextLayoutEffectCallbackRef = useRef(undefined);
+    const blockElementScrollPositionUntilNextRender = useCallback((el)=>{
         scrollPositionSaver.save(el);
         scrollController.disableScrollEvents();
         nextLayoutEffectCallbackRef.current = ()=>{
@@ -29825,7 +29829,7 @@ function useScrollPositionSaver() {
         scrollController,
         scrollPositionSaver
     ]);
-    (0,_docusaurus_useIsomorphicLayoutEffect__rspack_import_4/* ["default"] */.A)(()=>{
+    useIsomorphicLayoutEffect(()=>{
         // Queuing permits to restore scroll position after all useLayoutEffect
         // have run, and yet preserve the sync nature of the scroll restoration
         // See https://github.com/facebook/docusaurus/issues/8625
@@ -29892,11 +29896,10 @@ function smoothScrollPolyfill(top) {
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  Wf: () => (/* binding */ createStorageSlot),
-  Dv: () => (/* binding */ useStorageSlot)
+  Wf: () => (/* binding */ createStorageSlot)
 });
 
-// UNUSED EXPORTS: listStorageKeys
+// UNUSED EXPORTS: listStorageKeys, useStorageSlot
 
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js
 var react = __webpack_require__(2990);
@@ -30055,13 +30058,13 @@ Please only call storage APIs in effects and event handlers.`);
 }
 function useStorageSlot(key, options) {
     // Not ideal but good enough: assumes storage slot config is constant
-    const [storageSlot] = (0,react.useState)(()=>{
+    const [storageSlot] = useState(()=>{
         if (key === null) {
             return NoopStorageSlot;
         }
         return createStorageSlot(key, options);
     });
-    const listen = (0,react.useCallback)((onChange)=>{
+    const listen = useCallback((onChange)=>{
         // Do not try to add a listener during SSR
         if (typeof window === 'undefined') {
             return ()=>{};
@@ -30070,7 +30073,7 @@ function useStorageSlot(key, options) {
     }, [
         storageSlot
     ]);
-    const currentValue = (0,react.useSyncExternalStore)(listen, ()=>{
+    const currentValue = useSyncExternalStore(listen, ()=>{
         return storageSlot.get();
     }, ()=>null);
     return [
@@ -31814,8 +31817,8 @@ function HtmlNavbarItem({ value, className, mobile = false, isDropdownItem = fal
 
 // EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/index.js + 2 modules
 var client = __webpack_require__(518);
-// EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/docsUtils.js
-var docsUtils = __webpack_require__(2395);
+// EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+plugin-content-docs@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10_49419744f797027f5fc217d96ac862ab/node_modules/@docusaurus/plugin-content-docs/lib/client/docsUtils.js + 1 modules
+var docsUtils = __webpack_require__(6314);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/@docusaurus+theme-classic@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10.0_@sw_d80ed93973d8fdb1b9e1067267ab632b/node_modules/@docusaurus/theme-classic/lib/theme/NavbarItem/DocNavbarItem.js
 
 /**

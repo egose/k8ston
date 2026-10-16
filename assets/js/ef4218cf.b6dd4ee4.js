@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 ;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-guides-authentication-mdx-ef4.json
-var site_docs_guides_authentication_mdx_ef4_namespaceObject = JSON.parse('{"id":"guides/authentication","title":"Authentication","description":"Users sign in via generic OIDC SSO — Keycloak, Entra ID, Okta, Google, GitHub,","source":"@site/docs/guides/authentication.mdx","sourceDirName":"guides","slug":"/guides/authentication","permalink":"/guides/authentication","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":5,"frontMatter":{"sidebar_label":"Authentication","sidebar_position":5},"sidebar":"guides","previous":{"title":"Configuration","permalink":"/guides/configuration"},"next":{"title":"Authorization","permalink":"/guides/authorization"}}')
+var site_docs_guides_authentication_mdx_ef4_namespaceObject = JSON.parse('{"id":"guides/authentication","title":"Authentication","description":"Users sign in through OIDC-compatible providers such as Keycloak, Entra ID, Okta,","source":"@site/docs/guides/authentication.mdx","sourceDirName":"guides","slug":"/guides/authentication","permalink":"/guides/authentication","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":5,"frontMatter":{"sidebar_label":"Authentication","sidebar_position":5},"sidebar":"guides","previous":{"title":"Configuration","permalink":"/guides/configuration"},"next":{"title":"Authorization","permalink":"/guides/authorization"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
@@ -85,7 +85,7 @@ function _createMdxContent(props) {
         children: "Authentication"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Users sign in via generic OIDC SSO — Keycloak, Entra ID, Okta, Google, GitHub,\nor anything speaking discovery + PKCE. Users never need cluster credentials;\nthe app's ServiceAccount executes the K8s calls."
+      children: "Users sign in through OIDC-compatible providers such as Keycloak, Entra ID, Okta,\nGoogle, or Dex, using discovery and PKCE. OAuth-only providers need an OIDC-compatible\nbridge. In the default hybrid mode, users need no Kubernetes identity or cluster\ncredentials; the app's ServiceAccount executes Kubernetes calls. Optional\nimpersonation additionally requires matching human RBAC."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "how-login-works",
       children: "How login works"
@@ -279,10 +279,16 @@ function _createMdxContent(props) {
         }), " field."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Redirect URI defaults to ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "<NEXT_PUBLIC_APP_URL>/api/auth/callback"
+          children: "<configured-app-url>/api/auth/callback"
         }), "\n(override with ", (0,jsx_runtime.jsx)(_components.code, {
           children: "OIDC_REDIRECT_URI"
-        }), "); register the same value at your IdP.\nBehind a TLS-terminating proxy, the code exchange uses that registered public\nURI rather than the internal request host, preserving the callback parameters.\nUse a redirect URI without its own query string or fragment."]
+        }), "); register the same value at your IdP.\n", (0,jsx_runtime.jsx)(_components.code, {
+          children: "NEXT_PUBLIC_APP_URL"
+        }), " takes precedence over runtime ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "APP_URL"
+        }), " and can be baked\ninto the build. For reusable images, prefer ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "APP_URL"
+        }), " without a conflicting\nbuild-time public URL.\nBehind a TLS-terminating proxy, the code exchange uses that registered public\nURI rather than the internal request host, preserving the callback parameters.\nUse a redirect URI without its own query string or fragment."]
       }), "\n", (0,jsx_runtime.jsx)(_components.li, {
         children: "OIDC configuration is cached per process — restart the app after Dex/IdP\nrestarts or issuer changes."
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
@@ -303,7 +309,7 @@ function _createMdxContent(props) {
           children: "AUTH_DISABLED=true"
         }), " returns a mock admin (", (0,jsx_runtime.jsx)(_components.code, {
           children: "dev@k8ston.local"
-        }), ") for every\nrequest; login redirects to ", (0,jsx_runtime.jsx)(_components.code, {
+        }), ") for every\nrequest and ignores supplied session cookies; login redirects to ", (0,jsx_runtime.jsx)(_components.code, {
           children: "/"
         }), " without minting a session token or requiring\na signing key. Local development only — assert ", (0,jsx_runtime.jsx)(_components.code, {
           children: "authDisabled: false"
@@ -316,9 +322,11 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "sandbox/scripts/mint-jwt.mjs"
-        }), " mints session JWTs directly (must match\n", (0,jsx_runtime.jsx)(_components.code, {
+        }), " mints sandbox session JWTs directly (must match\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "SESSION_SECRET"
-        }), ") for headless authz checks:"]
+        }), ") for headless authz checks with ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "AUTH_DISABLED=false"
+        }), ".\nIt defaults to the public sandbox key. These are session/ACL checks, not an\nOIDC sign-in test; they cannot distinguish users while the bypass is enabled:"]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {

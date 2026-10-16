@@ -108,10 +108,8 @@ function _createMdxContent(props) {
       id: "prerequisites",
       children: "Prerequisites"
     }), "\n", (0,jsx_runtime.jsxs)(_components.ul, {
-      children: ["\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["Docker + ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "docker compose"
-        })]
+      children: ["\n", (0,jsx_runtime.jsx)(_components.li, {
+        children: "Docker with Compose v2, GNU Make, and Bash"
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.a, {
           href: "https://kind.sigs.k8s.io/docs/user/quick-start/#installation",
@@ -122,9 +120,23 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "kubectl"
-        }), ", ", (0,jsx_runtime.jsx)(_components.code, {
+        }), " and ", (0,jsx_runtime.jsx)(_components.code, {
           children: "curl"
-        }), ", Node 20+"]
+        })]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: ["Node 22.22 (the Docker build version) or the developer/CI version in\n", (0,jsx_runtime.jsx)(_components.a, {
+          href: "https://github.com/egose/k8ston/blob/main/.tool-versions",
+          children: (0,jsx_runtime.jsx)(_components.code, {
+            children: ".tool-versions"
+          })
+        }), ";\ncurrent dependencies require at least Node 22.19."]
+      }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
+        children: ["The pnpm version selected by ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "packageManager"
+        }), " in\n", (0,jsx_runtime.jsx)(_components.a, {
+          href: "https://github.com/egose/k8ston/blob/main/package.json",
+          children: "package.json"
+        }), "."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "quickstart",
@@ -132,12 +144,22 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "# from the repo root\nmake up          # kind cluster + Dex + fixtures\ncp sandbox/app.env.sandbox app/.env\ncd app && pnpm install && pnpm dev   # http://localhost:3000\n"
+        children: "# from the repo root\npnpm install --frozen-lockfile\nmake up          # kind cluster + Dex + fixtures\ncp -n sandbox/app.env.sandbox app/.env\npnpm --dir app dev --hostname 127.0.0.1   # http://localhost:3000\n"
       })
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["The app runs on the host, not in Compose. ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "cp -n"
+      }), " preserves an existing ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "app/.env"
+      }), ";\nupdate it deliberately if you previously used a different configuration.\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "make up"
+      }), " selects ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "kind-k8ston-sandbox"
+      }), " before seeding fixtures."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Sign in with any sandbox user (password is ", (0,jsx_runtime.jsx)(_components.code, {
         children: "password"
-      }), " for all):"]
+      }), " for all). These credentials\nand the sandbox signing key are public test fixtures, never production credentials:"]
     }), "\n", (0,jsx_runtime.jsxs)(_components.table, {
       children: [(0,jsx_runtime.jsx)(_components.thead, {
         children: (0,jsx_runtime.jsxs)(_components.tr, {
@@ -146,7 +168,7 @@ function _createMdxContent(props) {
           }), (0,jsx_runtime.jsx)(_components.th, {
             children: "Groups"
           }), (0,jsx_runtime.jsx)(_components.th, {
-            children: "Role in tests"
+            children: "Expected access"
           })]
         })
       }), (0,jsx_runtime.jsxs)(_components.tbody, {
@@ -159,8 +181,10 @@ function _createMdxContent(props) {
             children: (0,jsx_runtime.jsx)(_components.code, {
               children: "dev-team"
             })
-          }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "restricted-secret reader"
+          }), (0,jsx_runtime.jsxs)(_components.td, {
+            children: ["can manage ", (0,jsx_runtime.jsx)(_components.code, {
+              children: "database-credentials"
+            })]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -172,7 +196,7 @@ function _createMdxContent(props) {
               children: "other-team"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "gets 403s (negative case)"
+            children: "denied restricted Secrets; can manage open fixtures"
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -183,8 +207,10 @@ function _createMdxContent(props) {
             children: (0,jsx_runtime.jsx)(_components.code, {
               children: "frontend-team"
             })
-          }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "namespace-fallback reader"
+          }), (0,jsx_runtime.jsxs)(_components.td, {
+            children: ["can manage namespace-fallback Secrets in ", (0,jsx_runtime.jsx)(_components.code, {
+              children: "frontend-ns"
+            })]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -196,10 +222,12 @@ function _createMdxContent(props) {
               children: "k8ston-admin"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "admin bypass"
+            children: "application ACL bypass, within scope/visibility and Kubernetes RBAC"
           })]
         })]
       })]
+    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
+      children: "An application grant permits reading and managing a Secret; these are not read-only roles."
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Tear down: ", (0,jsx_runtime.jsx)(_components.code, {
         children: "make down"
@@ -207,9 +235,11 @@ function _createMdxContent(props) {
         children: "make destroy"
       }), " (removes Dex volumes ", (0,jsx_runtime.jsx)(_components.strong, {
         children: "and"
-      }), " the kind cluster), ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " all kind cluster data), or ", (0,jsx_runtime.jsx)(_components.code, {
         children: "make reset"
-      }), "."]
+      }), "\n(destroy and recreate). ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "make seed"
+      }), " reapplies fixtures and can overwrite fixture edits."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "layout",
       children: "Layout"
@@ -219,15 +249,13 @@ function _createMdxContent(props) {
         children: "sandbox/\n  docker-compose.yml   Dex (OIDC); kind is Makefile-managed, not composed\n  .env.example         compose-side overrides (cp to .env; all optional)\n  app.env.sandbox      ready-made app/.env for sandbox mode\n  dex/config.yaml      static clients/users/groups (in-memory, no DB)\n  kind/config.yaml     kind cluster definition\n  kind/fixtures/       namespaces, secrets, access ConfigMap, consumer Deployment\n  scripts/             seed.sh, wait-for-dex.sh, mint-jwt.mjs\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Ports (all ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "127.0.0.1"
-      }), "-bound): Dex ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "5556"
-      }), ", app ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "3000"
-      }), ", kind API ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["Dex binds to ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "127.0.0.1:5556"
+      }), "; the dev command above binds the app to ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "127.0.0.1:3000"
+      }), ".\nKind assigns a host API port recorded in its kubeconfig; do not assume host port ", (0,jsx_runtime.jsx)(_components.code, {
         children: "6443"
-      }), "\n(auto-mapped). Changing ", (0,jsx_runtime.jsx)(_components.code, {
+      }), ".\nChanging ", (0,jsx_runtime.jsx)(_components.code, {
         children: "DEX_PORT"
       }), " requires changing the ", (0,jsx_runtime.jsx)(_components.code, {
         children: "issuer"
@@ -239,9 +267,13 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["There is intentionally no ", (0,jsx_runtime.jsx)(_components.code, {
         children: "docker-compose.prod.yml"
-      }), " overlay: production K8ston\ndeploys to Kubernetes via ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "app/k8s/*.yaml"
-      }), ", not compose."]
+      }), " overlay: production K8ston\nuses reviewed ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/deploy-kubernetes/",
+        children: "manifests"
+      }), " or the ", (0,jsx_runtime.jsx)(_components.a, {
+        href: "/guides/deploy-helm/",
+        children: "Helm chart"
+      }), ", not this Compose setup."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "fixture-map--expected-visibility-matrix",
       children: "Fixture map + expected visibility matrix"
@@ -378,17 +410,19 @@ function _createMdxContent(props) {
           children: "Versioning"
         }), ": edit ", (0,jsx_runtime.jsx)(_components.code, {
           children: "database-credentials"
-        }), " twice → UID-bound v1/v2 snapshots\nappear (", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kubectl get secret -n k8ston-test -l k8ston.io/kind=history"
-        }), ");\nrestore v1 in the UI (restores snapshot first, so rollback is reversible)."]
+        }), " twice → UID-bound v1/v2 snapshots\nnamed ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "k8ston-h-<UID hash>-vN"
+        }), " appear\n(", (0,jsx_runtime.jsx)(_components.code, {
+          children: "kubectl --context kind-k8ston-sandbox get secret -n k8ston-test -l k8ston.io/kind=history"
+        }), ").\nRestoring v1 captures the current live state before replacing its data; recovery\ndepends on retained history. These are pre-write captures, not an atomic backup log."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "409 conflicts"
         }), ": open the same secret's edit page in two tabs/sessions, save\nboth — the second gets the resourceVersion-mismatch prompt."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
-          children: "1 MiB guard"
-        }), ": paste a large value — the form meter blocks; forced API calls 413."]
+          children: "Size guards"
+        }), ": paste oversized data — the form blocks it and the API rejects\nit too (400 for data validation or 413 for payload-size guards, depending on the input)."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Restart consumers"
@@ -397,7 +431,7 @@ function _createMdxContent(props) {
         }), ", hit ", (0,jsx_runtime.jsx)(_components.em, {
           children: "Restart apps"
         }), ",\nthen inspect ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "kubectl rollout status deploy/api-server -n k8ston-test"
+          children: "kubectl --context kind-k8ston-sandbox rollout status deploy/api-server -n k8ston-test"
         }), " and\nrollout history. The UI confirms the request only; verify application credential\nuptake separately without printing values (the sandbox sets\n", (0,jsx_runtime.jsx)(_components.code, {
           children: "K8STON_RESTART_ENABLED=true"
         }), "; the default is ", (0,jsx_runtime.jsx)(_components.code, {
@@ -406,11 +440,7 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "Redaction"
-        }), ": ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "grep"
-        }), " the ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "pnpm dev"
-        }), " log — key names only, never values."]
+        }), ": inspect app audit/error diagnostics — action metadata and key names,\nnot Secret values."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.strong, {
           children: "External adoption"
@@ -424,13 +454,15 @@ function _createMdxContent(props) {
       id: "headless-authz-checks-no-browser",
       children: "Headless authz checks (no browser)"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Mint session JWTs directly (must match the app's ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["Keep ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "AUTH_DISABLED=false"
+      }), " and mint sandbox session JWTs with the app's matching\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "SESSION_SECRET"
-      }), "):"]
+      }), ". The helper defaults to the public sandbox key, not a production key.\nWith auth disabled, cookies are ignored and every request is the mock admin, so a\nnegative per-user check cannot work. Print only HTTP status codes, not response values:"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)\nBOB=$(node sandbox/scripts/mint-jwt.mjs --email bob@company.com --groups other-team)\ncurl --cookie \"k8ston_session=$ALICE\" localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 200\ncurl --cookie \"k8ston_session=$BOB\"   localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 403\ncurl --cookie \"k8ston_session=$BOB\"   localhost:3000/api/namespaces/k8ston-test/secrets/feature-flags        # 200\n"
+        children: "ALICE=$(node sandbox/scripts/mint-jwt.mjs --email alice@company.com --groups dev-team)\nBOB=$(node sandbox/scripts/mint-jwt.mjs --email bob@company.com --groups other-team)\ncurl --silent --show-error --output /dev/null --write-out '%{http_code}\\n' \\\n  --cookie \"k8ston_session=$ALICE\" http://localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials  # 200\ncurl --silent --show-error --output /dev/null --write-out '%{http_code}\\n' \\\n  --cookie \"k8ston_session=$BOB\" http://localhost:3000/api/namespaces/k8ston-test/secrets/database-credentials    # 403\ncurl --silent --show-error --output /dev/null --write-out '%{http_code}\\n' \\\n  --cookie \"k8ston_session=$BOB\" http://localhost:3000/api/namespaces/k8ston-test/secrets/feature-flags          # 200\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["The full scripted lifecycle (create → update → versions → restore → restart →\ndelete) lives in the ", (0,jsx_runtime.jsx)(_components.a, {
@@ -441,33 +473,41 @@ function _createMdxContent(props) {
       id: "validating-the-in-cluster-path-serviceaccount--rbac",
       children: "Validating the in-cluster path (ServiceAccount + RBAC)"
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: [(0,jsx_runtime.jsx)(_components.code, {
-        children: "pnpm dev"
-      }), " uses your kubeconfig (admin-ish) — it does ", (0,jsx_runtime.jsx)(_components.strong, {
-        children: "not"
-      }), " exercise\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "app/k8s/role.yaml"
-      }), " or the SA-token flow. Validate those against kind too:"]
+      children: ["The host dev server uses your selected kubeconfig (typically admin in kind), not\nthe app's ServiceAccount or Role. The following ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "local-only"
+      }), " setup validates that\nidentity in namespace ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston"
+      }), ", not the host fixture namespaces. It prepares a\nminimal auth-disabled ConfigMap and a local image before applying the Deployment;\nno host-side Dex connection is needed:"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "# from the repo root, with the kind cluster from `make up` running\ndocker build -t k8ston:sandbox -f Dockerfile .\nkind load docker-image k8ston:sandbox --name k8ston-sandbox\nkubectl apply -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl apply -f app/k8s/configmap-access.yaml -f app/k8s/configmap-app.yaml\nkubectl create secret generic k8ston-oidc -n k8ston \\\n  --from-literal=OIDC_CLIENT_SECRET=sandbox-unused \\\n  --from-literal=SESSION_SECRET=sandbox-only-session-secret-32chars!!!\nkubectl apply -f app/k8s/deployment.yaml\nkubectl -n k8ston set image deploy/k8ston k8ston=k8ston:sandbox\n# AUTH_DISABLED=true below: pods inside kind cannot reach host-side Dex via\n# localhost, so in-cluster runs validate the SA/RBAC path (pair with\n# scripts/mint-jwt.mjs sessions for authz checks). Real SSO stays host-side\n# via `pnpm dev`, where both browser and app share the issuer URL.\nkubectl -n k8ston set env deploy/k8ston AUTH_DISABLED=true \\\n  SESSION_SECRET=sandbox-only-session-secret-32chars!!!\nkubectl -n k8ston rollout status deploy/k8ston\nkubectl -n k8ston port-forward --address 127.0.0.1 svc/k8ston 3300:80\n# → http://127.0.0.1:3300, namespace scope over `k8ston` only\n"
+        children: "# from the repo root, with the kind cluster from `make up` running\nSANDBOX_CONTEXT=kind-k8ston-sandbox\ndocker build -t k8ston:sandbox -f Dockerfile .\nkind load docker-image k8ston:sandbox --name k8ston-sandbox\nkubectl --context \"$SANDBOX_CONTEXT\" apply \\\n  -f app/k8s/namespace.yaml -f app/k8s/serviceaccount.yaml -f app/k8s/role.yaml\nkubectl --context \"$SANDBOX_CONTEXT\" apply -f app/k8s/configmap-access.yaml\nkubectl --context \"$SANDBOX_CONTEXT\" -n k8ston create configmap k8ston-config \\\n  --from-literal=AUTH_DISABLED=true \\\n  --from-literal=APP_URL=http://127.0.0.1:3300 \\\n  --from-literal=K8STON_ADMIN_GROUPS=k8ston-admin \\\n  --dry-run=client -o yaml | kubectl --context \"$SANDBOX_CONTEXT\" apply -f -\nkubectl --context \"$SANDBOX_CONTEXT\" -n k8ston create secret generic k8ston-oidc \\\n  --from-literal=SESSION_SECRET='sandbox-only-session-secret-32chars!!!' \\\n  --dry-run=client -o yaml | kubectl --context \"$SANDBOX_CONTEXT\" apply -f -\nsed 's|image: ghcr.io/egose/k8ston:latest|image: k8ston:sandbox|' app/k8s/deployment.yaml \\\n  | kubectl --context \"$SANDBOX_CONTEXT\" apply -f -\nkubectl --context \"$SANDBOX_CONTEXT\" -n k8ston rollout status deploy/k8ston\nkubectl --context \"$SANDBOX_CONTEXT\" -n k8ston port-forward --address 127.0.0.1 svc/k8ston 3300:80\n# → http://127.0.0.1:3300, namespace scope over `k8ston` only\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Prove least privilege (Role allows ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["In another terminal, prove least privilege (Role allows ", (0,jsx_runtime.jsx)(_components.code, {
         children: "k8ston"
       }), " only, no namespace listing):"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "kubectl auth can-i 'create secrets' -n k8ston --as=system:serviceaccount:k8ston:k8ston         # yes\nkubectl auth can-i 'list secrets' -n k8ston-test --as=system:serviceaccount:k8ston:k8ston      # no\nkubectl auth can-i 'list namespaces' --as=system:serviceaccount:k8ston:k8ston                    # no\n"
+        children: "kubectl --context kind-k8ston-sandbox auth can-i create secrets -n k8ston \\\n  --as=system:serviceaccount:k8ston:k8ston       # yes\nkubectl --context kind-k8ston-sandbox auth can-i list secrets -n k8ston-test \\\n  --as=system:serviceaccount:k8ston:k8ston       # no\nkubectl --context kind-k8ston-sandbox auth can-i list namespaces \\\n  --as=system:serviceaccount:k8ston:k8ston       # no\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Note: with ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "K8STON_SCOPE=cluster"
-      }), " but only the namespace Role applied, the\napp requires an explicit ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["With cluster scope but only this namespace Role, set an explicit\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "K8STON_NAMESPACES=k8ston"
-      }), " allowlist to avoid namespace\ndiscovery. Allowlist resolution makes no namespace-list calls. An empty allowlist\nrequires namespace-list RBAC and now returns an error if discovery fails instead\nof silently falling back to the pod namespace."]
+      }), " allowlist to avoid namespace discovery. An empty allowlist\nrequires namespace-list RBAC and returns an error on discovery failure; there is\nno fallback to the pod namespace. The allowlist does not grant extra Kubernetes access."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Auth-disabled runs validate ServiceAccount access, ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "not per-user ACLs"
+      }), ".\nFor headless in-cluster session checks, use ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "AUTH_DISABLED=false"
+      }), ", the matching\nsession key, and managed test Secrets in ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston"
+      }), "; the unchanged Role cannot manage\nthe ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston-test"
+      }), " fixtures. Session fixtures do not exercise OIDC sign-in. For real\nin-cluster SSO, use an HTTPS provider reachable by both the browser and pod — a\npod's ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "localhost"
+      }), " is not host-side Dex, and HTTP issuers are rejected in production."]
     }), "\n", (0,jsx_runtime.jsx)(_components.p, {
       children: "Cheap static checks that need no cluster at all:"
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
@@ -475,6 +515,8 @@ function _createMdxContent(props) {
         className: "language-bash",
         children: "make verify-sandbox   # compose config + offline manifest validation (no cluster needed)\n"
       })
+    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
+      children: "This structural check needs Python 3/PyYAML and does not replace API-server validation."
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "troubleshooting",
       children: "Troubleshooting"
@@ -514,9 +556,9 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Stale fixtures → ", (0,jsx_runtime.jsx)(_components.code, {
           children: "make seed"
-        }), " re-applies (idempotent); ", (0,jsx_runtime.jsx)(_components.code, {
+        }), " reapplies them and can overwrite edits; ", (0,jsx_runtime.jsx)(_components.code, {
           children: "make reset"
-        }), " for a\nfully clean slate."]
+        }), "\ndestroys all cluster data before recreating the sandbox."]
       }), "\n"]
     })]
   });

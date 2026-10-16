@@ -23,7 +23,7 @@ var lib = __webpack_require__(3191);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@docusaurus+theme-classic@3.10.0_@docusaurus+faster@3.10.0_@docusaurus+types@3.10.0_@sw_d80ed93973d8fdb1b9e1067267ab632b/node_modules/@docusaurus/theme-classic/lib/theme/CodeBlock/index.js + 27 modules
 var CodeBlock = __webpack_require__(4401);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/raw-loader@4.0.2_webpack@5.111.1_@swc+core@1.16.18_@swc+html@1.16.18_clean-css@5.3.3_cs_0a2048681882c260752bdc7655a466eb/node_modules/raw-loader/dist/cjs.js!./.samples/values-helm.yaml
-/* export default */ const values_helm = ("# Minimal Helm values for K8ston (chart: helm/main, subchart: helm/k8ston).\n# Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes\n# Secret referenced by envSecretName — never in values files.\nglobal:\n  env: {}\n\nk8ston:\n  enabled: true\n  replicaCount: 2\n  # kubectl create secret generic k8ston-oidc -n k8ston \\\n  #   --from-literal=OIDC_CLIENT_SECRET='...' \\\n  #   --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n  envSecretName: k8ston-oidc\n  env:\n    K8STON_SCOPE: namespace\n    K8STON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on\n    K8STON_ADMIN_GROUPS: k8ston-admin\n    OIDC_ISSUER: https://keycloak.example.com/realms/company\n    OIDC_CLIENT_ID: k8ston\n    OIDC_SCOPES: openid profile email groups\n    NEXT_PUBLIC_APP_URL: https://k8ston.example.com\n  # Derives the default K8STON_SCOPE (explicit entries must match):\n  # namespace (default) or cluster. Curated extras add a derived allowlist.\n  rbac:\n    create: true\n    scope: namespace\n  # \"Restart apps\" (API + UI + apps RBAC rule). Default false.\n  restartEnabled: false\n  # Namespace fallback rules (k8ston-access / access.json).\n  accessConfig:\n    enabled: false\n\nnetworkPolicy:\n  enabled: true\n  # MUST be true on OpenShift (routes arrive from openshift-ingress).\n  allowOpenShiftIngress: false\n");
+/* export default */ const values_helm = ("# Minimal Helm values for namespace k8ston (umbrella chart: helm/main).\n# Replace the image-version placeholder, URLs, client ID, and group names.\n# Secret values (OIDC_CLIENT_SECRET, SESSION_SECRET) belong in a Kubernetes\n# Secret referenced by envSecretName — never in values files.\nglobal:\n  env: {}\n\nk8ston:\n  enabled: true\n  replicaCount: 2\n  image:\n    tag: <published-X.Y.Z-version>\n  # Provision this Secret out-of-band; do not put its values in Git or shell history.\n  envSecretName: k8ston-oidc\n  env:\n    AUTH_DISABLED: 'false'\n    K8STON_ETCD_ENCRYPTED: 'false' # set 'true' once apiserver encryption is on\n    K8STON_ADMIN_GROUPS: k8ston-admin\n    OIDC_ISSUER: https://keycloak.example.com/realms/company\n    OIDC_CLIENT_ID: k8ston\n    OIDC_SCOPES: openid profile email groups\n    APP_URL: https://k8ston.example.com\n  # Derives the default K8STON_SCOPE (explicit entries must match):\n  # namespace (default) or cluster. Curated extras add a derived allowlist.\n  rbac:\n    create: true\n    scope: namespace\n  # \"Restart apps\" (API + UI + apps RBAC rule). Default false.\n  restartEnabled: false\n  # Namespace fallback rules (k8ston-access / access.json).\n  accessConfig:\n    enabled: true\n    data:\n      k8ston:\n        groups: [secret-operators]\n        users: []\n\nnetworkPolicy:\n  enabled: true\n  # MUST be true on OpenShift (routes arrive from openshift-ingress).\n  allowOpenShiftIngress: false\n");
 ;// CONCATENATED MODULE: ./docs/guides/deploy-helm.mdx
 
 
@@ -111,19 +111,43 @@ function _createMdxContent(props) {
         children: "helm/main"
       }), " chart deploys K8ston via the ", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm/k8ston"
-      }), " subchart, with\ntemplated RBAC scope, restart wiring, access config, and NetworkPolicy."]
+      }), " subchart, with\ntemplated RBAC scope, restart wiring, access config, and NetworkPolicy.\nOnly the ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "helm/k8ston"
+      }), " chart is published to OCI; direct-chart values are not\nwrapped in ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston:"
+      }), " and the direct chart does not include the umbrella's NetworkPolicy."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "minimal-values",
       children: "Minimal values"
     }), "\n", "\n", (0,jsx_runtime.jsx)(CodeBlock/* ["default"] */.A, {
       language: "yaml",
       children: values_helm
-    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Create the referenced Secret out-of-band (never commit values):"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["The example uses namespace ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston"
+      }), "; replace the image version, URLs, client ID,\nand group names. Configure a TLS exposure and register the exact provider callback\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "https://<your-host>/api/auth/callback"
+      }), ". Absent or empty namespace policy is open,\nnot deny-all; leaving both admin lists empty makes all authenticated users admins."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: [(0,jsx_runtime.jsx)(_components.code, {
+        children: "APP_URL"
+      }), " is read at server runtime. Do not bake in a conflicting ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "NEXT_PUBLIC_APP_URL"
+      }), ",\nwhich takes precedence and can be fixed at build time. Replicas must share a random\nsigning key and consistent annotation/retention settings."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["Create the referenced Secret out-of-band. For a manual initial setup, prepare a\nprivate env file outside the checkout (permissions ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "0600"
+      }), ") containing your provider's\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "OIDC_CLIENT_SECRET"
+      }), " and a fresh ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "SESSION_SECRET"
+      }), " from ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "openssl rand -hex 32"
+      }), ".\nDo not commit the file or put the actual credential in shell history:"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "kubectl create secret generic k8ston-oidc -n k8ston \\\n  --from-literal=OIDC_CLIENT_SECRET='...' \\\n  --from-literal=SESSION_SECRET=\"$(openssl rand -hex 32)\"\n"
+        children: "kubectl apply -f app/k8s/namespace.yaml\nkubectl -n k8ston create secret generic k8ston-oidc \\\n  --from-env-file=/secure/path/k8ston-oidc.env\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "key-knobs",
@@ -218,7 +242,7 @@ function _createMdxContent(props) {
               children: "k8ston.replicaCount"
             })
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "Stateless — more than one replica is always safe (default 2)"
+            children: "Application replicas; share the signing key and consistent configuration (umbrella default 2)."
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsxs)(_components.td, {
@@ -311,7 +335,7 @@ function _createMdxContent(props) {
           children: "k8ston.env"
         }), ". ", (0,jsx_runtime.jsx)(_components.code, {
           children: "extraNamespaces"
-        }), " is\nrejected with cluster scope."]
+        }), " is\nrejected with cluster scope. This allowlist limits the app, not the ClusterRole's\nKubernetes permissions; curated namespaces can use namespaced Roles instead."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "rbac.create: false"
@@ -396,13 +420,13 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Standard NetworkPolicy cannot match DNS names: add your IdP's CIDR ranges\nunder ", (0,jsx_runtime.jsx)(_components.code, {
           children: "networkPolicy.k8ston.idpEgressIpBlocks"
-        }), " when you tighten API egress."]
+        }), " when you tighten API egress.\nThe default API-port allowance permits all destinations on those ports; adding\nIdP CIDRs does not narrow that rule. Restrict API and IdP destinations deliberately."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
-        children: ["On OpenShift, ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "allowOpenShiftIngress"
-        }), " must be ", (0,jsx_runtime.jsx)(_components.code, {
-          children: "true"
-        }), " or all ingress is denied."]
+        children: ["With this NetworkPolicy enabled, OpenShift Routes require ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "allowOpenShiftIngress=true"
+        }), ";\nother ingress controllers need appropriate ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "ingressFrom"
+        }), " allowances."]
       }), "\n"]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "installing-with-the-chart-makefile",
@@ -410,20 +434,22 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: [(0,jsx_runtime.jsx)(_components.code, {
         children: "helm/main/Makefile"
-      }), " wraps the standard flow. Secret values live in a\n", (0,jsx_runtime.jsx)(_components.code, {
+      }), " wraps the standard flow and reads\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "values-<namespace>.secret.yaml"
-      }), " file (see ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "values-ai-poc.secret.yaml"
-      }), " for the\nshape; never commit real ones):"]
+      }), ". Despite that filename, keep provider/signing\ncredentials in the referenced Kubernetes Secret, not embedded in the values file.\nFrom the repository root, copy the documentation example without overwriting an\nexisting file, then customize it for your namespace and platform:"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "cd helm/main\nmake upgrade NAMESPACE=k8ston IMAGE_TAG=0.1.0   # helm dependency update + upgrade --install\nmake lint NAMESPACE=k8ston IMAGE_TAG=0.1.0      # render + validate\nmake template NAMESPACE=k8ston IMAGE_TAG=0.1.0  # render to template.yaml\n"
+        children: "cp -n website/.samples/values-helm.yaml helm/main/values-k8ston.secret.yaml\nRELEASE_VERSION='<published-X.Y.Z-version>'\nmake -C helm/main lint NAMESPACE=k8ston IMAGE_TAG=\"$RELEASE_VERSION\"\nmake -C helm/main upgrade NAMESPACE=k8ston IMAGE_TAG=\"$RELEASE_VERSION\"\nmake -C helm/main template NAMESPACE=k8ston IMAGE_TAG=\"$RELEASE_VERSION\"\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["The packaged subchart (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/main/charts/k8ston-0.1.0.tgz"
-      }), ") is refreshed by the\n", (0,jsx_runtime.jsx)(_components.code, {
+      children: [(0,jsx_runtime.jsx)(_components.code, {
+        children: "template"
+      }), " writes ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "helm/main/template.yaml"
+      }), "; avoid overwriting useful generated work.\nThe packaged subchart under ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "helm/main/charts/"
+      }), " is refreshed by the\n", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm-dep"
       }), " step (", (0,jsx_runtime.jsx)(_components.code, {
         children: "helm dependency update"
@@ -444,21 +470,32 @@ function _createMdxContent(props) {
         children: "version"
       }), " and ", (0,jsx_runtime.jsx)(_components.code, {
         children: "appVersion"
-      }), " are both set from the release tag, so chart\n", (0,jsx_runtime.jsx)(_components.code, {
-        children: "1.2.3"
-      }), " deploys app ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "1.2.3"
-      }), " (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "ghcr.io/egose/k8ston:1.2.3"
-      }), " by default —\noverride with ", (0,jsx_runtime.jsx)(_components.code, {
+      }), " are set from the release tag, but ", (0,jsx_runtime.jsx)(_components.code, {
         children: "image.tag"
-      }), ")."]
-    }), "\n", (0,jsx_runtime.jsx)(_components.p, {
-      children: "Install it directly, without the umbrella chart:"
+      }), "\nstill defaults to ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "latest"
+      }), ". ", (0,jsx_runtime.jsx)(_components.strong, {
+        children: "Pin both chart and image"
+      }), "; ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "--version"
+      }), " alone does\nnot pin the app. Choose a published stable ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "X.Y.Z"
+      }), " release without a leading ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "v"
+      }), "."]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["For a direct install, save the app settings at the top level in\n", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston-direct-values.yaml"
+      }), " (no ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston:"
+      }), " wrapper). See the\n", (0,jsx_runtime.jsx)(_components.a, {
+        href: "https://github.com/egose/k8ston/blob/main/helm/k8ston/README.md#install-directly",
+        children: "chart README"
+      }), "\nfor a complete direct-chart example. After provisioning the namespace and Secret:"]
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-bash",
-        children: "helm install k8ston oci://ghcr.io/egose/charts/k8ston --version 1.2.3 \\\n  --namespace k8ston --create-namespace\n"
+        children: "RELEASE_VERSION='<published-X.Y.Z-version>'\nhelm upgrade --install k8ston oci://ghcr.io/egose/charts/k8ston \\\n  --version \"$RELEASE_VERSION\" \\\n  --namespace k8ston --create-namespace \\\n  --values k8ston-direct-values.yaml \\\n  --set-string image.tag=\"$RELEASE_VERSION\" \\\n  --wait\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
       children: ["Or consume it as a dependency (", (0,jsx_runtime.jsx)(_components.code, {
@@ -467,17 +504,20 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-yaml",
-        children: "# Chart.yaml\ndependencies:\n  - name: k8ston\n    version: '1.2.3'\n    repository: oci://ghcr.io/egose/charts\n"
+        children: "# Chart.yaml\ndependencies:\n  - name: k8ston\n    version: '<published-X.Y.Z-version>'\n    repository: oci://ghcr.io/egose/charts\n    condition: k8ston.enabled\n"
       })
     }), "\n", (0,jsx_runtime.jsx)(_components.pre, {
       children: (0,jsx_runtime.jsx)(_components.code, {
         className: "language-yaml",
-        children: "# values.yaml\nk8ston:\n  enabled: true\n  env:\n    K8STON_SCOPE: namespace\n"
+        children: "# values.yaml\nk8ston:\n  enabled: true\n  image:\n    tag: '<published-X.Y.Z-version>'\n  envSecretName: k8ston-oidc\n  rbac:\n    scope: namespace\n"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["See ", (0,jsx_runtime.jsx)(_components.code, {
-        children: "helm/k8ston/README.md"
-      }), " for the full values reference (image, exposure,\nautoscaling, PDB, security contexts, extra volumes)."]
+      children: ["Replace both version placeholders and add authentication, access rules, and\nexposure settings under ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "k8ston:"
+      }), " for dependency usage. See the\n", (0,jsx_runtime.jsx)(_components.a, {
+        href: "https://github.com/egose/k8ston/blob/main/helm/k8ston/README.md",
+        children: "chart README"
+      }), "\nfor the full values reference."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "exposure-and-health",
       children: "Exposure and health"
@@ -495,7 +535,7 @@ function _createMdxContent(props) {
           children: "/api/config"
         }), ": unauthenticated and\nK8s/OIDC-free, so it is safe to probe (the raw manifests in ", (0,jsx_runtime.jsx)(_components.code, {
           children: "app/k8s/"
-        }), "\nprobe the same endpoint)."]
+        }), "\nprobe the same endpoint). They do not establish working auth or Kubernetes access;\nverify a real sign-in, allowed operations, and an unauthorized-user denial."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["The ServiceAccount token ", (0,jsx_runtime.jsx)(_components.strong, {
           children: "must"

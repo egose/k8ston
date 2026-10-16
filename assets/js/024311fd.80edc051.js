@@ -125,10 +125,17 @@ function _createMdxContent(props) {
         }), " field."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["Confirm the redirect URI registered at the IdP matches the app's\n(", (0,jsx_runtime.jsx)(_components.code, {
-          children: "<NEXT_PUBLIC_APP_URL>/api/auth/callback"
+          children: "<configured-app-url>/api/auth/callback"
         }), ", or ", (0,jsx_runtime.jsx)(_components.code, {
           children: "OIDC_REDIRECT_URI"
-        }), ")."]
+        }), ").\nCheck runtime ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "APP_URL"
+        }), " and any higher-precedence ", (0,jsx_runtime.jsx)(_components.code, {
+          children: "NEXT_PUBLIC_APP_URL"
+        }), " baked\ninto the image; see ", (0,jsx_runtime.jsx)(_components.a, {
+          href: "/guides/configuration/",
+          children: "Configuration"
+        }), "."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: ["For ", (0,jsx_runtime.jsx)(_components.code, {
           children: "http://"
@@ -362,9 +369,9 @@ function _createMdxContent(props) {
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "make seed"
-        }), " re-applies fixtures idempotently; ", (0,jsx_runtime.jsx)(_components.code, {
+        }), " reapplies fixtures and can overwrite edits; ", (0,jsx_runtime.jsx)(_components.code, {
           children: "make reset"
-        }), " for a clean slate."]
+        }), " destroys\nall kind cluster data before recreating the sandbox."]
       }), "\n", (0,jsx_runtime.jsxs)(_components.li, {
         children: [(0,jsx_runtime.jsx)(_components.code, {
           children: "make verify-sandbox"

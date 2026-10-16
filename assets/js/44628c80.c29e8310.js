@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 ;// CONCATENATED MODULE: ./.docusaurus/docusaurus-plugin-content-docs/default/site-docs-guides-configuration-mdx-446.json
-var site_docs_guides_configuration_mdx_446_namespaceObject = JSON.parse('{"id":"guides/configuration","title":"Configuration","description":"Everything is environment-driven (lib/config.ts), resolved at request time —","source":"@site/docs/guides/configuration.mdx","sourceDirName":"guides","slug":"/guides/configuration","permalink":"/guides/configuration","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":4,"frontMatter":{"sidebar_label":"Configuration","sidebar_position":4},"sidebar":"guides","previous":{"title":"Deploy with Helm","permalink":"/guides/deploy-helm"},"next":{"title":"Authentication","permalink":"/guides/authentication"}}')
+var site_docs_guides_configuration_mdx_446_namespaceObject = JSON.parse('{"id":"guides/configuration","title":"Configuration","description":"Configuration is environment-driven (app/lib/config.ts). Runtime settings let","source":"@site/docs/guides/configuration.mdx","sourceDirName":"guides","slug":"/guides/configuration","permalink":"/guides/configuration","draft":false,"unlisted":false,"tags":[],"version":"current","sidebarPosition":4,"frontMatter":{"sidebar_label":"Configuration","sidebar_position":4},"sidebar":"guides","previous":{"title":"Deploy with Helm","permalink":"/guides/deploy-helm"},"next":{"title":"Authentication","permalink":"/guides/authentication"}}')
 // EXTERNAL MODULE: ./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js
 var jsx_runtime = __webpack_require__(4686);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@mdx-js+react@3.1.1_@types+react@19.3.0_react@19.3.0/node_modules/@mdx-js/react/lib/index.js
@@ -87,9 +87,11 @@ function _createMdxContent(props) {
         children: "Configuration"
       })
     }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
-      children: ["Everything is environment-driven (", (0,jsx_runtime.jsx)(_components.code, {
-        children: "lib/config.ts"
-      }), "), resolved at request time —\none image runs in many clusters. Non-secret values go in ", (0,jsx_runtime.jsx)(_components.code, {
+      children: ["Configuration is environment-driven (", (0,jsx_runtime.jsx)(_components.code, {
+        children: "app/lib/config.ts"
+      }), "). Runtime settings let\none image run in many clusters, but ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "NEXT_PUBLIC_*"
+      }), " values can be baked into the\nbuild; environment changes require a server restart or rollout. Non-secret values go in ", (0,jsx_runtime.jsx)(_components.code, {
         children: "k8ston-config"
       }), ";\nsecrets (", (0,jsx_runtime.jsx)(_components.code, {
         children: "OIDC_CLIENT_SECRET"
@@ -101,6 +103,10 @@ function _createMdxContent(props) {
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "reference",
       children: "Reference"
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["These are runtime defaults, not the overrides in ", (0,jsx_runtime.jsx)(_components.code, {
+        children: ".env.example"
+      }), " or the sandbox."]
     }), "\n", (0,jsx_runtime.jsxs)(_components.table, {
       children: [(0,jsx_runtime.jsx)(_components.thead, {
         children: (0,jsx_runtime.jsxs)(_components.tr, {
@@ -130,16 +136,18 @@ function _createMdxContent(props) {
             })]
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
-          children: [(0,jsx_runtime.jsx)(_components.td, {
-            children: (0,jsx_runtime.jsx)(_components.code, {
+          children: [(0,jsx_runtime.jsxs)(_components.td, {
+            children: [(0,jsx_runtime.jsx)(_components.code, {
+              children: "POD_NAMESPACE"
+            }), ", ", (0,jsx_runtime.jsx)(_components.code, {
               children: "K8STON_NAMESPACE"
-            })
-          }), (0,jsx_runtime.jsx)(_components.td, {
-            children: (0,jsx_runtime.jsx)(_components.code, {
+            })]
+          }), (0,jsx_runtime.jsxs)(_components.td, {
+            children: [(0,jsx_runtime.jsx)(_components.code, {
               children: "k8ston"
-            })
+            }), " fallback"]
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "Fallback for the app's own namespace (downward API wins in-cluster)"
+            children: "Mounted ServiceAccount namespace wins in-cluster; otherwise these environment values are used in order."
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -227,7 +235,7 @@ function _createMdxContent(props) {
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "—"
           }), (0,jsx_runtime.jsx)(_components.td, {
-            children: "Bootstrap admins (empty = everyone, lock down!)"
+            children: "Bootstrap admins; leaving both empty makes every authenticated user an admin."
           })]
         }), (0,jsx_runtime.jsxs)(_components.tr, {
           children: [(0,jsx_runtime.jsx)(_components.td, {
@@ -365,8 +373,32 @@ function _createMdxContent(props) {
           }), (0,jsx_runtime.jsx)(_components.td, {
             children: "Public URL (derives OIDC redirect)"
           })]
+        }), (0,jsx_runtime.jsxs)(_components.tr, {
+          children: [(0,jsx_runtime.jsx)(_components.td, {
+            children: (0,jsx_runtime.jsx)(_components.code, {
+              children: "APP_URL"
+            })
+          }), (0,jsx_runtime.jsxs)(_components.td, {
+            children: [(0,jsx_runtime.jsx)(_components.code, {
+              children: "http://localhost:3000"
+            }), " fallback"]
+          }), (0,jsx_runtime.jsxs)(_components.td, {
+            children: ["Server runtime base URL when ", (0,jsx_runtime.jsx)(_components.code, {
+              children: "NEXT_PUBLIC_APP_URL"
+            }), " is not set."]
+          })]
         })]
       })]
+    }), "\n", (0,jsx_runtime.jsxs)(_components.p, {
+      children: ["For an image promoted between environments, prefer runtime ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "APP_URL"
+      }), " without\nbaking in a conflicting ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "NEXT_PUBLIC_APP_URL"
+      }), ", which takes precedence. The\nderived callback is ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "<configured-app-url>/api/auth/callback"
+      }), " unless explicitly\noverridden with ", (0,jsx_runtime.jsx)(_components.code, {
+        children: "OIDC_REDIRECT_URI"
+      }), "; provider registration must match exactly."]
     }), "\n", (0,jsx_runtime.jsx)(_components.h2, {
       id: "namespace-discovery-and-api-budgets",
       children: "Namespace discovery and API budgets"
